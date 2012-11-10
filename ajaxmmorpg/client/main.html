@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Jono's AJAX RPG Server</title>
+<script type="text/javascript" src="/client/jquery.js"></script>
+<script type="application/x-javascript">
+    function whoAmI() {
+      jQuery.get("/whoami", null,
+                 function(xml, textStatus) {
+                   var name = $(xml).text();
+                   $("#username").html(name);
+                 }, "xml");
+    }
+
+    function whoAreMyCharacters() {
+      jQuery.get("/list/chara", null,
+                 function(xml, textStatus) {
+                   var listItems = "";
+                   $(xml).find('chara').each( function() {
+                     var name = $(this).attr('name');
+                     var id = $(this).attr('id');
+                     var link = "<a href=\"/startplay?charid=" + id + "\">";
+                     var icon = "/icons/" + $(this).attr('icon_id');
+                     listItems += "<li>" + link + name;
+                     listItems += "<img src=\"" + icon + "\"></a></li>";
+		   });
+                   // <chara name="" id="" icon="">
+                   $("#chara-list").html(listItems);
+                 }, "xml");
+    }
+
+    function fillInTheBlanks() {
+      whoAmI();
+      whoAreMyCharacters();
+    }
+
+$(document).ready( fillInTheBlanks );
+
+</script>
+</head>
+<body>
+<h2>Jono's AJAX RPG server</h2>
+<div id="error-message"><!--ERR_MSG--></div>
+<p>You are logged in now.  You are logged in as <span id="username"></span>.</p>
+
+<a href="/logout">Log Out</a>
+<hr/>
+<h3>Choose a Character to Play</h3>
+<ul id="chara-list">
+</ul>
+<hr/>
+<h3>Other Options</h3>
+<ul>
+<li><a href="/client/world-editor.html">Create or Edit your Domain</a></li>
+<li><a href="/client/create_character.html">Create a New Character</a></li>
+</ul>
+<hr/>
+<!--CHAT_PANE-->
+</body> </html>

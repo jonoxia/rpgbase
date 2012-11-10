@@ -1,0 +1,48 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Create a New Character!</title>
+<script type="text/javascript" src="/client/jquery.js"></script>
+<script type="application/x-javascript">
+  $(document).ready( function() {
+      jQuery.get("/list/domain",  {new_character_can_start_here: 1 },
+          function(xml, textStatus) {
+              $(xml).find('domain').each(function(){
+                  var name = $(this).attr('name');
+                  var newItem = document.createElement('option');
+                  newItem.text = name;
+                  newItem.value = parseInt( $(this).attr('id') );
+                  $("#starting-domain").append(newItem);
+               });
+           }, "xml" );
+   });
+</script>
+</head>
+
+<body>
+
+<h1>Create A New Character</h1>
+<div id="error-message"><!--ERR_MSG--></div>
+<form action="/create/chara" method="POST">
+Your Character's Name: <input type="text" name="name"/><br/>
+
+<!--TODO later, dynamically load all the possible character choices that
+the server knows about.-->
+<input type="radio" name="icon_id" value="44"/><img src="/icons/44">
+
+<input type="radio" name="icon_id" value="45"/><img src="/icons/45">
+
+<input type="radio" name="icon_id" value="50"/><img src="/icons/50">
+
+<input type="radio" name="icon_id" value="51"/><img src="/icons/51">
+
+<input type="radio" name="icon_id" value="159"/><img src="/icons/159">
+
+
+Start in Domain:
+<select id="starting-domain" name="domain_id">
+</select>
+
+<br/>
+<input type="submit" value="Start Playing!"/>
+</form>
+</body> </html>

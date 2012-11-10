@@ -1,0 +1,25 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Jono's AJAX RPG server</title>
+</head>
+<body>
+<h2>Jono's AJAX RPG server</h2>
+<div id="error-message"><!--ERR_MSG--></div>
+<form action="/login" method="POST">
+<fieldset>
+Log In<br>
+Username: <input type="text" name="username"/>
+Password: <input type="password" name="password"/>
+<input type="submit" value="Log In"/>
+</fieldset></form>
+</form>
+<hr/>
+<form action="/create/account" method="POST">
+<fieldset>
+Create New Account<br/>
+Choose A Username: <input type="text" name="username"/>
+Choose A Password: <input type="password" name="password"/>
+Confirm Password: <input type="password" name="password2"/>
+<input type="submit" value="Create"/>
+</fieldset></form>
+</body> </html>

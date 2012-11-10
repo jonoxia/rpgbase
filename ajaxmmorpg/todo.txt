@@ -1,0 +1,179 @@
+New Features:
+ 
+  1. Use serverBackedRecord as a base class for the JS version of DoorEncounter, PlayerCharacter, and
+     every other client-side class with a server-side counterpart.
+
+     1.1 Test "Save As" button, and saving brand-new domains.
+  
+  2. Create-character page needs to take you to a sensible page after the
+     character is created.  Currently the submit button does a POST to a
+     CRUDplugin url, which means that all it gets back is the character xml.  Need
+     to either give the CRUDplugins configurable redirect urls to go to
+     on success, or else have all posts to them be from jQuery.post instead
+     of regular form submission.
+    (Should redirect to: startplay?charid=x    where X can be obtained from the
+     .id attribute of the xml tag sent back.)
+
+  3. Add in-browser editor for domain doors.
+     3.4 Use the name of the other domain that a door leads to rather than 
+         a number.
+     3.8 The current interface does not make it possible to create a door from
+         a domain into the same domain.  (Is that a problem?)
+     3.9 Currently if I make a "new door" on one map then go to another map before
+         placing it, the door is listed as floating but really has one end attached
+         to the other domain already.  Is that a problem?
+     3.11 Load doors from server when playing the game!
+     3.12 make it possible to "follow" a door through the interface.
+     3.13 Fix two-way vs one-way bug.  (Everything becomes two-way!)
+     3.14 Make the screen scroll to focus on a certain door when you select it from
+          the textual menu.
+
+  5. Make the world editor UI be like "New domain of size (enter size)", "Open...",
+    "Save", "Save As...", and "Exit".  (Done)
+
+     5.1 Allow you to choose the Default Tile Type of the new domain.
+      (ocean, grass, forest, mountain, ice, desert, bricks) (Low priority!)
+
+     5.2 Allow you to change size of an existing domain (add to or remove from
+       the edges). (Low priority)
+
+     5.3 Allow editing of only the domains you own.
+
+     5.4 Allow renaming a domain.  (Low priority)
+
+  6. All encounters should be downloaded from server when you enter a domain,
+     put into encounter manager, and cleared out when you leave the domain.
+     That includes doors, treasures, and random monsters.
+
+     6.1 make sure to redraw encounters after screen scrolls
+     6.2 make zero-interaction encounters?
+
+  7. In-browser editor for monsters.
+     7.1. for random encounter areas and likelihoods
+     7.2. for fixed encounter locations.
+
+  8. Add in-browser editor for item types and treasure locations.
+     When putting down an item, the creator gets to choose if it's 
+     "one for every player" or "just a single treasure".
+     Use TreasuresGotten to keep track of which players have gotten which
+     treasures, so you can't just get it over and over again.
+
+  9. AJAXify the inventory management system.
+
+  10. Interface for trading items with other players!!!
+
+  11. Interface for joining another player in an encounter!!!
+
+Refactorings and invisible changes:
+
+  Better error handling of cases where a request to the server fails or is
+  rejected.  (E.g. on an attempt to save a domain, alerting the user that the
+  save failed would be nice!!)
+
+  Chat protocol super inefficient; just return diffs from now on instead
+  of the entire thing.      Send a timestamp of when you last got updates...
+  Maybe make a single compbined checker that checks, in one jQuery.get(),
+  for both updated chat contents and updated player character locations.
+
+      Question: Where does the combined checker live?  (i.e. if it has to
+      be able to update chat_pane and otherCharacterList, or both, or
+      neither.) What protocol does it use?
+
+  -- On character creation, dynamically load all possible player charcter
+     choices from the db (currently hard-coded)
+
+   -- For the world editor, dyanmically load all land types from the db.
+
+   -- Shouldn't allow access to /client/play.html without a character choice!
+
+Bug list:
+
+  Sometimes the server gets a "broken pipe" when loading image file.
+   Especially this happens when you run around on roads or houses,
+   or when the screen has to scroll.  It doesn't happen if you're
+   running around on grass or sand. So loading certain images breaks the
+    pipe?  maybe?
+
+   When you create an account for the first time, it logs you in but
+   gives you a login session cookie tied to the path "/create".  (This
+   causes problems when you try to start the game immediately after.)
+
+   Broken image links on the world-editor screen, when loaded remotely.
+   Why ?!?!
+
+   The redirect I'm using is a little weird, as it doesn't change the
+   URL in the browser address bar, which makes me think it could cause	
+   problems later on.
+
+More Tiles:
+  * Rocky crags coming out of water
+  * Open treasure chest
+  * corners for icy coast
+  * Indoor doors
+  * Multi-part mountain
+  * Multi-part castle
+  * deciduous trees
+  * Flowers
+  * small rocks on sand
+  * small rocks on grass
+
+
+
+Game basics:
+
+1. Um.... add gameplay mechanics.  Let's start with a skill system:
+ 1.1 Skill system -> variable results from taking action in encounter
+ 1.2 UI for using skill system anytime
+ 1.3 Skill improvement
+
+2. Make vehicles into a distinct class from items.  You don't carry them; they live on
+   the map until you walk up and embark.
+
+3. Put encounteres in an overlay that covers the map.  
+  (I.e. a large square white background div with a border and absolute
+   positioning and z-index: 3 or something).  If they're gonna be modal,
+  make them look modal.
+
+
+ * Small todos:
+ *
+  
+
+
+Game design:
+
+A player creates an account and logs in.  On the same account, they can 
+"create a hero" i.e. a PC
+"start a kingdom", or
+"create a villian".
+
+With any of these, you can choose any existing artwork for your charcter, or create a new appearnace from scratch.
+
+No matter how many characters you have, you can only acutally play one of these at a time, though.
+
+Playing a PC is basically the normal RPG experience, except you can meet other player
+characters, help them out, talk to them, trade items with them, etc.
+
+With certain skills, you can also design new items, new spells, new vehicles, etc.  That includes
+writing javascript code for them.  Once you've designed something, the game tells you what
+resources it costs to make an instance.  Once you've made an instance, you can sell or trade
+it to other characters.
+
+When you start a kingdom, you get a randomly-generated map.  You get a portal to your new
+world from the central hub; you can write a description and have a profile for it, etc.  You can
+also post quests and requests for heroes to do stuff for you, and offer rewards.  You get some
+starting money, which you can use to build some basic facilities.  You're going to have to
+run an economy of sorts, and you can expand the settled land and create the layout of towns
+and so on.
+
+When you start a villian, you do it like creating a character.  Then you can choose a kingdom
+to screw with, out of the list of all kingdoms that don't yet have villians.  You also have to run
+an economy, but you spend money to do stuff like create monsters and add traps to lairs and
+so on.
+
+Random landform generation algorithm??
+
+
+(There's also GM mode -- where you can possess NPCs and talk through them, rearrange
+the map at will, edit the skill list, create items out of nothing, etc etc.  You're not part of the
+economy and you have infinite resources.  This is meant for interactinve GMing, obviously.)

@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Kung Fu Kitty Cat Quest!  For Aleksa!</title>
+<script type="text/javascript" src="/client/jquery.js"></script>
+<script type="text/javascript" src="/client/worldMapClasses.js"></script>
+<script type="text/javascript" src="/client/encounterClasses.js"></script>
+<script type="text/javascript" src="/client/playerClasses.js"></script>
+<script type="text/javascript" src="/client/keyboardClasses.js"></script>
+<script type="application/x-javascript">
+
+// Assumes already defined: EncounterManager, Player, WorldMapManager,
+// keyMap, handleKeystroke
+
+gPlayerCharacter = null;
+gOtherCharactersList = null;
+gEncounterManager = null;
+
+// Set up the UI callbacks
+function exitEncounter() {
+  if (gPlayerCharacter) {
+    gEncounterManager.resetActiveEncounter();
+    gPlayerCharacter.exitEncounter();
+    gPlayerCharacter.plot();
+  }
+}
+
+function responseBtn( choice ) {
+  var enc = gEncounterManager.getActiveEncounter();
+  if ( enc )
+    if (enc.responseHandler) {
+      var newText = enc.responseHandler(choice);
+      $("#encounter-screen").html( newText );
+    }
+}
+
+function doMove( deltaX, deltaY) {
+  if (gPlayerCharacter) {
+    gEncounterManager.plotAllEncounters();
+    gPlayerCharacter.move( deltaX, deltaY );
+    gEncounterManager.plotAllEncounters();
+    gOtherCharactersList.plotAll();
+  }
+}
+
+keyMap[ARROW_DOWN] = function(evt) {
+		       doMove( 0, 1 );
+		       cancelEvent(evt);
+		       };
+
+keyMap[ARROW_UP] = function(evt) {
+		     doMove( 0, -1);
+		     cancelEvent(evt);
+		     };
+
+keyMap[ARROW_LEFT] = function(evt) {
+                       doMove( -1, 0);
+		       cancelEvent(evt);
+		       };
+
+keyMap[ARROW_RIGHT] = function(evt) {
+			doMove( 1, 0);
+			cancelEvent(evt);
+			};
+
+
+function initializeWorldMap( domainId ) {
+  // create html for world table
+  WorldMapManager.downloadDomain(domainId, function() {
+    // After the download is done, then we'll...
+
+    // Draw everything and get ready to go:
+    gPlayerCharacter.plot();
+    gEncounterManager = new EncounterManager();
+    gEncounterManager.loadEncountersForDomain(domainId);
+    gEncounterManager.plotAllEncounters();
+
+    // Download the other characters who are in this domain...
+    gOtherCharactersList = new OtherCharactersList( domainId,
+                                                    gPlayerCharacter._id );
+
+    // Set timer so this list can get updated
+    setInterval("gOtherCharactersList.checkForUpdates()", 1000);
+  }); 
+}
+
+function initializeYourCharacter( characterId ) {
+  jQuery.get("/get/chara", {id: characterId},
+             function(xml, textStatus) {
+               // Parse the XML
+               var chara = $(xml).find('chara');
+               var name = chara.attr('name');
+               var domainId = chara.attr('domain_id');
+               var x = parseInt(chara.attr('x'));
+               var y = parseInt(chara.attr('y'));
+               var iconId = chara.attr('icon_id');
+
+               // Create the object for your character:
+               gPlayerCharacter = new Player( characterId, x, y, iconId, domainId );
+               // After character is done loading, then we'll...
+
+               // Put your character name on top of the page:
+               $("#chara-name").html(name);
+
+               // download the map for the domain you're in.
+               initializeWorldMap( domainId );
+
+               // Add the keydown listner to the document object
+               bind(document, 'keydown', keyMap, handleKeystroke);
+
+               // Set up your item menu
+               $("#item-menu").html( gPlayerCharacter.makeItemMenu());
+             }, "xml" );
+}
+
+
+$(document).ready( function() {
+  // Init your character.  <!--CHARA_ID--> will be replaced by a server-side
+  // include.  Yes, this is pretty hacky.
+  initializeYourCharacter( <!--CHARA_ID-->);
+});
+
+</script>
+</head>
+
+<body>
+<h2>The Adventures of <span id="chara-name"></span></h2>
+<div id="world-table"></div>
+<div id="debug"></div>
+<div id="player-layer" style="position: absolute; left: 0px; top: 0px; height: 64px; width:64px; padding: 0em; z-index: 1;"></div>
+<div id="other-characters-layer"></div>
+<div id="command-menu" style="position:absolute; left:650px; top: 0px;">
+  <button value="terraform" onclick=""/>
+</div>
+<div id="item-menu" style="position:absolute; left:650px; top:0px;"></div>
+<div id="encounter-screen" style="position: absolute; left: 650px; top: 110px;"></div>
+<hr/>
+<!--CHAT_PANE-->
+<a href="/client/main.html">Exit Game (back to Main Menu)</a>
+</body>
+</html>

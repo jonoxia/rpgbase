@@ -1,0 +1,63 @@
+<!--To be included inside another page...-->
+<div id="chat-pane">
+  <script type="text/javascript" src="/client/jquery.js"></script>
+<script type="application/x-javascript">
+  function checkChatServer() {
+    jQuery.get("/chat/get", null,
+               function(xml, textStatus){
+                 var chat_log_contents = "";
+                 $(xml).find('chatline').each(function() {
+                   var username = $(this).attr('user');
+                   var text = $(this).text();
+                   chat_log_contents += "<b>" + username + ":</b> ";
+                   chat_log_contents += text + "<br/>";
+                 });
+                 $("#chat_log").html(chat_log_contents);
+               }, "xml");
+  }
+
+  function doPost() {
+    var inputText = $("#chat_input").attr("value");
+    // POST input box contents to chat server.
+    jQuery.post("/chat/send",
+                {input: inputText },
+                function(data, textStatus) {
+                  // when post is done, clear input box
+                  $("#chat_input").attr("value", "");
+                });
+  }
+
+  $(document).ready( function() {
+     // Periodic check to chat server to get latest text.
+     setInterval( "checkChatServer();", 1000 );
+  });
+
+  function checkEnter(e){ //e is event object passed from function invocation
+    var characterCode; 
+
+    if(e && e.which){
+      e = e
+      characterCode = e.which //Moz
+    } else{
+      e = event
+      characterCode = e.keyCode //IE
+    }
+
+    if(characterCode == 13){ //Enter key
+      doPost() //submit the form
+      return false
+    } else{
+      return true
+    }
+  }
+
+</script>
+
+  <h3>Chat</h3>
+<div id="chat_log" style="border-style:solid;width:32em;height:24em;">
+  This is the chat log.
+</div>
+<hr/>
+<input type="text" size="50" id="chat_input" name="input" onKeyPress="checkEnter(event);"/>
+<input type="button" value="Send" onClick="doPost();"/>
+</div>

@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title></title>
+<script type="text/javascript;version=1.8" src="/client/jquery.js"></script>
+<script type="text/javascript;version=1.8" src="/client/serverBackedRecord.js"></script>
+<script type="text/javascript;version=1.8" src="/client/worldMapClasses.js"></script>
+<script type="text/javascript;version=1.8" src="/client/encounterClasses.js"></script>
+<script type="text/javascript;version=1.8" src="/client/doorManager.js"></script>
+<script type="text/javascript;version=1.8" src="/client/keyboardClasses.js"></script>
+<script type="text/javascript;version=1.8" src="/client/world-editor.js"></script>
+<script type="text/javascript;version=1.8" src="/client/continents.js"></script>
+</head>
+
+<body>
+<h3 id="title">Map Editor (Untitled)</h3>
+<div id="debug"><!--ERR_MSG--></div>
+<div id="world-table"></div>
+<div id="overlay-area"></div>
+
+<div style="position:absolute; left:650px; top: 10px"> <!-- Right Sidebar -->
+<!-- "file" menu -->
+<fieldset>
+  <input type="text" id="new-domain-width" size="3"/> by <input type="text" id="new-domain-height" size="3"/><button onclick="newBlankDomain();">New Map</button>
+
+  <select id="domain-select" onchange="loadSelectedDomain();">
+    <option value="0">-- Open Map --</option>
+  </select>
+
+  <button onclick="doSaveDomain();">Save Map</button><button onclick="doSaveDomainAs();">Save Map As...</button>
+
+  <a href="/client/main.html">Exit</a>
+</fieldset>
+<button onclick="makeTools(GEOLOGY);">Geology</button>
+<button onclick="makeTools(STARTING);">New Game Settings</button>
+<button onclick="makeTools(LAND_TILES);">Land Tiles</button>
+<button onclick="makeTools(DOORS);">Doors</button>
+<button onclick="makeTools(TREASURES);">Treasures</button>
+<button onclick="makeTools(SHOPS);">Shops</button>
+<button onclick="makeTools(ENCOUNTERS);">Encounters</button>
+<fieldset><legend id="tool-area-title"></legend>
+  <div id="land-tile-tools" style="display:block"></div>
+
+  <div id="door-tools" style="display:none">
+      <button onclick="g_door_editor.newDoor();">New Door</button>
+      <fieldset><legend>Doors FROM this map</legend>
+        <ol id="outgoing-doors-list"></ol>
+      </fieldset>
+      <fieldset><legend>Doors INTO this map</legend>
+        <ol id="incoming-doors-list"></ol>
+      </fieldset>
+      <fieldset><legend>Floating doors</legend>
+        <ol id="floating-doors-list"></ol>
+      </fieldset>
+
+      <fieldset><legend>Selected Door</legend>
+        <span id="selected-door-info"></span><br/>
+	<input type="checkbox" onclick="g_door_editor.setTwoWayness();" id="two-way-check" checked="true"/>
+        Two-way door
+        <button onclick="g_door_editor.deleteSelectedDoor();">Delete Door</button>
+        <button onclick="g_door_editor.detatchSelectedDoor();">Detatch this end</button>
+      </fieldset>
+  </div>
+
+  <div id="treasure-tools" style="display:none">Treasure Editor Here</div>
+  <div id="shop-tools" style="display:none">Shop Editor Here</div>
+  <div id="encounter-tools" style="display:none">Encounter Editor Here</div>
+  <div id="game-starting-tools" style="display:none">
+    <input type="checkbox" id="start-game-here-check" checked="false"/>
+    Allow new player characters to begin play in this domain.<br/>
+    New player start position:  X = <input type="text" size="3" id="start-position-x"/>,
+    Y = <input type="text" size="3" id="start-position-y"/>
+    <!-- TODO allow Click on map to set starting position -->
+    <button onclick="setGameStartPos();">Save</button>
+  </div>
+  <div id="geology-tools" style="display:none">
+    <!-- TODO none of these values is currently actually used.  Fix that.-->
+    <ul>
+      <li>Fault Lines:
+	<input type="radio" name="fault" value="0.0">None
+	<input type="radio" name="fault" value="0.5">Low
+	<input type="radio" name="fault" value="1.0">Medium
+	<input type="radio" name="fault" value="2.0">High
+	<input type="radio" name="fault" value="3.0">California</li>
+      <li>Volcanic Activity:
+	<input type="radio" name="volcanic" value="0.0">None
+	<input type="radio" name="volcanic" value="0.5">Low
+	<input type="radio" name="volcanic" value="1.0">Medium
+	<input type="radio" name="volcanic" value="2.0">High
+	<input type="radio" name="volcanic" value="3.0">Ring of Fire</li>
+      <li>Ruggedness:
+	<input type="radio" name="noise" value="0.25">Kansas
+	<input type="radio" name="noise" value="0.5">Low
+	<input type="radio" name="noise" value="1.0">Medium
+	<input type="radio" name="noise" value="1.5">High
+	<input type="radio" name="noise" value="2.0">Craggy</li>
+      <li>Erosion:
+	<input type="radio" name="erosion" value="0.5">Rough
+	<input type="radio" name="erosion" value="0.75">Low
+	<input type="radio" name="erosion" value="1.0">Medium
+	<input type="radio" name="erosion" value="1.5">High
+	<input type="radio" name="erosion" value="2.5">Polished</li>
+      <li>Sea Level:
+	<input type="radio" name="sea" value="0.94">Arid
+	<input type="radio" name="sea" value="0.96">Low
+	<input type="radio" name="sea" value="1.01">Medium
+	<input type="radio" name="sea" value="1.03">High
+	<input type="radio" name="sea" value="1.05">Archipelago
+      </li>
+    </ul>
+    <p><input type="button" value="Generate" onclick="newRandomDomain();"></p>
+  </div>
+</fieldset>
+
+</div>
+</body>
+</html>
