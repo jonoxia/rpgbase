@@ -27,10 +27,16 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this.tilePixelsX = tilePixelsX;
   this.tilePixelsY = tilePixelsY;
 
+  this.margins = {left: 3, top: 3, right: 3, bottom: 3};
+
   // TODO set width and height of canvas element to
   // numTilesX * tilePixelsX, etc.
 }
 MapScreen.prototype = {
+  setMargins: function( newMargins ) {
+    this.margins = newMargins;
+  },
+
   setNewDomain: function( domain ) {
     this._currentDomain = domain;
     this._scrollX = 0;
@@ -66,15 +72,21 @@ MapScreen.prototype = {
     var screenX = x - this._scrollX;
     var screenY = y - this._scrollY;
     var scrollVal = 0;
-    if (screenX < 3) {
-      this.scroll( (screenX - 3), 0 );
-    } else if (screenX > 7) {
-      this.scroll( (screenX - 7), 0 );
+    
+    var topEdge = this.margins.top;
+    var leftEdge = this.margins.left;
+    var rightEdge = this.numTilesX - this.margins.right - 1;
+    var bottomEdge = this.numTilesY - this.margins.bottom - 1;
+
+    if (screenX < leftEdge) {
+      this.scroll( (screenX - leftEdge), 0 );
+    } else if (screenX > rightEdge) {
+      this.scroll( (screenX - rightEdge), 0 );
     }
-    if (screenY < 3) {
-      this.scroll( 0, (screenY - 3) );
-    } else if (screenY > 7) {
-      this.scroll( 0, (screenY - 7 ) );
+    if (screenY < topEdge) {
+      this.scroll( 0, (screenY - topEdge) );
+    } else if (screenY > bottomEdge) {
+      this.scroll( 0, (screenY - bottomEdge ) );
     }
     this.render();
   },
@@ -113,7 +125,7 @@ MapScreen.prototype = {
       scrollX = this._currentDomain._dimX - this.numTilesX;
     if (scrollY < 0)
       scrollY = 0;
-    if (scrollY + this.numTilesX > this._currentDomain._dimY)
+    if (scrollY + this.numTilesY > this._currentDomain._dimY)
       scrollY = this._currentDomain._dimY - this.numTilesY;
 
     this._scrollX = scrollX;
