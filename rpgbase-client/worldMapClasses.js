@@ -33,7 +33,7 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   // numTilesX * tilePixelsX, etc.
 }
 MapScreen.prototype = {
-  setMargins: function( newMargins ) {
+  setScrollMargins: function( newMargins ) {
     this.margins = newMargins;
   },
 
