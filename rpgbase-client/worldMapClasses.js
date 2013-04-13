@@ -6,10 +6,36 @@ function Map(dimX, dimY, data, spritesheet) {
 
   this._img = new Image();
   this._img.src = spritesheet;
+
+  this._stepHandlers = [];
 }
 Map.prototype = {
   getTileForCode: function(mapCode) {
     return {x:mapCode, y:0};
+  },
+
+  onStep: function(trigger, result) {
+    this._stepHandlers.push({
+      trigger: trigger,
+      result: result});
+  },
+
+  processStep: function(x, y, player) {
+    for (var i = 0; i < this._stepHandlers.length; i++) {
+
+      var trigger = this._stepHandlers[i].trigger;
+      var result = this._stepHandlers[i].result;
+
+      var triggered = false;
+      if (trigger.x == x &&
+          trigger.y == y) {
+        triggered = true;
+      }
+      
+      if (triggered) {
+        result(player, x, y);
+      }
+    }
   }
 }
 
@@ -99,16 +125,16 @@ MapScreen.prototype = {
         var img = this._currentDomain._img;
         
         var tile = this._currentDomain.getTileForCode(code);
-        var spriteOffsetX = tile.x * this.tilePixelsX;
-        var spriteOffsetY = tile.y * this.tilePixelsY;
+        var spriteOffsetX = tile.x * this.tilePixelsX + 0.5;
+        var spriteOffsetY = tile.y * this.tilePixelsY + 0.5;
 
         this._ctx.drawImage(img,
                             spriteOffsetX,
                             spriteOffsetY,
-                            this.tilePixelsX,
-                            this.tilePixelsY,
-                            x * this.tilePixelsX,
-                            y * this.tilePixelsY,
+                            (this.tilePixelsX - 0.5),
+                            (this.tilePixelsY - 0.5),
+                            x * (this.tilePixelsX ),
+                            y * (this.tilePixelsY ),
                             this.tilePixelsX,
                             this.tilePixelsY);
       }
@@ -144,5 +170,9 @@ MapScreen.prototype = {
     var screenX = x - this._scrollX;
     var screenY = y - this._scrollY;
     this.scroll( x-4, y-4 );
+  },
+
+  processStep: function( player, x, y ) {
+    this._currentDomain.processStep(x, y, player);
   }
 };

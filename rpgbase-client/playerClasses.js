@@ -130,12 +130,17 @@ PlayerCharacter.prototype = {
       this._x = newX;
       this._y = newY;
       //this._updatePositionToServer();
+
+      // map triggers:
+      mapScreen.processStep(this, newX, newY);
     }
 
     // user-defined callback(s):
     for (var i = 0; i < this.moveListeners.length; i++) {
       this.moveListeners[i].call(this, deltaX, deltaY, canMove);
     }
+
+
     this.plot(mapScreen);
     //gEncounterManager.checkForEncounters(this._x, this._y, this);
   },

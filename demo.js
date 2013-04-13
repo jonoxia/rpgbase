@@ -27,6 +27,30 @@ var mapData = [
 ];
 
 $(document).ready( function() {
+  /*var ctx = document.getElementById("mapscreen-canvas").getContext("2d");
+  ctx.scale(2, 2);
+  var img = new Image();
+  img.onload = function() {
+    var spriteOffsetX = 37 * 16;// + 0.4;
+    var spriteOffsetY = 0;//0.5;
+    var tilePixelsX = 16;
+    var tilePixelsY = 16;
+    for (var x = 0; x < 5; x++) {
+    for (var y = 0; y < 5; y++) {
+      ctx.drawImage(img,
+                    spriteOffsetX,
+                    spriteOffsetY,
+                    (tilePixelsX),// - 1),
+                    (tilePixelsY),// - 1),
+                    x * tilePixelsX,
+                    y * tilePixelsY,
+                    tilePixelsX,
+                    tilePixelsY);
+    }
+    }
+  };
+  img.src = "terrain.png";*/
+
   var player = new Player();
   var hero = new PlayerCharacter("mapsprites.png", 16, 24, 0, -8);
 
@@ -64,6 +88,12 @@ $(document).ready( function() {
   map.getTileForCode = function(mapCode) {
     return {x:mapCode, y:0};
   };
+
+  map.onStep({x: 8, y: 17}, function(player, x, y) {
+    $("#debug").html("You stepped on a town.");
+  });
+
+
 
   mapScreen.setNewDomain(map);
   player.enterMapScreen(mapScreen, 4, 4);
