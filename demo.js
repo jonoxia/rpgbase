@@ -82,7 +82,7 @@ $(document).ready( function() {
 
   player.addCharacter(hero);
   var mapScreen = new MapScreen(document.getElementById("mapscreen-canvas"), 16, 12, 16, 16);
-  mapScreen.setScrollMargins({left: 5, top: 5, right: 5, bottom: 5});
+  mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
 
   var map = new Map(19, 25, mapData, "terrain.png");
   map.getTileForCode = function(mapCode) {
