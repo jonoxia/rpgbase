@@ -37,6 +37,14 @@ Player.prototype = {
     for (var i = 0; i < this.party.length; i++) {
       this.party[i].move(this.mapScreen, deltaX, deltaY);
     }
+
+    var mainChar = this.party[0];
+    this.mapScreen.autoScrollToPlayer( mainChar._x, 
+				       mainChar._y,
+				       deltaX,
+				       deltaY
+				       );
+
     this.mapScreen.render();
     this.plotAll();
   },
@@ -81,7 +89,6 @@ PlayerCharacter.prototype = {
   },
 
   plot: function(mapScreen) {
-    mapScreen.autoScrollToPlayer( this._x, this._y );
     var screenCoords = mapScreen.transform(this._x, this._y);
     var x = screenCoords[0] + this._offsetX;
     var y = screenCoords[1] + this._offsetY;

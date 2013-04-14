@@ -54,13 +54,18 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this.tilePixelsY = tilePixelsY;
 
   this.margins = {left: 3, top: 3, right: 3, bottom: 3};
-
+  this.pixelOffset = {x: 0, y: 0};
   // TODO set width and height of canvas element to
   // numTilesX * tilePixelsX, etc.
 }
 MapScreen.prototype = {
   setScrollMargins: function( newMargins ) {
     this.margins = newMargins;
+  },
+  
+  setTileOffset: function( newOffset ) {
+	this.pixelOffset = {x: newOffset.x * this.tilePixelsX,
+			    y: newOffset.y * this.tilePixelsY};
   },
 
   setNewDomain: function( domain ) {
@@ -84,7 +89,8 @@ MapScreen.prototype = {
     // transforms world coords to screen coords:
     var screenX = this.tilePixelsX * (worldX - this._scrollX);
     var screenY = this.tilePixelsY * (worldY - this._scrollY);
-    return [screenX, screenY];
+    return [screenX + this.pixelOffset.x,
+	    screenY + this.pixelOffset.y];
   },
   isOnScreen: function( worldX, worldY ) {
     var screenX = worldX - this._scrollX;
@@ -92,7 +98,7 @@ MapScreen.prototype = {
     return (screenX > -1 && screenX < this.numTilesX &&
             screenY > -1 && screenY < this.numTilesY);
   },
-  autoScrollToPlayer: function( x, y ) {
+  autoScrollToPlayer: function( x, y, delX, delY ) {
     // plotAt, but also scrolls screen if this is too close to the edge and it's
     // possible to scroll.
     var screenX = x - this._scrollX;
@@ -104,17 +110,18 @@ MapScreen.prototype = {
     var rightEdge = this.numTilesX - this.margins.right - 1;
     var bottomEdge = this.numTilesY - this.margins.bottom - 1;
 
-    if (screenX < leftEdge) {
+    if (delX < 0 && screenX < leftEdge) {
       this.scroll( (screenX - leftEdge), 0 );
-    } else if (screenX > rightEdge) {
+    }
+    if (delX > 0 && screenX > rightEdge) {
       this.scroll( (screenX - rightEdge), 0 );
     }
-    if (screenY < topEdge) {
+    if (delY < 0 && screenY < topEdge) {
       this.scroll( 0, (screenY - topEdge) );
-    } else if (screenY > bottomEdge) {
+    } 
+    if (delY > 0 && screenY > bottomEdge) {
       this.scroll( 0, (screenY - bottomEdge ) );
     }
-    this.render();
   },
 
   render: function() {
@@ -129,14 +136,14 @@ MapScreen.prototype = {
         var spriteOffsetY = tile.y * this.tilePixelsY + 0.5;
 
         this._ctx.drawImage(img,
-                            spriteOffsetX,
-                            spriteOffsetY,
-                            (this.tilePixelsX - 0.5),
-                            (this.tilePixelsY - 0.5),
-                            x * (this.tilePixelsX ),
-                            y * (this.tilePixelsY ),
-                            this.tilePixelsX,
-                            this.tilePixelsY);
+               spriteOffsetX,
+               spriteOffsetY,
+               (this.tilePixelsX),
+               (this.tilePixelsY),
+               x * (this.tilePixelsX ) + this.pixelOffset.x,
+               y * (this.tilePixelsY ) + this.pixelOffset.y,
+               this.tilePixelsX,
+               this.tilePixelsY);
       }
     }
 

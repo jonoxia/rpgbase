@@ -81,8 +81,9 @@ $(document).ready( function() {
   });
 
   player.addCharacter(hero);
-  var mapScreen = new MapScreen(document.getElementById("mapscreen-canvas"), 16, 12, 16, 16);
+  var mapScreen = new MapScreen(document.getElementById("mapscreen-canvas"), 17, 13, 16, 16);
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
+  mapScreen.setTileOffset({x: -0.5, y: -0.5});
 
   var map = new Map(19, 25, mapData, "terrain.png");
   map.getTileForCode = function(mapCode) {
