@@ -29,6 +29,9 @@ var mapData = [
 $(document).ready( function() {
   var ctx = document.getElementById("mapscreen-canvas").getContext("2d");
   ctx.scale(2, 2);
+  ctx.mozImageSmoothingEnabled = false;
+  ctx.webkitImageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = false;
 
   var player = new Player();
   var hero = new PlayerCharacter("mapsprites.png", 16, 24, 0, -8);
@@ -76,8 +79,6 @@ $(document).ready( function() {
   map.onStep({landType: 39}, function(player, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
-
-
 
   mapScreen.setNewDomain(map);
   player.enterMapScreen(mapScreen, 4, 4);

@@ -138,14 +138,14 @@ MapScreen.prototype = {
         var img = this._currentDomain._img;
         
         var tile = this._currentDomain.getTileForCode(code);
-        var spriteOffsetX = tile.x * this.tilePixelsX + 0.5;
-        var spriteOffsetY = tile.y * this.tilePixelsY + 0.5;
+        var spriteOffsetX = tile.x * this.tilePixelsX;
+        var spriteOffsetY = tile.y * this.tilePixelsY;
 
         this._ctx.drawImage(img,
-               spriteOffsetX,
-               spriteOffsetY,
-               (this.tilePixelsX),
-               (this.tilePixelsY),
+               spriteOffsetX,   // left of slice
+               spriteOffsetY,  // top of slice
+	       (this.tilePixelsX),  // width of slice
+	       (this.tilePixelsY), // height of slice
                x * (this.tilePixelsX ) + this.pixelOffset.x,
                y * (this.tilePixelsY ) + this.pixelOffset.y,
                this.tilePixelsX,
