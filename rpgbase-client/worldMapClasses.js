@@ -46,7 +46,6 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this._scrollY = 0;
   this._htmlElem = htmlElem;  // must be canvas
   this._ctx = this._htmlElem.getContext("2d");
-  this._ctx.scale(2, 2);
 
   this.numTilesX = numTilesX;
   this.numTilesY = numTilesY;
