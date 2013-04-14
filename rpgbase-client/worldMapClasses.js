@@ -15,6 +15,9 @@ Map.prototype = {
   },
 
   onStep: function(trigger, result) {
+    // Trigger can be:
+    // {x:x, y:y}
+    // {landType}
     this._stepHandlers.push({
       trigger: trigger,
       result: result});
@@ -29,6 +32,10 @@ Map.prototype = {
       var triggered = false;
       if (trigger.x == x &&
           trigger.y == y) {
+        triggered = true;
+      }
+
+      if (trigger.landType == this._mapData[y][x]) {
         triggered = true;
       }
       
