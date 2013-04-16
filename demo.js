@@ -45,13 +45,17 @@ $(document).ready( function() {
   };
   hero.setSprite(0, 1);
 
-  var walkFrame = 0;
-  player.onMove(function(deltaX, deltaY, reallyMoved) {
+  var frameCount = 0;
+  hero.walkAnimation(function(deltaX, deltaY, frame) {
+    // "this" refers to hero
+    frameCount += 1;
+    walkFrame = (Math.floor(frameCount / 3) % 2);
+    // switch sprite every 3 animation frames
     if (deltaX < 0) {
-      this.setSprite(6+ walkFrame, 1);
+      this.setSprite(6+walkFrame, 1);
     }
     if (deltaX > 0) {
-      this.setSprite(2 + walkFrame, 1);
+      this.setSprite(2 +walkFrame, 1);
     }
     if (deltaY < 0) {
       this.setSprite(4+walkFrame, 1);
@@ -59,7 +63,6 @@ $(document).ready( function() {
     if (deltaY > 0) {
       this.setSprite(0+walkFrame, 1);
     }
-    walkFrame = (walkFrame + 1) %2;
   });
 
   player.addCharacter(hero);

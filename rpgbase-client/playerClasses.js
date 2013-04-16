@@ -46,6 +46,7 @@ Player.prototype = {
       }
     } else {
       animator = function(frame) {
+        var i;
         if (canMove) {
           var offset = {
             x: deltaX * frame * 16 / self.scrollAnimFrames,
@@ -65,13 +66,13 @@ Player.prototype = {
         if (canMove) {
           self.party[i].move(self.mapScreen, deltaX, deltaY);
         }
-        // user-defined callback(s):
-        for (var i = 0; i < self.moveListeners.length; i++) {
-          self.moveListeners[i].call(self.party[i],
-                                     deltaX, deltaY, canMove);
-        }
       }
       self.mapScreen.scroll(scrolliness.x, scrolliness.y);
+      // user-defined callback(s):
+      for (var i = 0; i < self.moveListeners.length; i++) {
+        self.moveListeners[i].call(self.party[i],
+                                   deltaX, deltaY, canMove);
+      }
       self.mapScreen.render();
       self.busyMoving = false;
     }
@@ -81,6 +82,12 @@ Player.prototype = {
 
       if (animator) {
         animator(currFrame);
+      }
+
+      for (var i = 0; i < self.party.length; i++) {
+        if (self.party[i]._animationCallback) {
+          self.party[i]._animationCallback(deltaX, deltaY, currFrame);
+        }
       }
       
       currFrame ++;
@@ -127,6 +134,7 @@ PlayerCharacter.prototype = {
     this._offsetY = offsetY;
 
     this._animationOffset = {x: 0, y: 0};
+    this._animationCallback = null;
   },
   
   setSprite: function(sliceX, sliceY) {
@@ -135,6 +143,10 @@ PlayerCharacter.prototype = {
 
   setAnimationOffset: function(offset) {
     this._animationOffset = offset;
+  },
+
+  walkAnimation: function(callback) {
+    this._animationCallback = callback;
   },
 
   plot: function(mapScreen) {
