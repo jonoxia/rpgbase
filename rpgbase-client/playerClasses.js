@@ -38,6 +38,7 @@ Player.prototype = {
 				                     deltaX,
 				                     deltaY);
 
+    console.log("Scrolliness = " + scrolliness.x + ", " + scrolliness.y);
     var animator = null;
     if (scrolliness.x != 0 || scrolliness.y != 0) {
       if (canMove) {

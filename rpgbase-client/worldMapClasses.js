@@ -113,8 +113,8 @@ MapScreen.prototype = {
   },
 
   calcAutoScroll: function(x, y, delX, delY) {
-    var screenX = x - this._scrollX;
-    var screenY = y - this._scrollY;
+    var screenX = (x + delX) - this._scrollX;
+    var screenY = (y + delY) - this._scrollY;
     
     var topEdge = this.margins.top;
     var leftEdge = this.margins.left;
@@ -123,6 +123,7 @@ MapScreen.prototype = {
 
     var scrollX = this._scrollX;
     var scrollY = this._scrollY;
+    console.log("screenX/y is " + screenX+ ", " + screenY);
     if (delX < 0 && screenX < leftEdge) {
       scrollX += (screenX - leftEdge);
     }
@@ -148,32 +149,6 @@ MapScreen.prototype = {
 
     return {x: scrollX - this._scrollX,
             y: scrollY - this._scrollY};
-  },
-
-
-  autoScrollToPlayer: function( x, y, delX, delY ) {
-    // plotAt, but also scrolls screen if this is too close to the edge and it's
-    // possible to scroll.
-    var screenX = x - this._scrollX;
-    var screenY = y - this._scrollY;
-    
-    var topEdge = this.margins.top;
-    var leftEdge = this.margins.left;
-    var rightEdge = this.numTilesX - this.margins.right - 1;
-    var bottomEdge = this.numTilesY - this.margins.bottom - 1;
-
-    if (delX < 0 && screenX < leftEdge) {
-      this.scroll( (screenX - leftEdge), 0 );
-    }
-    if (delX > 0 && screenX > rightEdge) {
-      this.scroll( (screenX - rightEdge), 0 );
-    }
-    if (delY < 0 && screenY < topEdge) {
-      this.scroll( 0, (screenY - topEdge) );
-    } 
-    if (delY > 0 && screenY > bottomEdge) {
-      this.scroll( 0, (screenY - bottomEdge ) );
-    }
   },
 
   render: function(pixelAdjustment) {
