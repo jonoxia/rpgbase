@@ -122,7 +122,6 @@ MapScreen.prototype = {
 
     var scrollX = this._scrollX;
     var scrollY = this._scrollY;
-    console.log("screenX/y is " + screenX+ ", " + screenY);
     if (delX < 0 && screenX < leftEdge) {
       scrollX += (screenX - leftEdge);
     }
