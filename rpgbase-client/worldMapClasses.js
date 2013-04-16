@@ -4,8 +4,7 @@ function Map(dimX, dimY, data, spritesheet) {
   this._dimX = dimX;
   this._dimY = dimY;
 
-  this._img = new Image();
-  this._img.src = spritesheet;
+  this._img = spritesheet;
 
   this._stepHandlers = [];
 }

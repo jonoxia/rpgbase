@@ -1,4 +1,3 @@
-
 function Player() {
   this.mapScreen = null;
   this.party = [];
@@ -118,8 +117,7 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY) {
 }
 PlayerCharacter.prototype = {
   _init: function(spriteSheet, width, height, offsetX, offsetY) {
-    this._img = new Image();
-    this._img.src = spriteSheet;
+    this._img = spriteSheet;
     /*this._stuckInEncounter = false;
     this._inventory = [];*/
 

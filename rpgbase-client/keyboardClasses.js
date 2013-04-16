@@ -6,7 +6,6 @@ const RIGHT_ARROW = 39;
 const CONFIRM_BUTTON = 67;
 const CANCEL_BUTTON = 88;
 
-
 function SmoothKeyListener(repeatRate, callback) {
   this.repeatRate = repeatRate;
   this.callback = callback;

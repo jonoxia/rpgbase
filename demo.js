@@ -33,8 +33,11 @@ $(document).ready( function() {
   ctx.webkitImageSmoothingEnabled = false;
   ctx.imageSmoothingEnabled = false;
 
+  var loader = new AssetLoader();
+
   var player = new Player();
-  var hero = new PlayerCharacter("mapsprites.png", 16, 24, 0, -8);
+  var hero = new PlayerCharacter(loader.add("mapsprites.png"),
+                                 16, 24, 0, -8);
 
   hero.canCross = function(landType) {
     if ( landType == 36 || landType == 12 || landType == 13 || landType == 14 || landType == 15 || landType == 17 || landType == 40) {
@@ -95,7 +98,7 @@ $(document).ready( function() {
   });
   inputHandler.startListening();
 
-  var map = new Map(19, 25, mapData, "terrain.png");
+  var map = new Map(19, 25, mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
     return {x:mapCode, y:0};
   };
@@ -110,5 +113,8 @@ $(document).ready( function() {
 
   mapScreen.setNewDomain(map);
   player.enterMapScreen(mapScreen, 4, 4);
-  mapScreen.render();
+
+  loader.loadThemAll(function() {
+    mapScreen.render();
+  });
 });
