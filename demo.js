@@ -46,7 +46,7 @@ $(document).ready( function() {
   hero.setSprite(0, 1);
 
   var walkFrame = 0;
-  hero.onMove(function(deltaX, deltaY, reallyMoved) {
+  player.onMove(function(deltaX, deltaY, reallyMoved) {
     if (deltaX < 0) {
       this.setSprite(6+ walkFrame, 1);
     }
@@ -63,9 +63,34 @@ $(document).ready( function() {
   });
 
   player.addCharacter(hero);
+  player.useScrollAnimation(5, 50);
+
   var mapScreen = new MapScreen(document.getElementById("mapscreen-canvas"), 17, 13, 16, 16);
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
+
+  var walker = new SmoothWalker(5, 50, function(frame, direction) {
+    var delX, delY;
+    switch (direction) {
+    case DOWN_ARROW:
+      delX = 0; delY = 1;
+      break;
+    case LEFT_ARROW:
+      delX = -1; delY = 0;
+      break;
+    case UP_ARROW:
+      delX = 0; delY = -1;
+      break;
+    case RIGHT_ARROW:
+      delX = 1; delY = 0;
+      break;
+    }
+
+    if (!player.busyMoving) {
+      player.move(delX, delY);
+    }
+  });
+  walker.startListening();
 
   var map = new Map(19, 25, mapData, "terrain.png");
   map.getTileForCode = function(mapCode) {
@@ -82,5 +107,5 @@ $(document).ready( function() {
 
   mapScreen.setNewDomain(map);
   player.enterMapScreen(mapScreen, 4, 4);
-  player.plotAll();
+  mapScreen.render();
 });

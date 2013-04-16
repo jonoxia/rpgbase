@@ -63,6 +63,9 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this.pixelOffset = {x: 0, y: 0};
   // TODO set width and height of canvas element to
   // numTilesX * tilePixelsX, etc.
+
+  this.scrollAnimFrames = 0;
+  this.scrollAnimTime = 0;
 }
 MapScreen.prototype = {
   setScrollMargins: function( newMargins ) {
@@ -72,6 +75,10 @@ MapScreen.prototype = {
   setTileOffset: function( newOffset ) {
 	this.pixelOffset = {x: newOffset.x * this.tilePixelsX,
 			    y: newOffset.y * this.tilePixelsY};
+  },
+
+  setPlayer: function(player) {
+    this.player = player;
   },
 
   setNewDomain: function( domain ) {
@@ -104,12 +111,51 @@ MapScreen.prototype = {
     return (screenX > -1 && screenX < this.numTilesX &&
             screenY > -1 && screenY < this.numTilesY);
   },
+
+  calcAutoScroll: function(x, y, delX, delY) {
+    var screenX = x - this._scrollX;
+    var screenY = y - this._scrollY;
+    
+    var topEdge = this.margins.top;
+    var leftEdge = this.margins.left;
+    var rightEdge = this.numTilesX - this.margins.right - 1;
+    var bottomEdge = this.numTilesY - this.margins.bottom - 1;
+
+    var scrollX = this._scrollX;
+    var scrollY = this._scrollY;
+    if (delX < 0 && screenX < leftEdge) {
+      scrollX += (screenX - leftEdge);
+    }
+    if (delX > 0 && screenX > rightEdge) {
+      scrollX += (screenX - rightEdge);
+    }
+    if (delY < 0 && screenY < topEdge) {
+      scrollY += (screenY - topEdge);
+    } 
+    if (delY > 0 && screenY > bottomEdge) {
+      scrollY += (screenY - bottomEdge);
+    }
+
+    // Stop at edges of map:
+    if (scrollX < 0)
+      scrollX = 0;
+    if ( scrollX + this.numTilesX > this._currentDomain._dimX)
+      scrollX = this._currentDomain._dimX - this.numTilesX;
+    if (scrollY < 0)
+      scrollY = 0;
+    if (scrollY + this.numTilesY > this._currentDomain._dimY)
+      scrollY = this._currentDomain._dimY - this.numTilesY;
+
+    return {x: scrollX - this._scrollX,
+            y: scrollY - this._scrollY};
+  },
+
+
   autoScrollToPlayer: function( x, y, delX, delY ) {
     // plotAt, but also scrolls screen if this is too close to the edge and it's
     // possible to scroll.
     var screenX = x - this._scrollX;
     var screenY = y - this._scrollY;
-    var scrollVal = 0;
     
     var topEdge = this.margins.top;
     var leftEdge = this.margins.left;
@@ -130,7 +176,9 @@ MapScreen.prototype = {
     }
   },
 
-  render: function() {
+  render: function(pixelAdjustment) {
+    // pixel adjustment is optional but if present it should have
+    // a .x and .y
     for (var y = 0; y < this.numTilesY; y++) {
       for (var x = 0; x < this.numTilesX; x++) {
         var code = this.getLandType( x + this._scrollX,
@@ -141,18 +189,43 @@ MapScreen.prototype = {
         var spriteOffsetX = tile.x * this.tilePixelsX;
         var spriteOffsetY = tile.y * this.tilePixelsY;
 
+        var drawX = x * (this.tilePixelsX ) + this.pixelOffset.x;
+        var drawY = y * (this.tilePixelsY ) + this.pixelOffset.y;
+        if (pixelAdjustment) {
+          drawX += pixelAdjustment.x;
+          drawY += pixelAdjustment.y;
+        }
+
         this._ctx.drawImage(img,
                spriteOffsetX,   // left of slice
                spriteOffsetY,  // top of slice
 	       (this.tilePixelsX),  // width of slice
 	       (this.tilePixelsY), // height of slice
-               x * (this.tilePixelsX ) + this.pixelOffset.x,
-               y * (this.tilePixelsY ) + this.pixelOffset.y,
+               drawX,
+               drawY,
                this.tilePixelsX,
                this.tilePixelsY);
       }
     }
 
+    var party = this.player.getParty();
+    for (var i = 0; i < party.length; i++) {
+      party[i].plot(this);
+    }
+  },
+
+  getScrollAnimator: function(delta, numFrames) {
+    var self = this;
+    var xFactor = delta.x / numFrames;
+    var yFactor = delta.y / numFrames;
+    
+    var animator = function(frame) {
+      var adj = {x:(-1) * (frame * xFactor* self.tilePixelsX),
+                 y:(-1) * (frame * yFactor * self.tilePixelsY)
+                };
+      self.render(adj);
+    };
+    return animator;
   },
 
   scroll: function( deltaX, deltaY ) {

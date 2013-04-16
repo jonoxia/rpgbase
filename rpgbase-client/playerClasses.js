@@ -2,62 +2,107 @@
 function Player() {
   this.mapScreen = null;
   this.party = [];
+
+  this.scrollAnimFrames = 5;
+  this.scrollAnimTime = 50;
+
+  this.moveListeners = [];
+  this.busyMoving = false;
 }
 Player.prototype = {
   enterMapScreen: function(mapScreen, x, y) {
     this.mapScreen = mapScreen;
-    // Set up keyboard input:
-    var self = this;
-    keyMap[ARROW_DOWN] = function(evt) {
-      self.move( 0, 1 );
-      cancelEvent(evt);
-    };
-    keyMap[ARROW_UP] = function(evt) {
-      self.move( 0, -1);
-      cancelEvent(evt);
-    };
-    keyMap[ARROW_LEFT] = function(evt) {
-      self.move( -1, 0);
-      cancelEvent(evt);
-    };
-    keyMap[ARROW_RIGHT] = function(evt) {
-      self.move( 1, 0);
-      cancelEvent(evt);
-    };
-
-    // Add the keydown listner to the document object
-    bind(document, 'keydown', keyMap, handleKeystroke);
-
+    mapScreen.setPlayer(this);
     for (var i = 0; i < this.party.length; i++) {
       this.party[i].setPos(x, y);
     }
   },
 
+  useScrollAnimation: function( numFrames, frameTime) {
+    this.scrollAnimFrames = numFrames;
+    this.scrollAnimTime = frameTime;
+  },
+
   move: function(deltaX, deltaY) {
-    for (var i = 0; i < this.party.length; i++) {
-      this.party[i].move(this.mapScreen, deltaX, deltaY);
+    var self = this;
+    if (this.busyMoving) {
+      return;
+      // don't process another move event till this animation is done
+    }
+    this.busyMoving = true;
+    var mainChar = this.party[0];
+
+    var canMove = mainChar.canMove(self.mapScreen, deltaX, deltaY);
+    var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
+				                     mainChar._y,
+				                     deltaX,
+				                     deltaY);
+
+    var animator = null;
+    if (scrolliness.x != 0 || scrolliness.y != 0) {
+      if (canMove) {
+        animator = this.mapScreen.getScrollAnimator(scrolliness,
+                                                    self.scrollAnimFrames);
+      }
+    } else {
+      animator = function(frame) {
+        if (canMove) {
+          var offset = {
+            x: deltaX * frame * 16 / self.scrollAnimFrames,
+            y: deltaY * frame * 16 / self.scrollAnimFrames
+          };
+          for (var i = 0; i < self.party.length; i++) {
+            self.party[i].setAnimationOffset(offset);
+          }
+        }
+        self.mapScreen.render();
+      };
     }
 
-    var mainChar = this.party[0];
-    this.mapScreen.autoScrollToPlayer( mainChar._x, 
-				       mainChar._y,
-				       deltaX,
-				       deltaY
-				       );
+    var finish = function() {
+      for (var i = 0; i < self.party.length; i++) {
+        self.party[i].setAnimationOffset({x: 0, y: 0});
+        if (canMove) {
+          self.party[i].move(self.mapScreen, deltaX, deltaY);
+        }
+        // user-defined callback(s):
+        for (var i = 0; i < self.moveListeners.length; i++) {
+          self.moveListeners[i].call(self.party[i],
+                                     deltaX, deltaY, canMove);
+        }
+      }
+      self.mapScreen.scroll(scrolliness.x, scrolliness.y);
+      self.mapScreen.render();
+      self.busyMoving = false;
+    }
 
-    this.mapScreen.render();
-    this.plotAll();
+    var currFrame = 0;
+    var timer = window.setInterval(function() {
+
+      if (animator) {
+        animator(currFrame);
+      }
+      
+      currFrame ++;
+      if (currFrame == self.scrollAnimFrames) {
+        window.clearInterval(timer);
+        finish();
+      }
+    }, self.scrollAnimTime);
   },
 
   addCharacter: function(playerCharacter) {
     this.party.push(playerCharacter);
   },
 
-  plotAll: function() {
-    for (var i = 0; i < this.party.length; i++) {
-      this.party[i].plot(this.mapScreen);
-    }
+  getParty: function() {
+    return this.party;
+  },
+
+  onMove: function(callback) {
+    this.moveListeners.push(callback);
   }
+
 }
 
 
@@ -81,18 +126,30 @@ PlayerCharacter.prototype = {
     this._offsetX = offsetX;
     this._offsetY = offsetY;
 
-    this.moveListeners = [];
+    this._animationOffset = {x: 0, y: 0};
   },
   
   setSprite: function(sliceX, sliceY) {
     this._spriteSlice = {x: sliceX, y: sliceY};
   },
 
+  setAnimationOffset: function(offset) {
+    this._animationOffset = offset;
+  },
+
   plot: function(mapScreen) {
+    //adjustment is optional, but if provided it should have x, y
     var screenCoords = mapScreen.transform(this._x, this._y);
     var x = screenCoords[0] + this._offsetX;
     var y = screenCoords[1] + this._offsetY;
 
+    if (this._animationOffset) {
+      x+= this._animationOffset.x;
+      y+= this._animationOffset.y;
+    }
+
+   /* $("#debug").html("My x = " + this._x + ", y = " + this._y
+                     + " so plotting at screen x =" + x + ", y=" + y);*/
     var spriteOffsetX = this._spriteSlice.x * this.width;
     var spriteOffsetY = this._spriteSlice.y * this.height;
 
@@ -110,14 +167,7 @@ PlayerCharacter.prototype = {
     return true;
   },
 
-  move: function( mapScreen, deltaX, deltaY ) {
-    /*if (this._stuckInEncounter) {
-      return false;
-    }
-
-    if (this._movementCallback) {
-      var canMove = this._movementCallback(deltaX, deltaY);
-    }*/
+  canMove: function(mapScreen, deltaX, deltaY) {
     var canMove = true;
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
@@ -130,25 +180,28 @@ PlayerCharacter.prototype = {
         canMove = false;
       }
     }
+    return canMove;
+  },
 
-    if (canMove) {
-      var oldX = this._x;
-      var oldY = this._y;
-      this._x = newX;
-      this._y = newY;
-      //this._updatePositionToServer();
-
-      // map triggers:
-      mapScreen.processStep(this, newX, newY);
+  move: function( mapScreen, deltaX, deltaY ) {
+    /*if (this._stuckInEncounter) {
+      return false;
     }
 
-    // user-defined callback(s):
-    for (var i = 0; i < this.moveListeners.length; i++) {
-      this.moveListeners[i].call(this, deltaX, deltaY, canMove);
-    }
+    if (this._movementCallback) {
+      var canMove = this._movementCallback(deltaX, deltaY);
+    }*/
 
+    var newX = this._x + deltaX;
+    var newY = this._y + deltaY;
+    this._x = newX;
+    this._y = newY;
+    //this._updatePositionToServer();
 
-    this.plot(mapScreen);
+    // map triggers:
+    mapScreen.processStep(this, newX, newY);
+    //this.plot(mapScreen);
+    //$("#debug").html("x = " + this._x + ", y = " + this._y);
     //gEncounterManager.checkForEncounters(this._x, this._y, this);
   },
 
@@ -160,10 +213,5 @@ PlayerCharacter.prototype = {
 
   setDomain: function( domainId ) {
     this._domainId = domainId;
-  },
-
-  onMove: function(callback) {
-    this.moveListeners.push(callback);
   }
-
 };
