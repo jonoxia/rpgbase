@@ -72,9 +72,9 @@ $(document).ready( function() {
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
 
-  var walker = new SmoothWalker(5, 50, function(frame, direction) {
+  var inputHandler = new SmoothKeyListener(50, function(key) {
     var delX, delY;
-    switch (direction) {
+    switch (key) {
     case DOWN_ARROW:
       delX = 0; delY = 1;
       break;
@@ -93,7 +93,7 @@ $(document).ready( function() {
       player.move(delX, delY);
     }
   });
-  walker.startListening();
+  inputHandler.startListening();
 
   var map = new Map(19, 25, mapData, "terrain.png");
   map.getTileForCode = function(mapCode) {
