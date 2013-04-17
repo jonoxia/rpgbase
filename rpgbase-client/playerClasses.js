@@ -24,6 +24,12 @@ Player.prototype = {
 
   move: function(deltaX, deltaY) {
     var self = this;
+
+    var partyMoveDirections = [{x: deltaX, y: deltaY}];
+    for (var i = 0; i < this.party.length - 1; i++) {
+      partyMoveDirections.push(this.party[i].getLastMoved());
+    }
+
     if (this.busyMoving) {
       return;
       // don't process another move event till this animation is done
@@ -42,16 +48,20 @@ Player.prototype = {
       if (canMove) {
         animator = this.mapScreen.getScrollAnimator(scrolliness,
                                                     self.scrollAnimFrames);
+        // TODO should do animation offsets for party members
+        // beyond the first (who are not moving same direction as the
+        // first) even if the screen is scrolling.
       }
     } else {
       animator = function(frame) {
         var i;
         if (canMove) {
-          var offset = {
-            x: deltaX * frame * 16 / self.scrollAnimFrames,
-            y: deltaY * frame * 16 / self.scrollAnimFrames
-          };
+          var pixels = frame * 16 / self.scrollAnimFrames;
           for (var i = 0; i < self.party.length; i++) {
+            var offset = {
+              x: pixels * partyMoveDirections[i].x,
+              y: deltaY * partyMoveDirections[i].y
+            };
             self.party[i].setAnimationOffset(offset);
           }
         }
@@ -63,14 +73,15 @@ Player.prototype = {
       for (var i = 0; i < self.party.length; i++) {
         self.party[i].setAnimationOffset({x: 0, y: 0});
         if (canMove) {
-          self.party[i].move(self.mapScreen, deltaX, deltaY);
+          self.party[i].move(self.mapScreen,
+                             partyMoveDirections[i].x,
+                             partyMoveDirections[i].y);
         }
       }
       self.mapScreen.scroll(scrolliness.x, scrolliness.y);
       // user-defined callback(s):
       for (var i = 0; i < self.moveListeners.length; i++) {
-        self.moveListeners[i].call(self.party[i],
-                                   deltaX, deltaY, canMove);
+        self.moveListeners[i].call(self, deltaX, deltaY, canMove);
       }
       self.mapScreen.render();
       self.busyMoving = false;
@@ -85,7 +96,9 @@ Player.prototype = {
 
       for (var i = 0; i < self.party.length; i++) {
         if (self.party[i]._animationCallback) {
-          self.party[i]._animationCallback(deltaX, deltaY, currFrame);
+          self.party[i]._animationCallback(partyMoveDirections[i].x,
+                                           partyMoveDirections[i].y,
+                                           currFrame);
         }
       }
       
@@ -133,6 +146,8 @@ PlayerCharacter.prototype = {
 
     this._animationOffset = {x: 0, y: 0};
     this._animationCallback = null;
+
+    this.lastMoved = {x: 0, y: 0};
   },
   
   setSprite: function(sliceX, sliceY) {
@@ -206,6 +221,8 @@ PlayerCharacter.prototype = {
     var newY = this._y + deltaY;
     this._x = newX;
     this._y = newY;
+
+    this.lastMoved = {x: deltaX, y: deltaY};
     //this._updatePositionToServer();
 
     // map triggers:
@@ -223,5 +240,9 @@ PlayerCharacter.prototype = {
 
   setDomain: function( domainId ) {
     this._domainId = domainId;
+  },
+
+  getLastMoved: function() {
+    return this.lastMoved;
   }
 };

@@ -38,14 +38,18 @@ $(document).ready( function() {
   var player = new Player();
   var hero = new PlayerCharacter(loader.add("mapsprites.png"),
                                  16, 24, 0, -8);
+  var sidekick =  new PlayerCharacter(loader.add("mapsprites.png"),
+                                 16, 24, 0, -8);
 
-  hero.canCross = function(landType) {
+  var canCross = function(landType) {
     if ( landType == 36 || landType == 12 || landType == 13 || landType == 14 || landType == 15 || landType == 17 || landType == 40) {
       return false;
     } else {
       return true;
     }
   };
+
+  hero.canCross = canCross;
   hero.setSprite(0, 1);
 
   var frameCount = 0;
@@ -68,7 +72,35 @@ $(document).ready( function() {
     }
   });
 
+  var sidekickWalk = function(deltaX, deltaY, frame) {
+    walkFrame = (Math.floor(frameCount / 3) % 2);
+    if (deltaX < 0) {
+      this.setSprite(6+walkFrame, 0);
+    }
+    if (deltaX > 0) {
+      this.setSprite(2 +walkFrame, 0);
+    }
+    if (deltaY < 0) {
+      this.setSprite(4+walkFrame, 0);
+    }
+    if (deltaY > 0) {
+      this.setSprite(0+walkFrame, 0);
+    }
+  };
+  sidekick.walkAnimation(sidekickWalk);
+
+  var sidekick2 =  new PlayerCharacter(loader.add("mapsprites.png"),
+                                 16, 24, 0, -8);
+  sidekick2.walkAnimation(sidekickWalk);
+
+  var sidekick3 =  new PlayerCharacter(loader.add("mapsprites.png"),
+                                 16, 24, 0, -8);
+  sidekick3.walkAnimation(sidekickWalk);
+
   player.addCharacter(hero);
+  player.addCharacter(sidekick);
+  player.addCharacter(sidekick2);
+  player.addCharacter(sidekick3);
   player.useScrollAnimation(5, 50);
 
   var mapScreen = new MapScreen(document.getElementById("mapscreen-canvas"), 17, 13, 16, 16);
