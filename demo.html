@@ -4,14 +4,20 @@
 <script type="text/javascript" src="rpgbase-client/jquery.js"></script>
 <script type="text/javascript" src="rpgbase-client/webclientUtils.js"></script>
 <script type="text/javascript" src="rpgbase-client/keyboardClasses.js"></script>
+<script type="text/javascript" src="rpgbase-client/encounterClasses.js"></script>
 <script type="text/javascript" src="rpgbase-client/worldMapClasses.js"></script>
 <script type="text/javascript" src="rpgbase-client/playerClasses.js"></script>
 <script type="text/javascript" src="demo.js"></script>
+
+<link href="demo.css" rel="stylesheet" type="text/css">
 </head>
 
 <body>
 <canvas id="mapscreen-canvas" width="512" height="384">
 </canvas>
+<div id="battle-system" width="512" height="384">
+  <div class="msg-display"></div>
+</div>
 <div id="debug"></div>
 </body>
 </html>

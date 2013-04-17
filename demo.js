@@ -107,8 +107,15 @@ $(document).ready( function() {
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
 
+  var battleSystem = new BattleSystem($("#battle-system"), {});
+
   var inputHandler = new SmoothKeyListener(50, function(key) {
-    var delX, delY;
+    if (battleSystem.battleModeOn) {
+      battleSystem.handleKey(key);
+      return;
+    }
+    // otherwise, input goes to map screen:
+    var delX = 0, delY =0;
     switch (key) {
     case DOWN_ARROW:
       delX = 0; delY = 1;
@@ -122,9 +129,13 @@ $(document).ready( function() {
     case RIGHT_ARROW:
       delX = 1; delY = 0;
       break;
+    case CONFIRM_BUTTON:
+      break;
+    case CANCEL_BUTTON:
+      break;
     }
 
-    if (!player.busyMoving) {
+    if ((delX != 0 || delY != 0) && !player.busyMoving) {
       player.move(delX, delY);
     }
   });
@@ -143,8 +154,20 @@ $(document).ready( function() {
     $("#debug").html("You stepped on a hill.");
   });
 
+  map.onStep({chance: 0.05}, function(player, x, y) {
+    mapScreen.hide();
+    
+    battleSystem.onEndBattle(function() {
+      mapScreen.show();
+    });
+
+    battleSystem.startBattle(player, []);
+  });
+
   mapScreen.setNewDomain(map);
   player.enterMapScreen(mapScreen, 4, 4);
+
+
 
   loader.loadThemAll(function() {
     mapScreen.render();
