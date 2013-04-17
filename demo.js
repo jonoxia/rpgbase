@@ -71,6 +71,7 @@ $(document).ready( function() {
       this.setSprite(0+walkFrame, 1);
     }
   });
+  hero.name = "ALIS";
 
   var sidekickWalk = function(deltaX, deltaY, frame) {
     walkFrame = (Math.floor(frameCount / 3) % 2);
@@ -88,14 +89,17 @@ $(document).ready( function() {
     }
   };
   sidekick.walkAnimation(sidekickWalk);
+  sidekick.name = "MYAU";
 
   var sidekick2 =  new PlayerCharacter(loader.add("mapsprites.png"),
                                  16, 24, 0, -8);
   sidekick2.walkAnimation(sidekickWalk);
+  sidekick2.name = "ODIN";
 
   var sidekick3 =  new PlayerCharacter(loader.add("mapsprites.png"),
                                  16, 24, 0, -8);
   sidekick3.walkAnimation(sidekickWalk);
+  sidekick3.name = "NOAH";
 
   player.addCharacter(hero);
   player.addCharacter(sidekick);
@@ -107,7 +111,32 @@ $(document).ready( function() {
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
 
-  var battleSystem = new BattleSystem($("#battle-system"), {});
+
+  var defaultCmdSet = new BattleCommandSet();
+  defaultCmdSet.add("FIGHT", new BatCmd({
+    effect: function(screen, user) {
+      screen.showMsg(user + " does some fierce FIGHTING!");
+    }
+  }));
+  defaultCmdSet.add("MAGIC", new BatCmd({
+    effect: function(screen, user) {
+      screen.showMsg(user + " uses some arcane MAGIC!");
+    }
+  }));
+  defaultCmdSet.add("ITEM", new BatCmd({
+    effect: function(screen, user) {
+      screen.showMsg(user + " uses an appropriate ITEM!");
+    }
+  }));
+  defaultCmdSet.add("RUN", new BatCmd({
+    effect: function(screen, user) {
+      screen.showMsg(user + " prudently RUNS AWAY!");
+    }
+  }));
+
+  var battleSystem = new BattleSystem($("#battle-system"), {
+    defaultCmdSet: defaultCmdSet
+  });
 
   var inputHandler = new SmoothKeyListener(50, function(key) {
     if (battleSystem.battleModeOn) {
@@ -146,15 +175,15 @@ $(document).ready( function() {
     return {x:mapCode, y:0};
   };
 
-  map.onStep({x: 8, y: 17}, function(player, x, y) {
+  map.onStep({x: 8, y: 17}, function(pc, x, y) {
     $("#debug").html("You stepped on a town.");
   });
 
-  map.onStep({landType: 39}, function(player, x, y) {
+  map.onStep({landType: 39}, function(pc, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
 
-  map.onStep({chance: 0.05}, function(player, x, y) {
+  map.onStep({chance: 0.05}, function(pc, x, y) {
     mapScreen.hide();
     
     battleSystem.onEndBattle(function() {

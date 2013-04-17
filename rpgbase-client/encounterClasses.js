@@ -1,21 +1,27 @@
-function CmdMenu(parentTag) {
+function CmdMenu(container) {
     this.cmdList = [];
     this.selectedIndex = 0;
-    this.parentTag = $("<table></table>");
-    this.parentTag.addClass("menu");
-    parentTag.append(this.parentTag);
+    this.container = container;
     this.cursorHtml = "<blink>&#x25B6;</blink>";
+    this.msg = null;
+    this.afterChooseCallback = null;
 }
 CmdMenu.prototype = {
     clear: function() {
-	this.cmdList = [];
-	this.parentTag.empty();
+      this.cmdList = [];
+    },
+
+    setMsg: function(msg) {
+      this.msg = msg;
+    },
+
+    onChoose: function(callback) {
+      this.afterChooseCallback = callback;
     },
 
     addCommand: function(name, callback) {
 	this.cmdList.push({name: name, execute: callback});
     },
-    // remove command?
     
     moveSelectionUp: function() {
 	this.selectedIndex --;
@@ -34,24 +40,35 @@ CmdMenu.prototype = {
     },
 
     chooseSelected: function() {
-	var cmd = this.cmdList[this.selectedIndex];
-	cmd.execute();
+      var cmd = this.cmdList[this.selectedIndex];
+      cmd.execute();
+      if (this.afterChooseCallback) {
+        this.afterChooseCallback();
+      }
     },
 
     showArrowAtIndex: function(index) {
-	var rows = this.parentTag.find("tr");
-	for (var r = 0; r < rows.length; r++) {
-	    var cell = $(rows[r]).find("td")[0];
-	    if (r == index) {
-		$(cell).html(this.cursorHtml);
-	    } else {
-		$(cell).empty();
-	    }
+      var rows = this.parentTag.find("tr");
+      for (var r = 0; r < rows.length; r++) {
+	var cell = $(rows[r]).find("td")[0];
+	if (r == index) {
+	  $(cell).html(this.cursorHtml);
+	} else {
+	  $(cell).empty();
 	}
+      }
     },
 
     display: function() {
-	this.parentTag.empty();
+      if (this.msg) {
+        this.msgTag = $("<span></span>");
+        this.msgTag.html(this.msg);
+        this.container.append(this.msgTag);
+      }
+      this.parentTag = $("<table></table>");
+      this.parentTag.addClass("menu");
+      this.container.append(this.parentTag);
+
 	var self = this;
 
 	for (var c in this.cmdList) {
@@ -93,10 +110,14 @@ CmdMenu.prototype = {
   },
 
   close: function() {
+    this.msgTag.remove();
     this.parentTag.remove();
+  },
+
+  reset: function() {
+    this.selectedIndex = 0;
   }
 };
-
 
 function Encounter(monsterList) {
   
@@ -104,12 +125,12 @@ function Encounter(monsterList) {
 Encounter.prototype = {
 };
 
-
-
 function BattleSystem(htmlElem, options) {
   this.htmlElem = htmlElem;
   this.displayElem = this.htmlElem.find(".msg-display");
-  this.focusedMenu = null;
+
+  this.menuStack = [];
+
   this.htmlElem.hide();
   this.endBattleCallbacks = [];
 
@@ -119,12 +140,60 @@ function BattleSystem(htmlElem, options) {
   } else {
     this.defaultMsg = "Monsters appeared!";
   }
+
+  if (options.defaultCmdSet) {
+    this.defaultCmdSet = options.defaultCmdSet;
+  }
 }
 BattleSystem.prototype = {
-
   showMsg: function(msg) {
     this.displayElem.html(msg);
     this.displayElem.show();
+  },
+
+  pushMenu: function(newMenu) {
+    this.menuStack.push(newMenu);
+    newMenu.display();
+  },
+  
+  popMenu: function() {
+    if (this.menuStack.length > 1) {
+      this.menuStack[ this.menuStack.length - 1].close();
+      this.menuStack.pop();
+    }
+  },
+
+  emptyMenuStack: function() {
+    for (var i = 0; i < this.menuStack.length; i++) {
+      this.menuStack[i].close();
+    }
+    this.menuStack = [];
+  },
+
+  makeMenuForPC: function(pc) {
+    var self = this;
+    var cmdMenu = new CmdMenu(this.htmlElem);
+    cmdMenu.setMsg("Choose command for " + pc.name);
+    // TODO callback to userland to let menu be customized for this PC
+
+    var addOneCmd = function(name, cmd) {
+      cmdMenu.addCommand(name, function() {
+        self.lockedInCmds[pc.name] = cmd;
+      });
+    };
+    for (var name in self.defaultCmdSet.cmds) {
+      addOneCmd(name, self.defaultCmdSet.cmds[name]);
+    }
+    return cmdMenu;
+  },
+  
+  chainMenu: function(firstMenu, secondMenu) {
+    // makes it so that choosing first menu results in pushing
+    // second menu onto the menu stack.
+    var self = this;
+    firstMenu.onChoose(function() {
+      self.pushMenu(secondMenu);
+    });
   },
 
   startBattle: function(player, encounter) {
@@ -135,7 +204,28 @@ BattleSystem.prototype = {
     this.battleModeOn = true;
     var self = this;
 
-    var cmdMenu = new CmdMenu(this.htmlElem);
+    this.pcMenus = [];
+    this.lockedInCmds = {};
+    var party = this.player.getParty();
+    for (var i = 0; i < party.length; i++) {
+      this.pcMenus.push(this.makeMenuForPC(party[i]));
+    }
+
+    // Set up callback chain so selecting from each menu triggers
+    // the next menu, but selecting from the last menu starts the
+    // fight round:
+    for (var i = 0; i < party.length; i++) {
+      if (i + 1 < party.length) {
+        this.chainMenu(this.pcMenus[i], this.pcMenus[i+1]);
+      } else {
+        this.pcMenus[i].onChoose(function() {
+          self.emptyMenuStack();
+          self.fightOneRound();
+        });
+      }
+    }
+
+    /*var cmdMenu = new CmdMenu(this.htmlElem);
     cmdMenu.addCommand("Win", function() {
       self.endBattle("win");
     });
@@ -145,12 +235,45 @@ BattleSystem.prototype = {
     cmdMenu.addCommand("Run", function() {
       self.endBattle("run");
     });
-    cmdMenu.display();
-    this.focusedMenu = cmdMenu;
+    cmdMenu.display();*/
+    
+    this.showPCMenus();
+  },
+
+  showPCMenus: function() {
+    for (var i = 0; i < this.pcMenus.length; i++) {
+      this.pcMenus[i].reset();
+    }
+    this.pushMenu(this.pcMenus[0]);
+  },
+
+  fightOneRound: function() {
+    var fighters = [];
+    var self = this;
+    // TODO callback to userland to find out order of actions
+    for (var pcName in self.lockedInCmds) {
+      fighters.push(pcName);
+    }
+    var fighterIndex = 0;
+    self.showMsg("A round of battle is starting!");
+    var timer = window.setInterval(function() {
+      if (fighterIndex == fighters.length) {
+        self.showMsg("Round complete! Next round starts.");
+        window.clearInterval(timer);
+        self.showPCMenus();
+        return;
+      }
+      var fighter = fighters[fighterIndex];
+      var action = self.lockedInCmds[fighter];
+      action.effect(self, fighter);
+      fighterIndex++;
+    }, 750);
   },
 
   endBattle: function(winLoseRun) {
-    this.focusedMenu.close();
+    var i;
+    self.emptyMenuStack();
+    this.pcMenus = [];
     switch (winLoseRun) {
     case "win":
       $("#debug").html("You won!");
@@ -164,14 +287,22 @@ BattleSystem.prototype = {
     }
     this.battleModeOn = false;
     this.htmlElem.hide();
-    for (var i = 0; i < this.endBattleCallbacks.length; i++) {
+    for (i = 0; i < this.endBattleCallbacks.length; i++) {
       this.endBattleCallbacks[i](winLoseRun);
     }
   },
 
   handleKey: function(keyCode) {
-    if (this.focusedMenu) {
-      this.focusedMenu.onKey(keyCode);
+    if (keyCode == CANCEL_BUTTON) {
+      // cancel -> pop top menu off menu stack, go back to previous one
+      if (this.menuStack.length > 1) {
+        this.popMenu();
+      }
+    } else {
+      // send keystroke to menu on top of stack
+      if (this.menuStack.length > 0) {
+        this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
+      }
     }
   },
 
@@ -179,3 +310,99 @@ BattleSystem.prototype = {
     this.endBattleCallbacks.push(callback);
   }
 };
+
+
+function BatCmd(options) {
+  if (options.canUse) {
+    this.canUse = canUse;
+  } else {
+    this.canUse = function(user) {
+      return true;
+    };
+  }
+  this.targetType = options.target;
+  this.effect = options.effect;
+}
+
+
+function BattleCommandSet() {
+  this.cmds = {};
+}
+BattleCommandSet.prototype = {
+  add: function(name, battleCommand) {
+    battleCommand.name = name;
+    this.cmds[name] = battleCommand;
+  }
+};
+
+
+/* TODO:
+
+   monsters and players all get statblocks with 
+   setStats(dictionary)
+   setStat(name, value)
+   getStat(name)
+
+   create a stats display for each player character
+   positioning and style of stats displays determined by css
+   contents of stat display decided by userland callback
+
+   battlesystem calls back userland to decide action order
+   (here's an array of stat blocks. tell me who goes next!)
+
+   on monster's go, call monster AI callback to let monster
+   pick its action
+
+   on PC's go, pop up a menu of that PC's commands
+
+   one of the battlesystem options should be "batch commands" --
+   if true, ask for action for all PCs at beginning of "round"
+   (in which case, whoGoesNext callback should be able to say "end the
+      round")(perhaps by returning null?)
+   if false, each PC action is queried at the beginning of that PC's go.
+
+   how about supporting a battle system where you put in the action but
+   there's some time before it resolves (i.e. different actions have
+   varying initiative penalties?)
+
+   
+   jake wants a kind of "aggro system" for monster target selection
+   (that can really go in userland i think -- he just sets a stat
+    called 'targetTickets' for each PC, uses that in the AI callback)
+
+
+    want a 'standard command menu' which individual characters use as
+    the default, but can override (especially override the magic 
+      submenu).
+      
+    so there's probably a BattleCommandSet class which can recursively
+    contain other BattleCommandSets
+    and has some kind of .clone() method maybe? so you can clone it
+    and then modify the clones?
+
+    var fightCmds = new BattleCommandSet();
+    fightCmds.add("CHARGE", function() {});
+    fightCmds.add("STRIKE", function() {});
+    // etc etc.
+    var stdSet = new BattleCommandSet();
+    stdSet.add("FIGHT", fightCmds);
+    stdSet.add("MAGIC", null);
+    // null means it's greyed out and not selectable
+    
+    hero.commandSet = stdSet.clone().replace("MAGIC", heroMagic);
+    
+    // note we want the subitems of MAGIC and the subitems of ITEM to
+    be determined dynamically, at fight-start time, or better yet,
+    when the menu is displayed.
+
+    maybe each PC gets an (optional) customizeCommands callback? Now
+    we're getting somewhere.
+
+    hero.spellList = new BattleCommandSet();
+    hero.spellList.add("HEAL", function() {});
+
+    hero.onShowCommandMenu(function(pc, stdCmds) {
+        stdCmds.replace("MAGIC", hero.magic);
+        stdCmds.replace("ITEM", hero.items);
+    });
+*/
