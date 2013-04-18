@@ -111,6 +111,7 @@ Player.prototype = {
   },
 
   addCharacter: function(playerCharacter) {
+    playerCharacter._marchOrder = this.party.length;
     this.party.push(playerCharacter);
   },
 
@@ -123,7 +124,6 @@ Player.prototype = {
   }
 
 }
-
 
 function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY) {
   this._init(spriteSheet, width, height, offsetX, offsetY);

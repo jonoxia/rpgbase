@@ -189,6 +189,9 @@ MapScreen.prototype = {
 
     var party = this.player.getParty().slice();
     party.sort(function(a, b) {
+      if (a._y == b._y) {
+        return (b._marchOrder - a._marchOrder);
+      }
       return (a._y - b._y);
     });
     for (var i = 0; i < party.length; i++) {
