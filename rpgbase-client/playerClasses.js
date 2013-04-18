@@ -22,6 +22,12 @@ Player.prototype = {
     this.scrollAnimTime = frameTime;
   },
 
+  /* TODO the next rank of tiles in the direction you're scrolling
+   * towards needs to start getting drawn halfway through the scroll
+   * animation. Otherwise you don't see it and you get that ugly
+   * stretching effect. Basically we need to call scroll() halfway
+   * through the animation instead of at the end.*/
+
   move: function(deltaX, deltaY) {
     var self = this;
 
@@ -58,9 +64,6 @@ Player.prototype = {
                              partyMoveDirections[i].x,
                              partyMoveDirections[i].y);
         }
-      }
-      if (canMove) {
-        self.mapScreen.scroll(scrolliness.x, scrolliness.y);
       }
       // user-defined callback(s):
       for (var i = 0; i < self.moveListeners.length; i++) {

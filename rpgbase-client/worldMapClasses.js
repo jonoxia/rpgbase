@@ -206,11 +206,27 @@ MapScreen.prototype = {
     var self = this;
     var xFactor = delta.x / numFrames;
     var yFactor = delta.y / numFrames;
+
+    var halfwayPoint = Math.floor(numFrames/2);
     
     var animator = function(frame) {
+      // calculate pixel adjustment based on tile size, current
+      // frame, and direction of movement:
       var adj = {x:(-1) * (frame * xFactor* self.tilePixelsX),
                  y:(-1) * (frame * yFactor * self.tilePixelsY)
                 };
+      if (frame == halfwayPoint) {
+        // update the map's scroll position once,
+        // halfway through the animation, so that
+        // the next row of tiles will be loaded and ready to display:
+        self.scroll(delta.x, delta.y);
+      }
+      if (frame >= halfwayPoint) {
+        // after updating map's scroll position,
+        // correct pixel adjustment by one tile size:
+        adj.x += delta.x * self.tilePixelsX;
+        adj.y += delta.y * self.tilePixelsY;
+      }
       self.render(adj);
     };
     return animator;
