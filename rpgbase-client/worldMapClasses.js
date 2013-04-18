@@ -195,7 +195,7 @@ MapScreen.prototype = {
       return (a._y - b._y);
     });
     for (var i = 0; i < party.length; i++) {
-      party[i].plot(this);
+      party[i].plot(this, pixelAdjustment);
     }
   },
 

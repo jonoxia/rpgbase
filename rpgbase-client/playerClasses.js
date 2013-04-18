@@ -43,30 +43,12 @@ Player.prototype = {
 				                     deltaX,
 				                     deltaY);
 
-    var animator = null;
+    var mapAnimator = null;
     if (scrolliness.x != 0 || scrolliness.y != 0) {
       if (canMove) {
-        animator = this.mapScreen.getScrollAnimator(scrolliness,
-                                                    self.scrollAnimFrames);
-        // TODO should do animation offsets for party members
-        // beyond the first (who are not moving same direction as the
-        // first) even if the screen is scrolling.
+        mapAnimator = this.mapScreen.getScrollAnimator(scrolliness,
+                                                       self.scrollAnimFrames);
       }
-    } else {
-      animator = function(frame) {
-        var i;
-        if (canMove) {
-          var pixels = frame * 16 / self.scrollAnimFrames;
-          for (var i = 0; i < self.party.length; i++) {
-            var offset = {
-              x: pixels * partyMoveDirections[i].x,
-              y: deltaY * partyMoveDirections[i].y
-            };
-            self.party[i].setAnimationOffset(offset);
-          }
-        }
-        self.mapScreen.render();
-      };
     }
 
     var finish = function() {
@@ -89,17 +71,36 @@ Player.prototype = {
 
     var currFrame = 0;
     var timer = window.setInterval(function() {
+      // For each animation frame:
 
-      if (animator) {
-        animator(currFrame);
+      // Adjust each party member's screen position:
+      var i;
+      if (canMove) {
+        var pixels = currFrame * 16 / self.scrollAnimFrames;
+        for (var i = 0; i < self.party.length; i++) {
+          var offset = {
+            x: pixels * partyMoveDirections[i].x,
+            y: pixels * partyMoveDirections[i].y
+          };
+          self.party[i].setAnimationOffset(offset);
+        }
       }
 
-      for (var i = 0; i < self.party.length; i++) {
+      // Change the sprites for each party member:
+      for (i = 0; i < self.party.length; i++) {
         if (self.party[i]._animationCallback) {
           self.party[i]._animationCallback(partyMoveDirections[i].x,
                                            partyMoveDirections[i].y,
                                            currFrame);
         }
+      }
+
+      // scroll the map if needed:
+      if (mapAnimator) {
+        mapAnimator(currFrame); // this will render
+      } else {
+        // if not scrolling, just redraw our new positions:
+        self.mapScreen.render();
       }
       
       currFrame ++;
@@ -162,7 +163,7 @@ PlayerCharacter.prototype = {
     this._animationCallback = callback;
   },
 
-  plot: function(mapScreen) {
+  plot: function(mapScreen, adjustment) {
     //adjustment is optional, but if provided it should have x, y
     var screenCoords = mapScreen.transform(this._x, this._y);
     var x = screenCoords[0] + this._offsetX;
@@ -171,6 +172,10 @@ PlayerCharacter.prototype = {
     if (this._animationOffset) {
       x+= this._animationOffset.x;
       y+= this._animationOffset.y;
+    }
+    if (adjustment) {
+      x+= adjustment.x;
+      y+= adjustment.y;
     }
 
    /* $("#debug").html("My x = " + this._x + ", y = " + this._y
