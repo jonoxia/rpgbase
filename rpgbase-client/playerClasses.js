@@ -69,7 +69,7 @@ Player.prototype = {
       self.busyMoving = false;
     }
 
-    var currFrame = 0;
+    var currFrame = 1;
     var timer = window.setInterval(function() {
       // For each animation frame:
 
@@ -102,9 +102,8 @@ Player.prototype = {
         // if not scrolling, just redraw our new positions:
         self.mapScreen.render();
       }
-      
       currFrame ++;
-      if (currFrame == self.scrollAnimFrames) {
+      if (currFrame > self.scrollAnimFrames) {
         window.clearInterval(timer);
         finish();
       }
