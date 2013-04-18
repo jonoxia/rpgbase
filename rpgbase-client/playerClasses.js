@@ -42,7 +42,6 @@ Player.prototype = {
 				                     mainChar._y,
 				                     deltaX,
 				                     deltaY);
-
     var mapAnimator = null;
     if (scrolliness.x != 0 || scrolliness.y != 0) {
       if (canMove) {
@@ -60,7 +59,9 @@ Player.prototype = {
                              partyMoveDirections[i].y);
         }
       }
-      self.mapScreen.scroll(scrolliness.x, scrolliness.y);
+      if (canMove) {
+        self.mapScreen.scroll(scrolliness.x, scrolliness.y);
+      }
       // user-defined callback(s):
       for (var i = 0; i < self.moveListeners.length; i++) {
         self.moveListeners[i].call(self, deltaX, deltaY, canMove);
