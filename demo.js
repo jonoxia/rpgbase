@@ -111,17 +111,25 @@ $(document).ready( function() {
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
 
 
+  var spellList = new BattleCommandSet();
+  spellList.add("CURE1", new BatCmd({
+    effect: function(screen, user) {
+      screen.showMsg(user + " casts CURE1!");
+    }
+  }));
+  spellList.add("FIRE1", new BatCmd({
+    effect: function(screen, user) {
+      screen.showMsg(user + " casts FIRE1!");
+    }
+  }));
+
   var defaultCmdSet = new BattleCommandSet();
   defaultCmdSet.add("FIGHT", new BatCmd({
     effect: function(screen, user) {
       screen.showMsg(user + " does some fierce FIGHTING!");
     }
   }));
-  defaultCmdSet.add("MAGIC", new BatCmd({
-    effect: function(screen, user) {
-      screen.showMsg(user + " uses some arcane MAGIC!");
-    }
-  }));
+  defaultCmdSet.add("MAGIC", spellList);
   defaultCmdSet.add("ITEM", new BatCmd({
     effect: function(screen, user) {
       screen.showMsg(user + " uses an appropriate ITEM!");
@@ -138,11 +146,6 @@ $(document).ready( function() {
   });
 
   var inputHandler = new DPadStyleKeyHandler(50, function(key) {
-    if (battleSystem.battleModeOn) {
-      battleSystem.handleKey(key);
-      return;
-    }
-    // otherwise, input goes to map screen:
     var delX = 0, delY =0;
     switch (key) {
     case DOWN_ARROW:
@@ -169,6 +172,11 @@ $(document).ready( function() {
   });
   inputHandler.startListening();
 
+  var battleInputHandler = new NoRepeatKeyHandler(function(key) {
+     battleSystem.handleKey(key);
+  });
+
+
   var map = new Map(19, 25, mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
     return {x:mapCode, y:0};
@@ -181,15 +189,21 @@ $(document).ready( function() {
   map.onStep({landType: 39}, function(pc, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
+        // menu 
 
   map.onStep({chance: 0.05}, function(pc, x, y) {
-    /*mapScreen.hide();
+    console.log("Triggering battle system");
+    mapScreen.hide();
+    inputHandler.stopListening();
+    battleInputHandler.startListening();
     
     battleSystem.onEndBattle(function() {
+      battleInputHandler.stopListening();
+      inputHandler.startListening();
       mapScreen.show();
     });
 
-    battleSystem.startBattle(player, []);*/
+    battleSystem.startBattle(player, []);
   });
 
   mapScreen.setNewDomain(map);

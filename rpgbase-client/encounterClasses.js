@@ -170,19 +170,32 @@ BattleSystem.prototype = {
     this.menuStack = [];
   },
 
-  makeMenuForPC: function(pc) {
+  makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = new CmdMenu(this.htmlElem);
     cmdMenu.setMsg("Choose command for " + pc.name);
-    // TODO callback to userland to let menu be customized for this PC
 
     var addOneCmd = function(name, cmd) {
-      cmdMenu.addCommand(name, function() {
-        self.lockedInCmds[pc.name] = cmd;
-      });
+      console.log("In addOneCmd - name is " + name + " cmd is " + cmd);
+      // if this command has a submenu, then choosing it
+      // just opens the submenu:
+      if (cmd.isContainer) {
+        cmdMenu.addCommand(name, function() {
+          self.pushMenu(self.makeMenuForPC(pc, cmd));
+        });
+        // TODO this won't work because the chainMenus callback will
+        // trigger and open the next PC's main menu.
+      } else {
+          // but if it's a "leaf node" then choosing it
+          // locks in the command for the PC.
+        cmdMenu.addCommand(name, function() {
+          self.lockedInCmds[pc.name] = cmd;
+        });
+      }
     };
-    for (var name in self.defaultCmdSet.cmds) {
-      addOneCmd(name, self.defaultCmdSet.cmds[name]);
+    for (var name in cmdSet.cmds) {
+      console.log("Adding cmd " + name + " to menu.");
+      addOneCmd(name, cmdSet.cmds[name]);
     }
     return cmdMenu;
   },
@@ -197,6 +210,7 @@ BattleSystem.prototype = {
   },
 
   startBattle: function(player, encounter) {
+    console.log("Starting battle");
     this.htmlElem.show();
     this.player = player;
     this.encounter = encounter;
@@ -208,7 +222,10 @@ BattleSystem.prototype = {
     this.lockedInCmds = {};
     var party = this.player.getParty();
     for (var i = 0; i < party.length; i++) {
-      this.pcMenus.push(this.makeMenuForPC(party[i]));
+      // TODO callback to userland to let menu be customized for this PC
+      console.log("Will make main menu for " + party[i].name);
+      this.pcMenus.push(this.makeMenuForPC(party[i],
+                                           self.defaultCmdSet));
     }
 
     // Set up callback chain so selecting from each menu triggers
@@ -323,6 +340,9 @@ function BatCmd(options) {
   this.targetType = options.target;
   this.effect = options.effect;
 }
+BatCmd.prototype = {
+  isContainer: false
+};
 
 
 function BattleCommandSet() {
@@ -332,7 +352,10 @@ BattleCommandSet.prototype = {
   add: function(name, battleCommand) {
     battleCommand.name = name;
     this.cmds[name] = battleCommand;
-  }
+    // battleCommand can be another BattleCommandSet
+    // so these sets can nest recursively.
+  },
+  isContainer: true
 };
 
 

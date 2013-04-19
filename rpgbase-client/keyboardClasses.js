@@ -6,6 +6,38 @@ const RIGHT_ARROW = 39;
 const CONFIRM_BUTTON = 67;
 const CANCEL_BUTTON = 88;
 
+function NoRepeatKeyHandler(keyCallback) {
+  var keysThatAreDown = [];
+
+  this.onKeydown = function(evt) {
+    if ([LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW, CONFIRM_BUTTON, CANCEL_BUTTON].indexOf(evt.which) > -1) {
+      evt.preventDefault();
+      if (keysThatAreDown.indexOf(evt.which) == -1) {
+        keysThatAreDown.push(evt.which);
+        keyCallback(evt.which);
+      }
+    }
+  };
+
+  this.onKeyup = function(evt) {
+    var index = keysThatAreDown.indexOf(evt.which);
+    if (index > -1) {
+      evt.preventDefault();
+      keysThatAreDown.splice(index, 1);
+    }
+  };
+}
+NoRepeatKeyHandler.prototype = {
+  startListening: function() {
+    $(document).bind("keydown", this.onKeydown);
+    $(document).bind("keyup", this.onKeyup);
+  },
+  stopListening: function() {
+    $(document).unbind("keydown", this.onKeydown);
+    $(document).unbind("keyup", this.onKeyup);
+  }
+};
+
 function DPadStyleKeyHandler(repeatRate, keyCallback) {
   this.repeatRate = repeatRate;
 
@@ -22,6 +54,69 @@ function DPadStyleKeyHandler(repeatRate, keyCallback) {
   this.timer = null;
 
   this.keysThatAreDown = [];
+
+  var self = this;
+
+  this.loop = function() {
+    // If a key's being held down, queue it up
+    if (self.keysThatAreDown.length > 0) {
+      self.queueNextKey();
+    }
+
+    // if we're ready to start an animation:
+    if (!self.animationRunning && self.queued != null) {
+      // pull the key out of the queue
+      var key = self.queued;
+      self.queued = null;
+
+      // process the key:
+      self.keyCallback(key);
+      // the keyCallback will call startAnimation if it wants
+      // any animation. Check if an animation has started...
+      if (self.animationRunning) {
+        // that means we should consider the key to be in
+        // the state of being processed
+        self.processing = key;
+      }
+    }
+    
+    if (self.animationRunning) {
+      // if an animation is going on, run one frame of it:
+      self.currFrame ++;
+      if (self.frameCallback) {
+        self.frameCallback(self.currFrame);
+      }
+      
+      // If that was the last frame, finish up the animation:
+      if (self.currFrame == self.numFrames) {
+        if (self.finishCallback) {
+          self.finishCallback();
+        }
+        // clear the state
+        self.animationRunning = false;
+        self.processing = null;
+        self.currFrame = 0;
+      }
+    }
+  };
+
+  this.onKeyup = function(evt) {
+    var index = self.keysThatAreDown.indexOf(evt.which);
+    if (index > -1) {
+      evt.preventDefault();
+      self.keysThatAreDown.splice(index, 1);
+    }
+  };
+
+  this.onKeydown = function(evt) {
+    if ([LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW, CONFIRM_BUTTON, CANCEL_BUTTON].indexOf(evt.which) > -1) {
+      evt.preventDefault();
+      if (self.keysThatAreDown.indexOf(evt.which) == -1) {
+        self.keysThatAreDown.push(evt.which);
+        self.queueNextKey();
+      }
+    }
+  };
 }
 DPadStyleKeyHandler.prototype = {
   startAnimation: function(animationData) {
@@ -44,67 +139,14 @@ DPadStyleKeyHandler.prototype = {
   },
 
   startListening: function() {
-    var self = this;
+    this.timer = window.setInterval(this.loop, this.repeatRate);
+    $(document).bind("keydown", this.onKeydown);
+    $(document).bind("keyup", this.onKeyup);
+  },
 
-    self.timer = window.setInterval(function() {
-      // If a key's being held down, queue it up
-      if (self.keysThatAreDown.length > 0) {
-        self.queueNextKey();
-      }
-
-      // if we're ready to start an animation:
-      if (!self.animationRunning && self.queued != null) {
-        // pull the key out of the queue
-        var key = self.queued;
-        self.queued = null;
-
-        // process the key:
-        self.keyCallback(key);
-        // the keyCallback will call startAnimation if it wants
-        // any animation. Check if an animation has started...
-        if (self.animationRunning) {
-          // that means we should consider the key to be in
-          // the state of being processed
-          self.processing = key;
-        }
-      }
-
-      if (self.animationRunning) {
-        // if an animation is going on, run one frame of it:
-        self.currFrame ++;
-        if (self.frameCallback) {
-          self.frameCallback(self.currFrame);
-        }
-
-        // If that was the last frame, finish up the animation:
-        if (self.currFrame == self.numFrames) {
-          if (self.finishCallback) {
-            self.finishCallback();
-          }
-          // clear the state
-          self.animationRunning = false;
-          self.processing = null;
-          self.currFrame = 0;
-        }
-      }
-    }, self.repeatRate);
-
-    $(document).bind("keydown", function(evt) {
-      if ([LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW, CONFIRM_BUTTON, CANCEL_BUTTON].indexOf(evt.which) > -1) {
-        evt.preventDefault();
-        if (self.keysThatAreDown.indexOf(evt.which) == -1) {
-          self.keysThatAreDown.push(evt.which);
-          self.queueNextKey();
-        }
-      }
-    });
-
-    $(document).bind("keyup", function(evt) {
-      var index = self.keysThatAreDown.indexOf(evt.which);
-      if (index > -1) {
-        evt.preventDefault();
-        self.keysThatAreDown.splice(index, 1);
-      }
-    });
+  stopListening: function() {
+    // todo save refs to my own, only unbind those.
+    $(document).unbind("keydown", this.onKeydown);
+    $(document).unbind("keyup", this.onKeyup);
   }
 };
