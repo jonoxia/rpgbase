@@ -1,10 +1,6 @@
 function Player() {
   this.mapScreen = null;
   this.party = [];
-
-  this.scrollAnimFrames = 5;
-  this.scrollAnimTime = 50;
-
   this.moveListeners = [];
 }
 Player.prototype = {
@@ -16,14 +12,7 @@ Player.prototype = {
     }
   },
 
-  useScrollAnimation: function( numFrames, frameTime) {
-    this.scrollAnimFrames = numFrames;
-    // TODO frame time is now determined by SmoothKeyListener,
-    // so this is useless.
-    this.scrollAnimTime = frameTime;
-  },
-
-  move: function(deltaX, deltaY) {
+  move: function(deltaX, deltaY, numAnimFrames) {
     var self = this;
 
     var partyMoveDirections = [{x: deltaX, y: deltaY}];
@@ -42,7 +31,7 @@ Player.prototype = {
     if (scrolliness.x != 0 || scrolliness.y != 0) {
       if (canMove) {
         mapAnimator = this.mapScreen.getScrollAnimator(scrolliness,
-                                                       self.scrollAnimFrames);
+                                                       numAnimFrames);
       }
     }
 
@@ -68,7 +57,7 @@ Player.prototype = {
       // Adjust each party member's screen position:
       var i;
       if (canMove) {
-        var pixels = currFrame * 16 / self.scrollAnimFrames;
+        var pixels = currFrame * 16 / numAnimFrames;
         for (var i = 0; i < self.party.length; i++) {
           var offset = {
             x: pixels * partyMoveDirections[i].x,
@@ -96,7 +85,7 @@ Player.prototype = {
       }
     };
 
-    return {numFrames: self.scrollAnimFrames,
+    return {numFrames: numAnimFrames,
             frameCallback: frameCallback,
             finishCallback: finishCallback};
   },

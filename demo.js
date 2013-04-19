@@ -105,7 +105,6 @@ $(document).ready( function() {
   player.addCharacter(sidekick);
   player.addCharacter(sidekick2);
   player.addCharacter(sidekick3);
-  player.useScrollAnimation(5, 50);
 
   var mapScreen = new MapScreen(document.getElementById("mapscreen-canvas"), 17, 13, 16, 16);
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
@@ -138,7 +137,7 @@ $(document).ready( function() {
     defaultCmdSet: defaultCmdSet
   });
 
-  var inputHandler = new SmoothKeyListener(50, function(key) {
+  var inputHandler = new DPadStyleKeyHandler(50, function(key) {
     if (battleSystem.battleModeOn) {
       battleSystem.handleKey(key);
       return;
@@ -165,7 +164,7 @@ $(document).ready( function() {
     }
 
     if (delX != 0 || delY != 0) {
-      inputHandler.startAnimation(player.move(delX, delY));
+      inputHandler.startAnimation(player.move(delX, delY, 5));
     }
   });
   inputHandler.startListening();

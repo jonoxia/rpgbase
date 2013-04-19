@@ -6,7 +6,7 @@ const RIGHT_ARROW = 39;
 const CONFIRM_BUTTON = 67;
 const CANCEL_BUTTON = 88;
 
-function SmoothKeyListener(repeatRate, keyCallback) {
+function DPadStyleKeyHandler(repeatRate, keyCallback) {
   this.repeatRate = repeatRate;
 
   this.keyCallback = keyCallback;
@@ -23,7 +23,7 @@ function SmoothKeyListener(repeatRate, keyCallback) {
 
   this.keysThatAreDown = [];
 }
-SmoothKeyListener.prototype = {
+DPadStyleKeyHandler.prototype = {
   startAnimation: function(animationData) {
     this.numFrames = animationData.numFrames;
     this.frameCallback = animationData.frameCallback;
