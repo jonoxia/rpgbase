@@ -3,6 +3,8 @@
     font-family: monospace;
     font-weight: bold;
     color: white;
+    min-height: 384px;
+    min-width: 512px;
 }
 
 table.menu, div.wordbox {
@@ -16,4 +18,8 @@ table.menu, div.wordbox {
     -webkit-border-radius: 10px;
     -moz-border-radius: 10px;
     border-radius: 10px;
+}
+
+table.menu {
+    float: left;
 }

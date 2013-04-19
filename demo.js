@@ -192,7 +192,6 @@ $(document).ready( function() {
         // menu 
 
   map.onStep({chance: 0.05}, function(pc, x, y) {
-    console.log("Triggering battle system");
     mapScreen.hide();
     inputHandler.stopListening();
     battleInputHandler.startListening();
@@ -206,10 +205,14 @@ $(document).ready( function() {
     battleSystem.startBattle(player, []);
   });
 
-  mapScreen.setNewDomain(map);
-  player.enterMapScreen(mapScreen, 4, 4);
+  /*mapScreen.setNewDomain(map);
+  player.enterMapScreen(mapScreen, 4, 4);*/
 
-
+  // start battle immediately for testing purposes
+  mapScreen.hide();
+  battleSystem.startBattle(player, []);
+  inputHandler.stopListening();
+  battleInputHandler.startListening();
 
   loader.loadThemAll(function() {
     mapScreen.render();

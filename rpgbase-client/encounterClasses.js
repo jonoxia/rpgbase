@@ -4,7 +4,6 @@ function CmdMenu(container) {
     this.container = container;
     this.cursorHtml = "<blink>&#x25B6;</blink>";
     this.msg = null;
-    this.afterChooseCallback = null;
 }
 CmdMenu.prototype = {
     clear: function() {
@@ -13,10 +12,6 @@ CmdMenu.prototype = {
 
     setMsg: function(msg) {
       this.msg = msg;
-    },
-
-    onChoose: function(callback) {
-      this.afterChooseCallback = callback;
     },
 
     addCommand: function(name, callback) {
@@ -42,9 +37,6 @@ CmdMenu.prototype = {
     chooseSelected: function() {
       var cmd = this.cmdList[this.selectedIndex];
       cmd.execute();
-      if (this.afterChooseCallback) {
-        this.afterChooseCallback();
-      }
     },
 
     showArrowAtIndex: function(index) {
@@ -170,6 +162,22 @@ BattleSystem.prototype = {
     this.menuStack = [];
   },
 
+  choosePCCommand: function(pc, cmd) {
+    // lock in the choice:
+    this.lockedInCmds[pc.name] = cmd;
+
+    // If that was the last party member, then hide the menus
+    // and start the round!
+    var pcIndex = this.party.indexOf(pc);
+    if (pcIndex == this.party.length - 1) {
+      this.emptyMenuStack();
+      this.fightOneRound();
+    } else {
+      // Otherwise, show menu for next party member!
+      this.pushMenu(this.pcMenus[ pcIndex + 1]);
+    }
+  },
+
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = new CmdMenu(this.htmlElem);
@@ -183,13 +191,11 @@ BattleSystem.prototype = {
         cmdMenu.addCommand(name, function() {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
-        // TODO this won't work because the chainMenus callback will
-        // trigger and open the next PC's main menu.
       } else {
-          // but if it's a "leaf node" then choosing it
-          // locks in the command for the PC.
+        // but if it's a "leaf node" then choosing it
+        // locks in the command for the PC.
         cmdMenu.addCommand(name, function() {
-          self.lockedInCmds[pc.name] = cmd;
+          self.choosePCCommand(pc, cmd);
         });
       }
     };
@@ -200,15 +206,6 @@ BattleSystem.prototype = {
     return cmdMenu;
   },
   
-  chainMenu: function(firstMenu, secondMenu) {
-    // makes it so that choosing first menu results in pushing
-    // second menu onto the menu stack.
-    var self = this;
-    firstMenu.onChoose(function() {
-      self.pushMenu(secondMenu);
-    });
-  },
-
   startBattle: function(player, encounter) {
     console.log("Starting battle");
     this.htmlElem.show();
@@ -216,30 +213,15 @@ BattleSystem.prototype = {
     this.encounter = encounter;
     this.showMsg(this.defaultMsg);
     this.battleModeOn = true;
-    var self = this;
 
     this.pcMenus = [];
     this.lockedInCmds = {};
-    var party = this.player.getParty();
-    for (var i = 0; i < party.length; i++) {
+    this.party = this.player.getParty();
+    for (var i = 0; i < this.party.length; i++) {
       // TODO callback to userland to let menu be customized for this PC
-      console.log("Will make main menu for " + party[i].name);
-      this.pcMenus.push(this.makeMenuForPC(party[i],
-                                           self.defaultCmdSet));
-    }
-
-    // Set up callback chain so selecting from each menu triggers
-    // the next menu, but selecting from the last menu starts the
-    // fight round:
-    for (var i = 0; i < party.length; i++) {
-      if (i + 1 < party.length) {
-        this.chainMenu(this.pcMenus[i], this.pcMenus[i+1]);
-      } else {
-        this.pcMenus[i].onChoose(function() {
-          self.emptyMenuStack();
-          self.fightOneRound();
-        });
-      }
+      console.log("Will make main menu for " + this.party[i].name);
+      this.pcMenus.push(this.makeMenuForPC(this.party[i],
+                                           this.defaultCmdSet));
     }
 
     /*var cmdMenu = new CmdMenu(this.htmlElem);
