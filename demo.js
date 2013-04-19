@@ -164,8 +164,8 @@ $(document).ready( function() {
       break;
     }
 
-    if ((delX != 0 || delY != 0) && !player.busyMoving) {
-      player.move(delX, delY);
+    if (delX != 0 || delY != 0) {
+      inputHandler.startAnimation(player.move(delX, delY));
     }
   });
   inputHandler.startListening();
@@ -184,13 +184,13 @@ $(document).ready( function() {
   });
 
   map.onStep({chance: 0.05}, function(pc, x, y) {
-    mapScreen.hide();
+    /*mapScreen.hide();
     
     battleSystem.onEndBattle(function() {
       mapScreen.show();
     });
 
-    battleSystem.startBattle(player, []);
+    battleSystem.startBattle(player, []);*/
   });
 
   mapScreen.setNewDomain(map);

@@ -6,7 +6,6 @@ function Player() {
   this.scrollAnimTime = 50;
 
   this.moveListeners = [];
-  this.busyMoving = false;
 }
 Player.prototype = {
   enterMapScreen: function(mapScreen, x, y) {
@@ -19,14 +18,10 @@ Player.prototype = {
 
   useScrollAnimation: function( numFrames, frameTime) {
     this.scrollAnimFrames = numFrames;
+    // TODO frame time is now determined by SmoothKeyListener,
+    // so this is useless.
     this.scrollAnimTime = frameTime;
   },
-
-  /* TODO the next rank of tiles in the direction you're scrolling
-   * towards needs to start getting drawn halfway through the scroll
-   * animation. Otherwise you don't see it and you get that ugly
-   * stretching effect. Basically we need to call scroll() halfway
-   * through the animation instead of at the end.*/
 
   move: function(deltaX, deltaY) {
     var self = this;
@@ -36,11 +31,6 @@ Player.prototype = {
       partyMoveDirections.push(this.party[i].getLastMoved());
     }
 
-    if (this.busyMoving) {
-      return;
-      // don't process another move event till this animation is done
-    }
-    this.busyMoving = true;
     var mainChar = this.party[0];
 
     var canMove = mainChar.canMove(self.mapScreen, deltaX, deltaY);
@@ -56,7 +46,7 @@ Player.prototype = {
       }
     }
 
-    var finish = function() {
+    var finishCallback = function() {
       for (var i = 0; i < self.party.length; i++) {
         self.party[i].setAnimationOffset({x: 0, y: 0});
         if (canMove) {
@@ -70,11 +60,9 @@ Player.prototype = {
         self.moveListeners[i].call(self, deltaX, deltaY, canMove);
       }
       self.mapScreen.render();
-      self.busyMoving = false;
-    }
+    };
 
-    var currFrame = 1;
-    var timer = window.setInterval(function() {
+    var frameCallback = function(currFrame) {
       // For each animation frame:
 
       // Adjust each party member's screen position:
@@ -106,12 +94,11 @@ Player.prototype = {
         // if not scrolling, just redraw our new positions:
         self.mapScreen.render();
       }
-      currFrame ++;
-      if (currFrame > self.scrollAnimFrames) {
-        window.clearInterval(timer);
-        finish();
-      }
-    }, self.scrollAnimTime);
+    };
+
+    return {numFrames: self.scrollAnimFrames,
+            frameCallback: frameCallback,
+            finishCallback: finishCallback};
   },
 
   addCharacter: function(playerCharacter) {
