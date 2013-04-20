@@ -7,28 +7,30 @@ const CONFIRM_BUTTON = 67;
 const CANCEL_BUTTON = 88;
 
 function NoRepeatKeyHandler(keyCallback) {
-  var keysThatAreDown = [];
+  this.keysThatAreDown = [];
+  var self = this;
 
   this.onKeydown = function(evt) {
     if ([LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW, CONFIRM_BUTTON, CANCEL_BUTTON].indexOf(evt.which) > -1) {
       evt.preventDefault();
-      if (keysThatAreDown.indexOf(evt.which) == -1) {
-        keysThatAreDown.push(evt.which);
+      if (self.keysThatAreDown.indexOf(evt.which) == -1) {
+        self.keysThatAreDown.push(evt.which);
         keyCallback(evt.which);
       }
     }
   };
 
   this.onKeyup = function(evt) {
-    var index = keysThatAreDown.indexOf(evt.which);
+    var index = self.keysThatAreDown.indexOf(evt.which);
     if (index > -1) {
       evt.preventDefault();
-      keysThatAreDown.splice(index, 1);
+      self.keysThatAreDown.splice(index, 1);
     }
   };
 }
 NoRepeatKeyHandler.prototype = {
   startListening: function() {
+    this.keysThatAreDown = [];
     $(document).bind("keydown", this.onKeydown);
     $(document).bind("keyup", this.onKeyup);
   },
@@ -142,10 +144,18 @@ DPadStyleKeyHandler.prototype = {
     this.timer = window.setInterval(this.loop, this.repeatRate);
     $(document).bind("keydown", this.onKeydown);
     $(document).bind("keyup", this.onKeyup);
+
+    this.animationRunning = false;
+    this.currFrame = 0;
+    this.numFrames = 0;
+    this.queued = null;
+    this.processing = null;
+    this.keysThatAreDown = [];
   },
 
   stopListening: function() {
-    // todo save refs to my own, only unbind those.
+    window.clearInterval(this.timer);
+    this.timer = null;
     $(document).unbind("keydown", this.onKeydown);
     $(document).unbind("keyup", this.onKeyup);
   }

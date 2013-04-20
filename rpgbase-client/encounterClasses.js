@@ -126,7 +126,6 @@ function BattleSystem(htmlElem, options) {
   this.htmlElem.hide();
   this.endBattleCallbacks = [];
 
-  this.battleModeOn = false;
   if (options.defaultMsg) {
     this.defaultMsg = options.defaultMsg;
   } else {
@@ -136,6 +135,7 @@ function BattleSystem(htmlElem, options) {
   if (options.defaultCmdSet) {
     this.defaultCmdSet = options.defaultCmdSet;
   }
+  this.timer = null;
 }
 BattleSystem.prototype = {
   showMsg: function(msg) {
@@ -212,8 +212,7 @@ BattleSystem.prototype = {
     this.player = player;
     this.encounter = encounter;
     this.showMsg(this.defaultMsg);
-    this.battleModeOn = true;
-
+    this.emptyMenuStack();
     this.pcMenus = [];
     this.lockedInCmds = {};
     this.party = this.player.getParty();
@@ -255,10 +254,14 @@ BattleSystem.prototype = {
     }
     var fighterIndex = 0;
     self.showMsg("A round of battle is starting!");
-    var timer = window.setInterval(function() {
+    if (this.timer != null) {
+      window.clearInterval(this.timer);
+    }
+    this.timer = window.setInterval(function() {
       if (fighterIndex == fighters.length) {
         self.showMsg("Round complete! Next round starts.");
-        window.clearInterval(timer);
+        window.clearInterval(self.timer);
+        self.timer = null;
         self.showPCMenus();
         return;
       }
@@ -271,7 +274,7 @@ BattleSystem.prototype = {
 
   endBattle: function(winLoseRun) {
     var i;
-    self.emptyMenuStack();
+    this.emptyMenuStack();
     this.pcMenus = [];
     switch (winLoseRun) {
     case "win":
@@ -284,7 +287,9 @@ BattleSystem.prototype = {
       $("#debug").html("You ran away!");
       break;
     }
-    this.battleModeOn = false;
+    if (this.timer != null) {
+      window.clearInterval(this.timer);
+    }
     this.htmlElem.hide();
     for (i = 0; i < this.endBattleCallbacks.length; i++) {
       this.endBattleCallbacks[i](winLoseRun);

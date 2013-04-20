@@ -113,31 +113,32 @@ $(document).ready( function() {
 
   var spellList = new BattleCommandSet();
   spellList.add("CURE1", new BatCmd({
-    effect: function(screen, user) {
-      screen.showMsg(user + " casts CURE1!");
+    effect: function(battle, user) {
+      battle.showMsg(user + " casts CURE1!");
     }
   }));
   spellList.add("FIRE1", new BatCmd({
-    effect: function(screen, user) {
-      screen.showMsg(user + " casts FIRE1!");
+    effect: function(battle, user) {
+      battle.showMsg(user + " casts FIRE1!");
     }
   }));
 
   var defaultCmdSet = new BattleCommandSet();
   defaultCmdSet.add("FIGHT", new BatCmd({
-    effect: function(screen, user) {
-      screen.showMsg(user + " does some fierce FIGHTING!");
+    effect: function(battle, user) {
+      battle.showMsg(user + " does some fierce FIGHTING!");
     }
   }));
   defaultCmdSet.add("MAGIC", spellList);
   defaultCmdSet.add("ITEM", new BatCmd({
-    effect: function(screen, user) {
-      screen.showMsg(user + " uses an appropriate ITEM!");
+    effect: function(battle, user) {
+      battle.showMsg(user + " uses an appropriate ITEM!");
     }
   }));
   defaultCmdSet.add("RUN", new BatCmd({
-    effect: function(screen, user) {
-      screen.showMsg(user + " prudently RUNS AWAY!");
+    effect: function(battle, user) {
+      battle.showMsg(user + " prudently RUNS AWAY!");
+      battle.endBattle("run");
     }
   }));
 
@@ -175,7 +176,12 @@ $(document).ready( function() {
   var battleInputHandler = new NoRepeatKeyHandler(function(key) {
      battleSystem.handleKey(key);
   });
-
+  battleSystem.onEndBattle(function() {
+    // TODO leaving battle makes everything fucked up
+    battleInputHandler.stopListening();
+    inputHandler.startListening();
+    mapScreen.show();
+  });
 
   var map = new Map(19, 25, mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
@@ -189,30 +195,16 @@ $(document).ready( function() {
   map.onStep({landType: 39}, function(pc, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
-        // menu 
 
   map.onStep({chance: 0.05}, function(pc, x, y) {
     mapScreen.hide();
     inputHandler.stopListening();
     battleInputHandler.startListening();
-    
-    battleSystem.onEndBattle(function() {
-      battleInputHandler.stopListening();
-      inputHandler.startListening();
-      mapScreen.show();
-    });
-
     battleSystem.startBattle(player, []);
   });
 
-  /*mapScreen.setNewDomain(map);
-  player.enterMapScreen(mapScreen, 4, 4);*/
-
-  // start battle immediately for testing purposes
-  mapScreen.hide();
-  battleSystem.startBattle(player, []);
-  inputHandler.stopListening();
-  battleInputHandler.startListening();
+  mapScreen.setNewDomain(map);
+  player.enterMapScreen(mapScreen, 4, 4);
 
   loader.loadThemAll(function() {
     mapScreen.render();
