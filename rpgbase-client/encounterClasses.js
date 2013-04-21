@@ -3,15 +3,15 @@ function CmdMenu(container) {
     this.selectedIndex = 0;
     this.container = container;
     this.cursorHtml = "<blink>&#x25B6;</blink>";
-    this.msg = null;
+    this.title = null;
 }
 CmdMenu.prototype = {
     clear: function() {
       this.cmdList = [];
     },
 
-    setMsg: function(msg) {
-      this.msg = msg;
+    setTitle: function(title) {
+      this.title = title;
     },
 
     addCommand: function(name, callback) {
@@ -40,7 +40,7 @@ CmdMenu.prototype = {
     },
 
     showArrowAtIndex: function(index) {
-      var rows = this.parentTag.find("tr");
+      var rows = this.table.find("tr");
       for (var r = 0; r < rows.length; r++) {
 	var cell = $(rows[r]).find("td")[0];
 	if (r == index) {
@@ -52,13 +52,19 @@ CmdMenu.prototype = {
     },
 
     display: function() {
-      if (this.msg) {
-        this.msgTag = $("<span></span>");
-        this.msgTag.html(this.msg);
-        this.container.append(this.msgTag);
-      }
-      this.parentTag = $("<table></table>");
+      this.parentTag = $("<div></div>");
       this.parentTag.addClass("menu");
+      if (this.title) {
+        var titleSpan = $("<span></span>");
+        titleSpan.addClass("menu");
+        titleSpan.html(this.title);
+        this.parentTag.append(titleSpan);
+      }
+      this.table = $("<table></table>");
+      this.table.addClass("menu");
+      this.parentTag.css("left", this.screenX);
+      this.parentTag.css("top", this.screenY);
+      this.parentTag.append(this.table);
       this.container.append(this.parentTag);
 
 	var self = this;
@@ -81,7 +87,7 @@ CmdMenu.prototype = {
 		    self.chooseSelected();
 		});
 	    })(row, c);*/
-	    this.parentTag.append(row);
+	    this.table.append(row);
 	}
 	this.showArrowAtIndex(0);
 	this.parentTag.focus();
@@ -102,12 +108,20 @@ CmdMenu.prototype = {
   },
 
   close: function() {
-    this.msgTag.remove();
     this.parentTag.remove();
   },
 
   reset: function() {
     this.selectedIndex = 0;
+  },
+
+  setPos: function(x, y) {
+    this.screenX = x;
+    this.screenY = y;
+    if (this.parentTag) {
+      this.parentTag.css("left", x);
+      this.parentTag.css("top", y);
+    }
   }
 };
 
@@ -124,6 +138,7 @@ function BattleSystem(htmlElem, options) {
   this.menuStack = [];
 
   this.htmlElem.hide();
+  $("#battlescreen-canvas").hide(); // TODO no hardcode
   this.endBattleCallbacks = [];
 
   if (options.defaultMsg) {
@@ -135,6 +150,10 @@ function BattleSystem(htmlElem, options) {
   if (options.defaultCmdSet) {
     this.defaultCmdSet = options.defaultCmdSet;
   }
+  this._drawCallback = null;
+  if (options.onDrawBattle) {
+    this._drawCallback = options.onDrawBattle;
+  }
   this.timer = null;
 }
 BattleSystem.prototype = {
@@ -144,6 +163,11 @@ BattleSystem.prototype = {
   },
 
   pushMenu: function(newMenu) {
+    var x = 25;
+    for (var i = 0; i < this.menuStack.length; i++) {
+      x += 80;
+    }
+    newMenu.setPos(x, 250);
     this.menuStack.push(newMenu);
     newMenu.display();
   },
@@ -181,10 +205,9 @@ BattleSystem.prototype = {
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = new CmdMenu(this.htmlElem);
-    cmdMenu.setMsg("Choose command for " + pc.name);
+    cmdMenu.setTitle(pc.name);
 
     var addOneCmd = function(name, cmd) {
-      console.log("In addOneCmd - name is " + name + " cmd is " + cmd);
       // if this command has a submenu, then choosing it
       // just opens the submenu:
       if (cmd.isContainer) {
@@ -200,42 +223,57 @@ BattleSystem.prototype = {
       }
     };
     for (var name in cmdSet.cmds) {
-      console.log("Adding cmd " + name + " to menu.");
       addOneCmd(name, cmdSet.cmds[name]);
     }
     return cmdMenu;
   },
   
   startBattle: function(player, encounter) {
-    console.log("Starting battle");
     this.htmlElem.show();
     this.player = player;
-    this.encounter = encounter;
+    this.party = this.player.getParty();
+
+    this.monsters = [];
+    if (encounter.number) {
+      for (var i = 0; i < encounter.number; i++) {
+        this.monsters.push(encounter.type.instantiate());
+      }
+    }
+
     this.showMsg(this.defaultMsg);
     this.emptyMenuStack();
     this.pcMenus = [];
     this.lockedInCmds = {};
-    this.party = this.player.getParty();
     for (var i = 0; i < this.party.length; i++) {
       // TODO callback to userland to let menu be customized for this PC
-      console.log("Will make main menu for " + this.party[i].name);
       this.pcMenus.push(this.makeMenuForPC(this.party[i],
                                            this.defaultCmdSet));
     }
-
-    /*var cmdMenu = new CmdMenu(this.htmlElem);
-    cmdMenu.addCommand("Win", function() {
-      self.endBattle("win");
-    });
-    cmdMenu.addCommand("Lose", function() {
-      self.endBattle("lose");
-    });
-    cmdMenu.addCommand("Run", function() {
-      self.endBattle("run");
-    });
-    cmdMenu.display();*/
-    
+    this.draw();
     this.showPCMenus();
+  },
+
+  draw: function() {
+    // TODO not hardcode this:
+    var canvas = document.getElementById("battlescreen-canvas");
+    $(canvas).show();
+    this._ctx = canvas.getContext("2d");
+
+    if (this._drawCallback) {
+      this._drawCallback(this._ctx, this.monsters);
+    } else {
+      this._ctx.fillStyle = "black";
+      this._ctx.fillRect(0, 0, 512, 384); // TODO no hardcode
+
+      for (var i = 0; i < this.monsters.length; i++) {
+        this.monsters[i].setPos(25 + 50 * i, 25);
+        this.monsters[i].plot(this._ctx);
+      }
+    }
+  },
+
+  onDrawBattle: function(callback) {
+    this._drawCallback = callback;
   },
 
   showPCMenus: function() {
@@ -294,6 +332,9 @@ BattleSystem.prototype = {
     for (i = 0; i < this.endBattleCallbacks.length; i++) {
       this.endBattleCallbacks[i](winLoseRun);
     }
+    console.log("Hiding battle canvas");
+    $("#battlescreen-canvas").hide(); // why this no work?
+    
   },
 
   handleKey: function(keyCode) {
@@ -345,6 +386,50 @@ BattleCommandSet.prototype = {
   isContainer: true
 };
 
+function MonsterType(img, statBlock) {
+  this.img = img;
+  this.statBlock = statBlock;
+  // TODO: monster type command list
+  // TODO: monster AI callback
+  // TODO: need a way to set some generic functions, like, default monster
+  // AI, default monster on-die handler, etc. I guess we set those on
+  // the battle system?
+}
+MonsterType.prototype = {
+  instantiate: function() {
+    // return a Monster instance
+    var cloneStats = {};
+    for (var name in this.statBlock) {
+      cloneStats[name] = this.statBlock[name];
+    }
+    return new Monster(this.img, cloneStats);
+  }
+};
+
+function Monster(img, statBlock) {
+  this.img = img;
+  this.statBlock = statBlock;
+  this.x = null;
+  this.y = null;
+};
+Monster.prototype = {
+  setPos: function(x, y) {
+    this.x = x;
+    this.y = y;
+  },
+  setStat: function(statName, value) {
+    this.statBlock[statName] = value;
+  },
+  getStat: function(statName) {
+    return this.statBlock[statName];
+  },
+  modifyStat: function(statName, delta) {
+    this.statBlock[statName] += delta;
+  },
+  plot: function(ctx) {
+    ctx.drawImage(this.img, this.x, this.y);
+  }
+};
 
 /* TODO:
 

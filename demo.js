@@ -177,11 +177,20 @@ $(document).ready( function() {
      battleSystem.handleKey(key);
   });
   battleSystem.onEndBattle(function() {
-    // TODO leaving battle makes everything fucked up
     battleInputHandler.stopListening();
     inputHandler.startListening();
     mapScreen.show();
   });
+  battleSystem.onDrawBattle(function(context, monsters) {
+    context.fillStyle = "black";
+    context.fillRect(0, 0, 512, 384); // TODO no hardcode
+
+    for (var i = 0; i < monsters.length; i++) {
+      monsters[i].setPos(50 + 100 * i, 125);
+      monsters[i].plot(context);
+    }
+  });
+
 
   var map = new Map(19, 25, mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
@@ -196,11 +205,15 @@ $(document).ready( function() {
     $("#debug").html("You stepped on a hill.");
   });
 
+  var biteWorm = new MonsterType(loader.add("monsters/biteworm.png"),
+                                 {});
+
   map.onStep({chance: 0.05}, function(pc, x, y) {
     mapScreen.hide();
     inputHandler.stopListening();
     battleInputHandler.startListening();
-    battleSystem.startBattle(player, []);
+    battleSystem.startBattle(player, {type: biteWorm,
+                                     number: 3});
   });
 
   mapScreen.setNewDomain(map);

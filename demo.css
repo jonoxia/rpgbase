@@ -1,25 +1,60 @@
 #battle-system {
-    background-color: black; /*#0020d0;*/
     font-family: monospace;
     font-weight: bold;
-    color: white;
     min-height: 384px;
     min-width: 512px;
+    z-index: 2;
+    position: absolute;
+    left: 0px;
+    top: 0px;
 }
 
-table.menu, div.wordbox {
+.msg-display {
+    position: absolute;
+    left: 50;
+    top: 25;
+
+    background-color: black;
     color: white;
     font-weight: bold;
     border-color: white;
     border-style: ridge;
     border-width: 3px;
     padding: 1em;
-    
     -webkit-border-radius: 10px;
     -moz-border-radius: 10px;
     border-radius: 10px;
 }
 
+div.menu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}
 table.menu {
-    float: left;
+   background-color: black;
+   color: white;
+   font-weight: bold;
+   border-color: white;
+   border-style: ridge;
+   border-width: 3px;
+   padding: 1em;
+   
+   -webkit-border-radius: 10px;
+   -moz-border-radius: 10px;
+   border-radius: 10px;
+}
+
+span.menu {
+   background-color: black;
+   color: white;
+   font-weight: bold;
+   border-color: white;
+   border-style: ridge;
+   border-width: 3px;
+   padding: 1em;
+   
+   -webkit-border-radius: 10px;
+   -moz-border-radius: 10px;
+   border-radius: 10px;
 }
