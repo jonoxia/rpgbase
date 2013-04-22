@@ -36,7 +36,8 @@ Player.prototype = {
     }
 
     var finishCallback = function() {
-      for (var i = 0; i < self.party.length; i++) {
+      var i;
+      for (i = 0; i < self.party.length; i++) {
         self.party[i].setAnimationOffset({x: 0, y: 0});
         if (canMove) {
           self.party[i].move(self.mapScreen,
@@ -44,11 +45,15 @@ Player.prototype = {
                              partyMoveDirections[i].y);
         }
       }
+      self.mapScreen.render();
+
+      // map effects of the lead character's step
+      self.mapScreen.processStep(this, mainChar._x, mainChar._y);
+
       // user-defined callback(s):
-      for (var i = 0; i < self.moveListeners.length; i++) {
+      for (i = 0; i < self.moveListeners.length; i++) {
         self.moveListeners[i].call(self, deltaX, deltaY, canMove);
       }
-      self.mapScreen.render();
     };
 
     var frameCallback = function(currFrame) {
@@ -210,7 +215,7 @@ PlayerCharacter.prototype = {
     //this._updatePositionToServer();
 
     // map triggers:
-    mapScreen.processStep(this, newX, newY);
+    //mapScreen.processStep(this, newX, newY);
     //this.plot(mapScreen);
     //$("#debug").html("x = " + this._x + ", y = " + this._y);
     //gEncounterManager.checkForEncounters(this._x, this._y, this);

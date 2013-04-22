@@ -264,14 +264,5 @@ MapScreen.prototype = {
 
   processStep: function( player, x, y ) {
     this._currentDomain.processStep(x, y, player);
-  },
-
-  hide: function() {
-    $(this._htmlElem).hide();
-  },
-
-  show: function() {
-    $(this._htmlElem).show();
-    this.render();
   }
 };

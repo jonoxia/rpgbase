@@ -138,7 +138,7 @@ function BattleSystem(htmlElem, options) {
   this.menuStack = [];
 
   this.htmlElem.hide();
-  $("#battlescreen-canvas").hide(); // TODO no hardcode
+  //$("#mapscreen-canvas").hide(); // TODO no hardcode
   this.endBattleCallbacks = [];
 
   if (options.defaultMsg) {
@@ -255,8 +255,8 @@ BattleSystem.prototype = {
 
   draw: function() {
     // TODO not hardcode this:
-    var canvas = document.getElementById("battlescreen-canvas");
-    $(canvas).show();
+    var canvas = document.getElementById("mapscreen-canvas");
+    //$(canvas).show();
     this._ctx = canvas.getContext("2d");
 
     if (this._drawCallback) {
@@ -333,8 +333,6 @@ BattleSystem.prototype = {
       this.endBattleCallbacks[i](winLoseRun);
     }
     console.log("Hiding battle canvas");
-    $("#battlescreen-canvas").hide(); // why this no work?
-    
   },
 
   handleKey: function(keyCode) {

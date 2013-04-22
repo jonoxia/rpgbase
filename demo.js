@@ -179,14 +179,14 @@ $(document).ready( function() {
   battleSystem.onEndBattle(function() {
     battleInputHandler.stopListening();
     inputHandler.startListening();
-    mapScreen.show();
+    mapScreen.render();
   });
   battleSystem.onDrawBattle(function(context, monsters) {
     context.fillStyle = "black";
     context.fillRect(0, 0, 512, 384); // TODO no hardcode
 
     for (var i = 0; i < monsters.length; i++) {
-      monsters[i].setPos(50 + 100 * i, 125);
+      monsters[i].setPos(50 + 50 * i, 50);
       monsters[i].plot(context);
     }
   });
@@ -209,7 +209,6 @@ $(document).ready( function() {
                                  {});
 
   map.onStep({chance: 0.05}, function(pc, x, y) {
-    mapScreen.hide();
     inputHandler.stopListening();
     battleInputHandler.startListening();
     battleSystem.startBattle(player, {type: biteWorm,
