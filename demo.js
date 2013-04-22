@@ -113,19 +113,22 @@ $(document).ready( function() {
 
   var spellList = new BattleCommandSet();
   spellList.add("CURE1", new BatCmd({
-    effect: function(battle, user) {
-      battle.showMsg(user + " casts CURE1!");
+    target: "ally",
+    effect: function(battle, user, target) {
+      battle.showMsg(user + " casts CURE1 on " + target.name);
     }
   }));
   spellList.add("FIRE1", new BatCmd({
-    effect: function(battle, user) {
+    target: "random_enemy",
+    effect: function(battle, user, target) {
       battle.showMsg(user + " casts FIRE1!");
     }
   }));
 
   var defaultCmdSet = new BattleCommandSet();
   defaultCmdSet.add("FIGHT", new BatCmd({
-    effect: function(battle, user) {
+    target: "random_enemy",
+    effect: function(battle, user, target) {
       battle.showMsg(user + " does some fierce FIGHTING!");
     }
   }));

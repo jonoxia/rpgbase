@@ -138,7 +138,6 @@ function BattleSystem(htmlElem, options) {
   this.menuStack = [];
 
   this.htmlElem.hide();
-  //$("#mapscreen-canvas").hide(); // TODO no hardcode
   this.endBattleCallbacks = [];
 
   if (options.defaultMsg) {
@@ -186,9 +185,10 @@ BattleSystem.prototype = {
     this.menuStack = [];
   },
 
-  choosePCCommand: function(pc, cmd) {
+  choosePCCommand: function(pc, cmd, target) {
     // lock in the choice:
-    this.lockedInCmds[pc.name] = cmd;
+    this.lockedInCmds[pc.name] = {cmd: cmd,
+                                  target: target};
 
     // If that was the last party member, then hide the menus
     // and start the round!
@@ -200,6 +200,21 @@ BattleSystem.prototype = {
       // Otherwise, show menu for next party member!
       this.pushMenu(this.pcMenus[ pcIndex + 1]);
     }
+  },
+
+  makeAllyTargetMenu: function(pc, cmd) {
+    var cmdMenu = new CmdMenu(this.htmlElem);
+    cmdMenu.setTitle("Target?");
+    var self = this;
+    var addOneCmd = function(target) {
+      cmdMenu.addCommand(target.name, function() {
+        self.choosePCCommand(pc, cmd, target);
+      });
+    };
+    for (var i = 0; i < this.party.length; i++) {
+      addOneCmd(this.party[i]);
+    }
+    return cmdMenu;
   },
 
   makeMenuForPC: function(pc, cmdSet) {
@@ -215,11 +230,20 @@ BattleSystem.prototype = {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
       } else {
-        // but if it's a "leaf node" then choosing it
-        // locks in the command for the PC.
-        cmdMenu.addCommand(name, function() {
-          self.choosePCCommand(pc, cmd);
-        });
+        // but if it's a "leaf node"...
+        // then if it needs a target, choosing it pops open
+        // a target menu:
+        if (cmd.target == "ally") {
+          cmdMenu.addCommand(name, function() {
+            self.pushMenu(self.makeAllyTargetMenu(pc,cmd));
+          });
+        } else {
+          // if leaf node with no target needed, then choosing it
+          // locks in the command for the PC.
+          cmdMenu.addCommand(name, function() {
+            self.choosePCCommand(pc, cmd);
+          });
+        }
       }
     };
     for (var name in cmdSet.cmds) {
@@ -256,7 +280,6 @@ BattleSystem.prototype = {
   draw: function() {
     // TODO not hardcode this:
     var canvas = document.getElementById("mapscreen-canvas");
-    //$(canvas).show();
     this._ctx = canvas.getContext("2d");
 
     if (this._drawCallback) {
@@ -305,7 +328,7 @@ BattleSystem.prototype = {
       }
       var fighter = fighters[fighterIndex];
       var action = self.lockedInCmds[fighter];
-      action.effect(self, fighter);
+      action.cmd.effect(self, fighter, action.target);
       fighterIndex++;
     }, 750);
   },
@@ -332,7 +355,6 @@ BattleSystem.prototype = {
     for (i = 0; i < this.endBattleCallbacks.length; i++) {
       this.endBattleCallbacks[i](winLoseRun);
     }
-    console.log("Hiding battle canvas");
   },
 
   handleKey: function(keyCode) {
@@ -363,7 +385,7 @@ function BatCmd(options) {
       return true;
     };
   }
-  this.targetType = options.target;
+  this.target = options.target;
   this.effect = options.effect;
 }
 BatCmd.prototype = {
