@@ -131,10 +131,10 @@ function Encounter(monsterList) {
 Encounter.prototype = {
 };
 
-function BattleSystem(htmlElem, options) {
+function BattleSystem(htmlElem, canvas, options) {
   this.htmlElem = htmlElem;
   this.displayElem = this.htmlElem.find(".msg-display");
-
+  this._ctx = canvas.getContext("2d");
   this.menuStack = [];
 
   this.htmlElem.hide();
@@ -278,10 +278,6 @@ BattleSystem.prototype = {
   },
 
   draw: function() {
-    // TODO not hardcode this:
-    var canvas = document.getElementById("mapscreen-canvas");
-    this._ctx = canvas.getContext("2d");
-
     if (this._drawCallback) {
       this._drawCallback(this._ctx, this.monsters);
     } else {
@@ -520,4 +516,52 @@ Monster.prototype = {
         stdCmds.replace("MAGIC", hero.magic);
         stdCmds.replace("ITEM", hero.items);
     });
+
+
+    for implementing game mechanics like "take damage", "heal", etc
+    make a message-passing API:
+
+    something like
+    
+    battleSystem.onEffect("damage", function(target, effectData) {
+       // the generic damage handler, which individual PCs or monster
+       // types can override if they wish.
+    });
+    
+    monsterType.onEffect("damage", function(monster, effectData) {
+    });
+
+    pc.onEffect("damage", function(monster, effectData) {
+    });
+
+    new BatCmd({
+      effect: function(battle, user, target) {
+        target.takeEffect("damage", {amount: 5, type: "fire"});
+      }
+
+   });
+
+   
+   Think about: how to chain multiple effect handlers together?
+   Like, do we want to fall through to the default handler, or prevent
+   it?
+
+   How about: if you return an effectData, that gets passed to next
+   handler in the chain. If you return nothing, the chain ends.
+
+   This way, a fire-immune monster can be like:
+   
+   if (effectData.type == "fire") {
+       effectData.amount = effectData.amount / 2;
+   }
+   return effectData;
+
+   Battle system needs a callback for random *player* target selection
+   too. If PC uses a "random_enemy" ability, how does it choose which
+   one?
+
+   Battle system doesn't need to know about hit points but it needs
+   to know about how to remove a monster from the fight!
+
+   Battle system needs "start battle" callback (mostly for animation)
 */
