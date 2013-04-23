@@ -48,7 +48,9 @@ Player.prototype = {
       self.mapScreen.render();
 
       // map effects of the lead character's step
-      self.mapScreen.processStep(this, mainChar._x, mainChar._y);
+      if (canMove) {
+        self.mapScreen.processStep(this, mainChar._x, mainChar._y);
+      }
 
       // user-defined callback(s):
       for (i = 0; i < self.moveListeners.length; i++) {
