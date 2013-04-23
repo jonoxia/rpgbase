@@ -36,3 +36,11 @@ AssetLoader.prototype = {
 	}
     }
 };
+
+function rollDice(number, type) {
+  var total = 0;
+  for (var i = 0; i < number; i++) {
+    total += Math.floor(Math.random() * type + 1);
+  }
+  return total;
+}
