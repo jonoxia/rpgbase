@@ -176,7 +176,7 @@ function setUpBattleSystem(canvas, loader) {
    * var battleScreenTiles = loader.add("filename.png");
    */
 
-  battleSystem.onDrawBattle(function(context, monsters) {
+  battleSystem.onDrawBattle(function(context, monsters, landType) {
     context.fillStyle = "black";
     context.fillRect(0, 0, 512, 384); // TODO no hardcode
 
@@ -275,11 +275,11 @@ $(document).ready( function() {
   /* 5% chance of random encounter on each step through overworld
    * When an encounter happens, switch to the battlescreen-style
    * input, and start the battle */
-  overworld.onStep({chance: 0.05}, function(pc, x, y) {
+  overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
     inputHandler.stopListening();
     battleInputHandler.startListening();
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                      number: 3});
+                                      number: 3}, landType);
   });
 
   /* When a battle ends, return to map-screen style input, and

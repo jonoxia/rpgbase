@@ -27,6 +27,7 @@ Map.prototype = {
 
       var trigger = this._stepHandlers[i].trigger;
       var result = this._stepHandlers[i].result;
+      var landType = this._mapData[y][x];
 
       var triggered = false;
       if (trigger.x == x &&
@@ -34,7 +35,7 @@ Map.prototype = {
         triggered = true;
       }
 
-      if (trigger.landType == this._mapData[y][x]) {
+      if (trigger.landType == landType) {
         triggered = true;
       }
 
@@ -45,7 +46,7 @@ Map.prototype = {
       }
       
       if (triggered) {
-        result(player, x, y);
+        result(player, x, y, landType);
       }
     }
   }

@@ -252,8 +252,9 @@ BattleSystem.prototype = {
     return cmdMenu;
   },
   
-  startBattle: function(player, encounter) {
+  startBattle: function(player, encounter, landType) {
     this.htmlElem.show();
+    this.landType = landType;
     this.player = player;
     this.party = this.player.getParty();
 
@@ -279,7 +280,7 @@ BattleSystem.prototype = {
 
   draw: function() {
     if (this._drawCallback) {
-      this._drawCallback(this._ctx, this.monsters);
+      this._drawCallback(this._ctx, this.monsters, this.landType);
     } else {
       this._ctx.fillStyle = "black";
       this._ctx.fillRect(0, 0, 512, 384); // TODO no hardcode
