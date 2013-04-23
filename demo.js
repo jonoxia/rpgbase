@@ -282,6 +282,11 @@ $(document).ready( function() {
                                       number: 3}, landType);
   });
 
+  var stepCount = 0;
+  overworld.onStep({}, function() {
+    stepCount++;
+    console.log("step count " + stepCount);
+  });
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onEndBattle(function() {

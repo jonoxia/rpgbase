@@ -29,19 +29,23 @@ Map.prototype = {
       var result = this._stepHandlers[i].result;
       var landType = this._mapData[y][x];
 
-      var triggered = false;
-      if (trigger.x == x &&
-          trigger.y == y) {
-        triggered = true;
+      var triggered = true;
+      if (trigger.x != undefined) {
+        if (trigger.x != x ||
+            trigger.y != y) {
+          triggered = false;
+        }
       }
 
-      if (trigger.landType == landType) {
-        triggered = true;
+      if (trigger.landType != undefined) {
+        if (trigger.landType != landType) {
+          triggered = false;
+        }
       }
 
-      if (trigger.chance > 0) {
-        if (Math.random() <= trigger.chance) {
-          triggered = true;
+      if (trigger.chance != undefined) {
+        if (Math.random() > trigger.chance) {
+          triggered = false;
         }
       }
       
