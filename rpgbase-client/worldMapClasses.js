@@ -271,3 +271,16 @@ MapScreen.prototype = {
     this._currentDomain.processStep(x, y, player);
   }
 };
+
+
+/* TODO:
+ * 1. implement/test loading a new map from an onStep handler, so this
+ *  can be used for town and cave maps etc.
+ * 2. implement ability to draw non-PC sprites on the map
+ *   (NPCs, the boat)
+ * 3. write a Vehicle class, and have it take over player.move when
+ *   the party is embarked.
+ * 4. hit a button on the map screen to pop open the stats menus
+ *   (you know, for equipping stuff, casting heals, etc.)
+
+*/

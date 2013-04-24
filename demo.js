@@ -140,7 +140,7 @@ function setUpBattleSystem(canvas, loader) {
     /* A BatCmd with target "random_enemy" will randomly choose a
      * target with no need for player input */
     effect: function(battle, user, target) {
-      battle.showMsg(user + " casts FIRE1!");
+      battle.showMsg(user + " casts FIRE1 on " + target.name + "!");
     }
   }));
 
@@ -148,7 +148,7 @@ function setUpBattleSystem(canvas, loader) {
   defaultCmdSet.add("FIGHT", new BatCmd({
     target: "random_enemy",
     effect: function(battle, user, target) {
-      battle.showMsg(user + " does some fierce FIGHTING!");
+      battle.showMsg(user + " attacks " + target.name + "!");
     }
   }));
   // Here is how you nest a sub-menu inside the main menu:
@@ -232,9 +232,11 @@ function setUpInputHandler(player) {
 function setUpMonstrousManuel(loader) {
   var manuel = {
     biteWorm: new MonsterType(loader.add("monsters/biteworm.png"),
+                              "Biteworm",
                               {}),
     groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
-                              {})
+                                 "Groundsnake",
+                                 {})
     // TODO - Add more monster definitions here. Comma-separated.
   };
   return manuel;
@@ -282,11 +284,6 @@ $(document).ready( function() {
                                       number: 3}, landType);
   });
 
-  var stepCount = 0;
-  overworld.onStep({}, function() {
-    stepCount++;
-    console.log("step count " + stepCount);
-  });
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onEndBattle(function() {
@@ -305,5 +302,10 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     mapScreen.render();
+    inputHandler.stopListening();
+    battleInputHandler.startListening();
+    battleSystem.startBattle(player, {type: manuel.biteWorm,
+                                      number: 3}, 1);
+
   });
 });

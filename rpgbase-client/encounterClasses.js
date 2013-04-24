@@ -162,6 +162,7 @@ BattleSystem.prototype = {
   },
 
   pushMenu: function(newMenu) {
+    console.log("pushMenu called");
     var x = 25;
     for (var i = 0; i < this.menuStack.length; i++) {
       x += 80;
@@ -198,6 +199,7 @@ BattleSystem.prototype = {
       this.fightOneRound();
     } else {
       // Otherwise, show menu for next party member!
+      console.log("Showing menu for next party member");
       this.pushMenu(this.pcMenus[ pcIndex + 1]);
     }
   },
@@ -217,6 +219,21 @@ BattleSystem.prototype = {
     return cmdMenu;
   },
 
+  randomElementFromArray: function(arr) {
+    // TODO allow registering a callback to override this function
+    // choose random PC:
+    var index = Math.floor( Math.random() * arr.length);
+    return arr[index];
+  },
+
+  chooseRandomEnemy: function(team) {
+    if (team == "monster") {
+      return this.randomElementFromArray(this.party);
+    } else {
+      return this.randomElementFromArray(this.monsters);
+    }
+  },
+
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = new CmdMenu(this.htmlElem);
@@ -227,22 +244,35 @@ BattleSystem.prototype = {
       // just opens the submenu:
       if (cmd.isContainer) {
         cmdMenu.addCommand(name, function() {
+          console.log("Pushing submenu for " + cmd.name);
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
       } else {
-        // but if it's a "leaf node"...
-        // then if it needs a target, choosing it pops open
-        // a target menu:
-        if (cmd.target == "ally") {
+        // but if it's a "leaf node", then next step is to pick
+        // a target...
+        switch (cmd.target) {
+        case "random_enemy":
+          // choose a random enemy to be the target:
           cmdMenu.addCommand(name, function() {
+            var target = self.chooseRandomEnemy("player");
+            self.choosePCCommand(pc, cmd, target);
+          });
+          break;
+        case "ally":
+          // if it targets one ally, then picking it pops open
+          // the ally menu:
+          cmdMenu.addCommand(name, function() {
+            console.log("Pushing ally menu for " + cmd.name);
             self.pushMenu(self.makeAllyTargetMenu(pc,cmd));
           });
-        } else {
-          // if leaf node with no target needed, then choosing it
+          break;
+        default:
+          // if no target needed, then choosing it
           // locks in the command for the PC.
           cmdMenu.addCommand(name, function() {
             self.choosePCCommand(pc, cmd);
           });
+          break;
         }
       }
     };
@@ -261,7 +291,11 @@ BattleSystem.prototype = {
     this.monsters = [];
     if (encounter.number) {
       for (var i = 0; i < encounter.number; i++) {
-        this.monsters.push(encounter.type.instantiate());
+        var monster = encounter.type.instantiate();
+        // name them e.g. "Biteworm A", "Biteworm B" etc.
+        var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        monster.setName(encounter.type.name + " " + letters[i]);
+        this.monsters.push(monster);
       }
     }
 
@@ -297,10 +331,26 @@ BattleSystem.prototype = {
   },
 
   showPCMenus: function() {
+    // call this at beginning of round...
+    this.lockedInCmds = {}; // clear all locked in cmds from previous round
     for (var i = 0; i < this.pcMenus.length; i++) {
       this.pcMenus[i].reset();
     }
+    console.log("Pushing menu for pc 0 in showPCMenus");
     this.pushMenu(this.pcMenus[0]);
+  },
+
+  defaultMonsterAI: function(monster) {
+    // TODO allow overriding this with custom AI
+    // for now have them all fight random players
+    var fight = this.defaultCmdSet.get("FIGHT");
+    // TODO this assumes there's a "fight" in the players' default
+    // command set!
+    var target = this.chooseRandomEnemy("monster");
+    return {
+      cmd: fight,
+      target: target
+    };
   },
 
   fightOneRound: function() {
@@ -309,6 +359,12 @@ BattleSystem.prototype = {
     // TODO callback to userland to find out order of actions
     for (var pcName in self.lockedInCmds) {
       fighters.push(pcName);
+    }
+    for (var i = 0; i < this.monsters.length; i++) {
+      var name = this.monsters[i].name;
+      fighters.push(name);
+      var action = this.defaultMonsterAI(this.monsters[i]);
+      this.lockedInCmds[name] = action;
     }
     var fighterIndex = 0;
     self.showMsg("A round of battle is starting!");
@@ -400,12 +456,18 @@ BattleCommandSet.prototype = {
     // battleCommand can be another BattleCommandSet
     // so these sets can nest recursively.
   },
+
+  get: function(name) {
+    return this.cmds[name];
+  },
+
   isContainer: true
 };
 
-function MonsterType(img, statBlock) {
+function MonsterType(img, name, statBlock) {
   this.img = img;
   this.statBlock = statBlock;
+  this.name = name;
   // TODO: monster type command list
   // TODO: monster AI callback
   // TODO: need a way to set some generic functions, like, default monster
@@ -428,8 +490,12 @@ function Monster(img, statBlock) {
   this.statBlock = statBlock;
   this.x = null;
   this.y = null;
+  this.name = "A Monster";
 };
 Monster.prototype = {
+  setName: function(name) {
+    this.name = name;
+  },
   setPos: function(x, y) {
     this.x = x;
     this.y = y;
@@ -447,6 +513,28 @@ Monster.prototype = {
     ctx.drawImage(this.img, this.x, this.y);
   }
 };
+
+/* TODO:
+Part I: Monster Actions
+(done) 1. name each monster
+(default done) 2. have a callback for random target selection; if not provided, all enemy targets are equally likely. (define enemy target) (done)
+(shared for now) 3. give monsters a default battle command set too
+(done) 4. give monsters turns too
+(default done) 5. AI callback that chooses which battle command a monster uses (default: it's always 'fight')
+6. initiative callback to determine order of actions (default: it's random)
+
+Part II: Game Mechanics
+7. getStats and setStats
+8. Message passing, registering message handlers
+9. 'remove this guy from combat' function
+10. write handler for "take damage" that removes guy from combat if hp drops to 0
+11. have the fight command send the "take damage" message.
+12. display PCs stats (at least HP) somewhere
+13. trigger end battle (win or lose) when everybody on one side are wiped out
+14. allow individual PC /individual monster types to override default command list with their own custom commands.
+*/
+
+
 
 /* TODO:
 
