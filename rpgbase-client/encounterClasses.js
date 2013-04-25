@@ -404,6 +404,11 @@ BattleSystem.prototype = {
     var fight = this.defaultCmdSet.get("FIGHT");
     // TODO this assumes there's a "fight" in the players' default
     // command set!
+    
+    if (!fight || fight.isContainer) {
+      fight = BASIC_FIGHT_CMD;
+    }
+
     var target = this.chooseRandomEnemy("monster");
     return {
       cmd: fight,
@@ -604,6 +609,16 @@ Monster.prototype = {
     return this._lockedAction;
   }
 };
+
+
+BASIC_FIGHT_CMD = new BatCmd({
+  target: "random_enemy",
+  effect: function(battle, user, target) {
+      battle.showMsg(user.name + " attacks " + target.name + "!");
+  }
+});
+// so monsters have something to use if it's not defined elsewhere
+
 
 /* TODO:
 Part I: Monster Actions
