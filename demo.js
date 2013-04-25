@@ -132,7 +132,7 @@ function setUpBattleSystem(canvas, loader) {
     /* A BatCmd with target "ally" will pop up a menu to choose which
      * ally you are targeting. */
     effect: function(battle, user, target) {
-      battle.showMsg(user + " casts CURE1 on " + target.name);
+      battle.showMsg(user.name + " casts CURE1 on " + target.name);
     }
   }));
   spellList.add("FIRE1", new BatCmd({
@@ -140,7 +140,7 @@ function setUpBattleSystem(canvas, loader) {
     /* A BatCmd with target "random_enemy" will randomly choose a
      * target with no need for player input */
     effect: function(battle, user, target) {
-      battle.showMsg(user + " casts FIRE1 on " + target.name + "!");
+      battle.showMsg(user.name + " casts FIRE1 on " + target.name + "!");
     }
   }));
 
@@ -148,26 +148,63 @@ function setUpBattleSystem(canvas, loader) {
   defaultCmdSet.add("FIGHT", new BatCmd({
     target: "random_enemy",
     effect: function(battle, user, target) {
-      battle.showMsg(user + " attacks " + target.name + "!");
+      battle.showMsg(user.name + " attacks " + target.name + "!");
     }
   }));
   // Here is how you nest a sub-menu inside the main menu:
   defaultCmdSet.add("MAGIC", spellList);
   defaultCmdSet.add("ITEM", new BatCmd({
     effect: function(battle, user) {
-      battle.showMsg(user + " uses an appropriate ITEM!");
+      battle.showMsg(user.name + " uses an appropriate ITEM!");
     }
   }));
-  defaultCmdSet.add("RUN", new BatCmd({
+  defaultCmdSet.add("DEFEND", new BatCmd({
     effect: function(battle, user) {
-      battle.showMsg(user + " prudently RUNS AWAY!");
+      battle.showMsg(user.name + " gets ready to DEFEND!");
+    }
+  }));
+
+  var metaCmdSet = new BattleCommandSet();
+  metaCmdSet.add("REPEAT", new BatCmd({
+    effect: function(battle, party) {
+      battle.repeatLastRoundCommands();
+    }
+  }));
+  metaCmdSet.add("TACTIC", new BatCmd({
+    effect: function(battle, party) {
+      battle.showMsg("TACTICs are SO TOTALLY NOT IMPLEMENTED YET. Sorry.");
+    }
+  }));
+  metaCmdSet.add("COMBAT", new BatCmd({
+    effect: function(battle, party) {
+      battle.showFirstPCMenu();
+    }
+  }));
+
+  var escapeCmdSet = new BattleCommandSet();
+  escapeCmdSet.add("SAFELY", new BatCmd({
+    effect: function(battle, party) {
+      battle.endBattle("run");
+    }
+  }));
+  escapeCmdSet.add("SPEEDY", new BatCmd({
+    effect: function(battle, party) {
+      battle.endBattle("run");
+    }
+  }));
+  escapeCmdSet.add("PANIC", new BatCmd({
+    effect: function(battle, party) {
       battle.endBattle("run");
     }
   }));
 
+  metaCmdSet.add("ESCAPE", escapeCmdSet);
+
+
   var battleSystem = new BattleSystem($("#battle-system"),
                                       canvas,
                                       {
+                                        metaCmdSet: metaCmdSet,
                                         defaultCmdSet: defaultCmdSet
                                       });
 
@@ -190,6 +227,11 @@ function setUpBattleSystem(canvas, loader) {
       monsters[i].plot(context);
     }
   });
+  
+  /*battleSystem.onRollInitiative(function(party, monsters)) {
+    // TODO
+    return [];
+  });*/
 
   return battleSystem;
 }

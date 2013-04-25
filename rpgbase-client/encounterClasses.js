@@ -159,17 +159,30 @@ function BattleSystem(htmlElem, canvas, options) {
   }
 
   if (options.metaCmdSet) {
-    this.metaMenu = new CmdMenu(this.htmlElem);
-    this.metaMenu.setTitle("Party");
     var self = this;
-    var addOneCmd = function(name, cmd) {
-      self.metaMenu.addCommand(name, function() {
-        cmd.effect(self, self.party);
-      });
-    };
-    for (var name in options.metaCmdSet.cmds) {
-      addOneCmd(name, options.metaCmdSet.cmds[name]);
+    function makeMetaMenu(title, cmdSet) {
+      var metaMenu = new CmdMenu(self.htmlElem);
+      metaMenu.setTitle(title);
+
+      var addOneCmd = function(name, cmd) {
+        // allow recursive submenus
+        if (cmd.isContainer) {
+          metaMenu.addCommand(name, function() {
+            self.pushMenu(makeMetaMenu(name, cmd));
+          });
+        } else {
+          metaMenu.addCommand(name, function() {
+            cmd.effect(self, self.party);
+          });
+        }
+      };
+      for (var name in cmdSet.cmds) {
+        addOneCmd(name, cmdSet.cmds[name]);
+      }
+      return metaMenu;
     }
+
+    this.metaMenu = makeMetaMenu("Party", options.metaCmdSet);
   } else {
     this.metaMenu =null;
   }
@@ -368,6 +381,23 @@ BattleSystem.prototype = {
     this.pushMenu(this.pcMenus[0]);
   },
 
+  repeatLastRoundCommands: function() {
+    // all that really needs doing before we start the next
+    // round is to choose new targets for "random_enemy" commands.
+    // (LONGTERM_TODO: or any command with a chosen target whose 
+    // target is no longer valid.)
+    for (var i = 0; i < this.party.length; i++) {
+      var action = this.party[i].getLockedInCmd();
+      if (action) {
+        if (action.cmd.target == "random_enemy") {
+          action.target = this.chooseRandomEnemy("player");
+        }
+        this.party[i].lockInCmd(action.cmd, action.target);
+      }
+    }
+    this.fightOneRound();
+  },
+
   defaultMonsterAI: function(monster) {
     // TODO allow overriding this with custom AI
     // for now have them all fight random players
@@ -434,7 +464,7 @@ BattleSystem.prototype = {
       if (action) {
         action.cmd.effect(self, fighter, action.target);
       } else {
-        self.showMsg(fighter.name + " attempts to use an unimplemented feature, and fails!");
+        self.showMsg(fighter.name + " has no idea what to do!");
       }
       fighterIndex++;
     }, 750);
