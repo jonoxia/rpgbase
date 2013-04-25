@@ -235,5 +235,14 @@ PlayerCharacter.prototype = {
 
   getLastMoved: function() {
     return this.lastMoved;
+  },
+
+  // used by the battle system:
+  lockInCmd: function(cmd, target) {
+    this._lockedAction = {cmd: cmd,
+                          target: target};
+  },
+  getLockedInCmd: function() {
+    return this._lockedAction;
   }
 };

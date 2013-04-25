@@ -153,6 +153,27 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onDrawBattle) {
     this._drawCallback = options.onDrawBattle;
   }
+  this._initiativeCallback = null;
+  if (options.onRollInitiative) {
+    this._initiativeCallback = options.onRollInitiative;
+  }
+
+  if (options.metaCmdSet) {
+    this.metaMenu = new CmdMenu(this.htmlElem);
+    this.metaMenu.setTitle("Party");
+    var self = this;
+    var addOneCmd = function(name, cmd) {
+      self.metaMenu.addCommand(name, function() {
+        cmd.effect(self, self.party);
+      });
+    };
+    for (var name in options.metaCmdSet.cmds) {
+      addOneCmd(name, options.metaCmdSet.cmds[name]);
+    }
+  } else {
+    this.metaMenu =null;
+  }
+
   this.timer = null;
 }
 BattleSystem.prototype = {
@@ -188,14 +209,12 @@ BattleSystem.prototype = {
 
   choosePCCommand: function(pc, cmd, target) {
     // lock in the choice:
-    this.lockedInCmds[pc.name] = {cmd: cmd,
-                                  target: target};
+    pc.lockInCmd(cmd, target);
 
     // If that was the last party member, then hide the menus
     // and start the round!
     var pcIndex = this.party.indexOf(pc);
     if (pcIndex == this.party.length - 1) {
-      this.emptyMenuStack();
       this.fightOneRound();
     } else {
       // Otherwise, show menu for next party member!
@@ -302,14 +321,13 @@ BattleSystem.prototype = {
     this.showMsg(this.defaultMsg);
     this.emptyMenuStack();
     this.pcMenus = [];
-    this.lockedInCmds = {};
     for (var i = 0; i < this.party.length; i++) {
       // TODO callback to userland to let menu be customized for this PC
       this.pcMenus.push(this.makeMenuForPC(this.party[i],
                                            this.defaultCmdSet));
     }
     this.draw();
-    this.showPCMenus();
+    this.showStartRoundMenu();
   },
 
   draw: function() {
@@ -330,13 +348,23 @@ BattleSystem.prototype = {
     this._drawCallback = callback;
   },
 
-  showPCMenus: function() {
-    // call this at beginning of round...
-    this.lockedInCmds = {}; // clear all locked in cmds from previous round
+  onRollInitiative: function(callback) {
+    this._initiativeCallback = callback;
+  },
+
+  showStartRoundMenu: function() {
     for (var i = 0; i < this.pcMenus.length; i++) {
       this.pcMenus[i].reset();
     }
-    console.log("Pushing menu for pc 0 in showPCMenus");
+    if (this.metaMenu) {
+      this.metaMenu.reset();
+      this.pushMenu(this.metaMenu);
+    } else {
+      this.showFirstPCMenu();
+    }
+  },
+
+  showFirstPCMenu: function() {
     this.pushMenu(this.pcMenus[0]);
   },
 
@@ -354,19 +382,41 @@ BattleSystem.prototype = {
   },
 
   fightOneRound: function() {
-    var fighters = [];
+    var fighters = []; // will be an ORDERED array of who goes
     var self = this;
-    // TODO callback to userland to find out order of actions
-    for (var pcName in self.lockedInCmds) {
-      fighters.push(pcName);
-    }
-    for (var i = 0; i < this.monsters.length; i++) {
-      var name = this.monsters[i].name;
-      fighters.push(name);
-      var action = this.defaultMonsterAI(this.monsters[i]);
-      this.lockedInCmds[name] = action;
-    }
     var fighterIndex = 0;
+    var i;
+
+    // TODO what if we had pendingCmd and pendingTarget as properties
+    // of the PC and monster objects? That would make things a lot
+    // easier deshou?
+
+    // Choose actions for each monster
+    for (i = 0; i < this.monsters.length; i++) {
+      var name = this.monsters[i].name;
+      var action = this.defaultMonsterAI(this.monsters[i]);
+      this.monsters[i].lockInCmd(action.cmd, action.target);
+    }
+
+    if (this._initiativeCallback) {
+      // if initiative callback is set, use it to determine
+      // order of fighters.
+      fighters = this._initiativeCallback(this.party,
+                                          this.monsters);
+    } else {
+      // if not set, then everybody in party goes followed by
+      // each monster:
+      for (i = 0; i < this.party.length; i++) {
+        fighters.push(this.party[i]);
+      }
+      for (i = 0; i < this.monsters.length; i++) {
+        fighters.push(this.monsters[i]);
+      }
+    }
+    
+    // hide menus
+    this.emptyMenuStack();
+
     self.showMsg("A round of battle is starting!");
     if (this.timer != null) {
       window.clearInterval(this.timer);
@@ -376,12 +426,16 @@ BattleSystem.prototype = {
         self.showMsg("Round complete! Next round starts.");
         window.clearInterval(self.timer);
         self.timer = null;
-        self.showPCMenus();
+        self.showStartRoundMenu();
         return;
       }
       var fighter = fighters[fighterIndex];
-      var action = self.lockedInCmds[fighter];
-      action.cmd.effect(self, fighter, action.target);
+      var action = fighter.getLockedInCmd();
+      if (action) {
+        action.cmd.effect(self, fighter, action.target);
+      } else {
+        self.showMsg(fighter.name + " attempts to use an unimplemented feature, and fails!");
+      }
       fighterIndex++;
     }, 750);
   },
@@ -511,6 +565,13 @@ Monster.prototype = {
   },
   plot: function(ctx) {
     ctx.drawImage(this.img, this.x, this.y);
+  },
+  lockInCmd: function(cmd, target) {
+    this._lockedAction = {cmd: cmd,
+                          target: target};
+  },
+  getLockedInCmd: function() {
+    return this._lockedAction;
   }
 };
 
