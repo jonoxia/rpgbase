@@ -1,8 +1,8 @@
-function Map(dimX, dimY, data, spritesheet) {
+function Map(data, spritesheet) {
   // mapData must be array of dimensions equal to dimX and dimY.
   this._mapData = data;
-  this._dimX = dimX;
-  this._dimY = dimY;
+  this._dimX = data[0].length;
+  this._dimY = data.length;
 
   this._img = spritesheet;
 
