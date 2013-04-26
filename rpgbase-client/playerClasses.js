@@ -9,7 +9,10 @@ Player.prototype = {
     mapScreen.setPlayer(this);
     for (var i = 0; i < this.party.length; i++) {
       this.party[i].setPos(x, y);
+      this.party[i].lastMoved = {x: 0, y: 0};
     }
+
+    mapScreen.scrollToShow(x, y);
   },
 
   move: function(deltaX, deltaY, numAnimFrames) {

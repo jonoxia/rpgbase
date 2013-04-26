@@ -26,6 +26,22 @@ var mapData = [
 [37,37,37,37,37,37,40,37,37,37,37,37,37,37,37,37,37,37,37]
 ];
 
+var townData = [
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
+
 /* TODO: any global variables that will need to be accessed by
  * multiple functions (e.g. day/night, phase of moon, etc)
  * should be declared here, before all functions. */
@@ -100,16 +116,10 @@ function setUpMapScreen(canvas) {
 }
 
 function setUpOverworldMap(loader) {
-  var map = new Map(19, 25, mapData, loader.add("terrain.png"));
+  var map = new Map(mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
     return {x:mapCode, y:0};
   };
-
-  // Example of how to trigger a function when player steps on
-  // a certain square:
-  map.onStep({x: 8, y: 17}, function(pc, x, y) {
-    $("#debug").html("You stepped on a town.");
-  });
 
   // Example of how to trigger a function when player steps on
   // a certain type of tile:
@@ -118,6 +128,10 @@ function setUpOverworldMap(loader) {
   });
 
   return map;
+}
+
+function setUpTownMap(loader) {
+  return (new Map(townData, loader.add("terrain.png")));
 }
 
 
@@ -326,6 +340,22 @@ $(document).ready( function() {
                                       number: 3}, landType);
   });
 
+  var townMap = setUpTownMap(loader);
+
+  /* Enter the town: */
+  overworld.onStep({x: 8, y: 17}, function(pc, x, y) {
+    mapScreen.setNewDomain(townMap);
+    player.enterMapScreen(mapScreen, 4, 4);
+    mapScreen.render();
+  });
+
+  /* To get back out of the town: */
+  townMap.onStep({edge: "any"}, function() {
+    mapScreen.setNewDomain(overworld);
+    player.enterMapScreen(mapScreen, 8, 17);
+    mapScreen.render();
+  });
+
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onEndBattle(function() {
@@ -339,15 +369,10 @@ $(document).ready( function() {
   inputHandler.startListening();
   // Put the player at position 4, 4 in the overworld:
   mapScreen.setNewDomain(overworld);
-  player.enterMapScreen(mapScreen, 4, 4);
+  player.enterMapScreen(mapScreen, 15, 20);
 
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     mapScreen.render();
-    inputHandler.stopListening();
-    battleInputHandler.startListening();
-    battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                      number: 3}, 1);
-
   });
 });

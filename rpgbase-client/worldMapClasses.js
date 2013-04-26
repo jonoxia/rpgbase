@@ -48,6 +48,16 @@ Map.prototype = {
           triggered = false;
         }
       }
+
+      if (trigger.edge != undefined) {
+        if (trigger.edge == "any") {
+          if (x != 0 && x != this._dimX-1 &&
+              y != 0 && y != this._dimY-1) {
+            triggered = false;
+          }
+              
+        }
+      }
       
       if (triggered) {
         result(player, x, y, landType);
@@ -262,9 +272,7 @@ MapScreen.prototype = {
   },
 
   scrollToShow: function( x, y ) {
-    var screenX = x - this._scrollX;
-    var screenY = y - this._scrollY;
-    this.scroll( x-4, y-4 );
+    this.scroll( x - this.margins.left, y - this.margins.top );
   },
 
   processStep: function( player, x, y ) {
