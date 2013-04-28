@@ -187,6 +187,12 @@ function BattleSystem(htmlElem, canvas, options) {
     this.metaMenu =null;
   }
 
+  if (options.msgDelay) {
+    this._msgDelay = options.msgDelay;
+  } else {
+    this._msgDelay = 750;
+  }
+
   this._effectHandlers = {};
 
   this.timer = null;
@@ -235,7 +241,7 @@ BattleSystem.prototype = {
     }
     return aliveParty;
   },
- 
+
   getMenuForPC: function(pc) {
     // kind of a hack to allow non-index-based access to menus
     // in case some pcs are dead:
@@ -520,7 +526,7 @@ BattleSystem.prototype = {
         }
       }
       fighterIndex++;
-    }, 750);
+    }, this._msgDelay);
   },
 
   endBattle: function(winLoseRun) {
@@ -737,7 +743,8 @@ Monster.prototype = {
 BASIC_FIGHT_CMD = new BatCmd({
   target: "random_enemy",
   effect: function(battle, user, target) {
-      battle.showMsg(user.name + " attacks " + target.name + "!");
+    battle.showMsg(user.name + " attacks " + target.name + "!");
+    battle.sendEffect(target, "damage", {amount: rollDice(1, 6)});
   }
 });
 // so monsters have something to use if it's not defined elsewhere
