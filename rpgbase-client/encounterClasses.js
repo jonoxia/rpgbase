@@ -193,7 +193,8 @@ function BattleSystem(htmlElem, canvas, options) {
 }
 BattleSystem.prototype = {
   showMsg: function(msg) {
-    this.displayElem.html(msg);
+    this.displayElem.append($("<span></span>").html(msg));
+    this.displayElem.append($("<br>"));
     this.displayElem.show();
   },
 
@@ -221,18 +222,40 @@ BattleSystem.prototype = {
     this.menuStack = [];
   },
 
+  getAliveParty: function() {
+    var aliveParty = [];
+    for (var i =0 ; i< this.party.length; i++) {
+      if (!this.party[i].dead) {
+        aliveParty.push(this.party[i]);
+      }
+    }
+    return aliveParty;
+  },
+ 
+  getMenuForPC: function(pc) {
+    // kind of a hack to allow non-index-based access to menus
+    // in case some pcs are dead:
+    var index = this.party.indexOf(pc);
+    return this.pcMenus[index];
+  },
+
   choosePCCommand: function(pc, cmd, target) {
     // lock in the choice:
     pc.lockInCmd(cmd, target);
 
     // If that was the last party member, then hide the menus
     // and start the round!
-    var pcIndex = this.party.indexOf(pc);
-    if (pcIndex == this.party.length - 1) {
+    var aliveParty = this.getAliveParty(); // skip dead people
+
+    var pcIndex = aliveParty.indexOf(pc);
+
+    if (pcIndex == aliveParty.length - 1) {
       this.fightOneRound();
     } else {
-      // Otherwise, show menu for next party member!
-      this.pushMenu(this.pcMenus[ pcIndex + 1]);
+      // Otherwise, show menu for next alive party member!
+
+      var nextPC = aliveParty[ pcIndex +1 ];
+      this.pushMenu(this.getMenuForPC(nextPC));
     }
   },
 
@@ -262,7 +285,8 @@ BattleSystem.prototype = {
     if (team == "monster") {
       return this.randomElementFromArray(this.monsters);
     } else {
-      return this.randomElementFromArray(this.party);
+      // monsters should only attack alive people:
+      return this.randomElementFromArray(this.getAliveParty());
     }
   },
 
@@ -283,7 +307,6 @@ BattleSystem.prototype = {
         // a target...
         switch (cmd.target) {
         case "random_enemy":
-          // choose a random enemy to be the target:
           cmdMenu.addCommand(name, function() {
             self.choosePCCommand(pc, cmd, "random_monster");
           });
@@ -313,6 +336,7 @@ BattleSystem.prototype = {
   
   startBattle: function(player, encounter, landType) {
     this.htmlElem.show();
+    this.displayElem.empty();
     this.landType = landType;
     this.player = player;
     this.party = this.player.getParty();
@@ -365,7 +389,6 @@ BattleSystem.prototype = {
   onEffect: function(effectName, callback) {
     // callback should take target and data, and do things using
     // target.setStat or target.modifyStat.
-    console.log("Registered effect handler.");
     this._effectHandlers[effectName] = callback;
     // TODO allow more than one??
   },
@@ -383,7 +406,8 @@ BattleSystem.prototype = {
   },
 
   showFirstPCMenu: function() {
-    this.pushMenu(this.pcMenus[0]);
+    var firstAlivePC = this.getAliveParty()[0];
+    this.pushMenu(this.getMenuForPC(firstAlivePC));
   },
 
   repeatLastRoundCommands: function() {
@@ -427,10 +451,6 @@ BattleSystem.prototype = {
     var fighterIndex = 0;
     var i;
 
-    // TODO what if we had pendingCmd and pendingTarget as properties
-    // of the PC and monster objects? That would make things a lot
-    // easier deshou?
-
     // Choose actions for each monster
     for (i = 0; i < this.monsters.length; i++) {
       var name = this.monsters[i].name;
@@ -438,16 +458,17 @@ BattleSystem.prototype = {
       this.monsters[i].lockInCmd(action.cmd, action.target);
     }
 
+    var aliveParty = this.getAliveParty();
     if (this._initiativeCallback) {
       // if initiative callback is set, use it to determine
       // order of fighters.
-      fighters = this._initiativeCallback(this.party,
+      fighters = this._initiativeCallback(aliveParty,
                                           this.monsters);
     } else {
       // if not set, then everybody in party goes followed by
       // each monster:
-      for (i = 0; i < this.party.length; i++) {
-        fighters.push(this.party[i]);
+      for (i = 0; i < aliveParty.length; i++) {
+        fighters.push(aliveParty[i]);
       }
       for (i = 0; i < this.monsters.length; i++) {
         fighters.push(this.monsters[i]);
@@ -462,6 +483,8 @@ BattleSystem.prototype = {
       window.clearInterval(this.timer);
     }
     this.timer = window.setInterval(function() {
+      self.displayElem.empty();// clear the message
+
       if (fighterIndex == fighters.length) {
         self.showMsg("Round complete! Next round starts.");
         window.clearInterval(self.timer);
@@ -470,20 +493,27 @@ BattleSystem.prototype = {
         return;
       }
       var fighter = fighters[fighterIndex];
-      var action = fighter.getLockedInCmd();
-      var target = action.target;
-
-      // choose random targets now, right before executing:
-      if (target = "random_monster") {
-        target = self.chooseRandomEnemy("monster");
-      } else if (target = "random_pc") {
-        target = self.chooseRandomEnemy("pc");
-      }
-
-      if (action) {
-        action.cmd.effect(self, fighter, target);
+      if (fighter.dead) {
+        // If fighter died earlier in the turn before taking their
+        // action, then skip them.
+        self.showMsg(fighter.name + " is dead!");
+        // TODO skip faster!
       } else {
-        self.showMsg(fighter.name + " has no idea what to do!");
+        var action = fighter.getLockedInCmd();
+        var target = action.target;
+
+        // choose random targets now, right before executing:
+        if (target == "random_monster") {
+          target = self.chooseRandomEnemy("monster");
+        } else if (target == "random_pc") {
+          target = self.chooseRandomEnemy("pc");
+        }
+        
+        if (action) {
+          action.cmd.effect(self, fighter, target);
+        } else {
+          self.showMsg(fighter.name + " has no idea what to do!");
+        }
       }
       fighterIndex++;
     }, 750);
@@ -534,39 +564,43 @@ BattleSystem.prototype = {
   sendEffect: function(target, effectName, data) {
     // 1. if target has a handler for this name, call that
     // (target.takeEffect)
-    console.log("battle.sendEffect was called.");
 
     data = target.takeEffect(effectName, data);
     // takeEffect will return null to mean prevent default, or
     // will return modified data....
     if (!data) {
-      console.log("target's custom effect handler prevented default");
       return;
     }
 
     // 2. if not, if i have a default handler, call the default handler
-    console.log("Checking if i have a handler...");
     if (this._effectHandlers[effectName]) {
-      console.log("I have a handler!");
       var result = this._effectHandlers[effectName](target, data);
     }
   },
 
   removeFromBattle: function(target) {
+    // dead fighters will be skipped during command input and execution
+    target.dead = true;
+    
     if (this.party.indexOf(target) > -1) {
       // if it's a player...
-
-      // uhhh... we shouldn't remove them entirely, because they
-      // still need to show up as a choice on target menus etc.
-      // but they shouldn't get turns, or menus!!
-
+      // check for tpk:
+      var tpk = true;
+      for (var i = 0; i < this.party.length; i++) {
+        if (!this.party[i].dead) {
+          tpk = false;
+        }
+      }
+      if (tpk) {
+        this.endBattle("lose");
+      }
     }
 
     var index = this.monsters.indexOf(target);
     if (index > -1) {
       // if it's a monster...
       this.monsters.splice(index, 1);
-      // just remove it from the list
+      // just remove it from the list.
 
       if (this.monsters.length == 0) {
         // if all monsters die, you win!
@@ -679,9 +713,7 @@ Monster.prototype = {
     return this._lockedAction;
   },
   takeEffect: function(effectName, data) {
-    console.log("monster.takeEffect was called.");
     if (this._effectHandlers[effectName]) {
-      console.log("monster have a handler");
       data = this._effectHandlers[effectName](this, data);
       // return null to prevent default
     }

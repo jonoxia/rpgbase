@@ -140,6 +140,9 @@ PlayerCharacter.prototype = {
 
     this.lastMoved = {x: 0, y: 0};
     this._effectHandlers = {};
+
+    // TODO replace this with something a little, uh... less dumb:
+    this.dead = false;
   },
   
   setSprite: function(sliceX, sliceY) {
@@ -155,6 +158,11 @@ PlayerCharacter.prototype = {
   },
 
   plot: function(mapScreen, adjustment) {
+
+    if (this.dead) {
+      return; // this will leave a gap in the party... not the best
+    }
+
     //adjustment is optional, but if provided it should have x, y
     var screenCoords = mapScreen.transform(this._x, this._y);
     var x = screenCoords[0] + this._offsetX;
@@ -169,8 +177,6 @@ PlayerCharacter.prototype = {
       y+= adjustment.y;
     }
 
-   /* $("#debug").html("My x = " + this._x + ", y = " + this._y
-                     + " so plotting at screen x =" + x + ", y=" + y);*/
     var spriteOffsetX = this._spriteSlice.x * this.width;
     var spriteOffsetY = this._spriteSlice.y * this.height;
 
@@ -205,27 +211,12 @@ PlayerCharacter.prototype = {
   },
 
   move: function( mapScreen, deltaX, deltaY ) {
-    /*if (this._stuckInEncounter) {
-      return false;
-    }
-
-    if (this._movementCallback) {
-      var canMove = this._movementCallback(deltaX, deltaY);
-    }*/
-
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
     this._x = newX;
     this._y = newY;
 
     this.lastMoved = {x: deltaX, y: deltaY};
-    //this._updatePositionToServer();
-
-    // map triggers:
-    //mapScreen.processStep(this, newX, newY);
-    //this.plot(mapScreen);
-    //$("#debug").html("x = " + this._x + ", y = " + this._y);
-    //gEncounterManager.checkForEncounters(this._x, this._y, this);
   },
 
   setPos: function( x, y ) {

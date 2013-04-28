@@ -249,7 +249,6 @@ function setUpBattleSystem(canvas, loader) {
   });*/
 
   battleSystem.onEffect("damage", function(target, data) {
-    console.log("damage handler was called.");
     target.modifyStat("hp", (-1) * data.amount);
 
     battleSystem.showMsg(target.name + "'s HP drops to " + target.getStat("hp"));
