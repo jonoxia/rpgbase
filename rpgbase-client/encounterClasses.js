@@ -187,6 +187,8 @@ function BattleSystem(htmlElem, canvas, options) {
     this.metaMenu =null;
   }
 
+  this._effectHandlers = {};
+
   this.timer = null;
 }
 BattleSystem.prototype = {
@@ -196,7 +198,6 @@ BattleSystem.prototype = {
   },
 
   pushMenu: function(newMenu) {
-    console.log("pushMenu called");
     var x = 25;
     for (var i = 0; i < this.menuStack.length; i++) {
       x += 80;
@@ -231,7 +232,6 @@ BattleSystem.prototype = {
       this.fightOneRound();
     } else {
       // Otherwise, show menu for next party member!
-      console.log("Showing menu for next party member");
       this.pushMenu(this.pcMenus[ pcIndex + 1]);
     }
   },
@@ -260,9 +260,9 @@ BattleSystem.prototype = {
 
   chooseRandomEnemy: function(team) {
     if (team == "monster") {
-      return this.randomElementFromArray(this.party);
-    } else {
       return this.randomElementFromArray(this.monsters);
+    } else {
+      return this.randomElementFromArray(this.party);
     }
   },
 
@@ -276,7 +276,6 @@ BattleSystem.prototype = {
       // just opens the submenu:
       if (cmd.isContainer) {
         cmdMenu.addCommand(name, function() {
-          console.log("Pushing submenu for " + cmd.name);
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
       } else {
@@ -286,15 +285,13 @@ BattleSystem.prototype = {
         case "random_enemy":
           // choose a random enemy to be the target:
           cmdMenu.addCommand(name, function() {
-            var target = self.chooseRandomEnemy("player");
-            self.choosePCCommand(pc, cmd, target);
+            self.choosePCCommand(pc, cmd, "random_monster");
           });
           break;
         case "ally":
           // if it targets one ally, then picking it pops open
           // the ally menu:
           cmdMenu.addCommand(name, function() {
-            console.log("Pushing ally menu for " + cmd.name);
             self.pushMenu(self.makeAllyTargetMenu(pc,cmd));
           });
           break;
@@ -365,6 +362,14 @@ BattleSystem.prototype = {
     this._initiativeCallback = callback;
   },
 
+  onEffect: function(effectName, callback) {
+    // callback should take target and data, and do things using
+    // target.setStat or target.modifyStat.
+    console.log("Registered effect handler.");
+    this._effectHandlers[effectName] = callback;
+    // TODO allow more than one??
+  },
+
   showStartRoundMenu: function() {
     for (var i = 0; i < this.pcMenus.length; i++) {
       this.pcMenus[i].reset();
@@ -382,20 +387,21 @@ BattleSystem.prototype = {
   },
 
   repeatLastRoundCommands: function() {
-    // all that really needs doing before we start the next
-    // round is to choose new targets for "random_enemy" commands.
-    // (LONGTERM_TODO: or any command with a chosen target whose 
-    // target is no longer valid.)
+    // (LONGTERM_TODO: retarget any command with a chosen target
+    // that is no longer valid.)
+
+    // make sure everyone has a command:
+    var everyoneHasCommands = true;
     for (var i = 0; i < this.party.length; i++) {
-      var action = this.party[i].getLockedInCmd();
-      if (action) {
-        if (action.cmd.target == "random_enemy") {
-          action.target = this.chooseRandomEnemy("player");
-        }
-        this.party[i].lockInCmd(action.cmd, action.target);
+      if (!this.party[i].getLockedInCmd()) {
+        everyoneHasCommands = false;
       }
     }
-    this.fightOneRound();
+    if (everyoneHasCommands) {
+      this.fightOneRound();
+    } else {
+      this.showMsg("You haven't entered commands yet, so there's nothing to REPEAT.");
+    }
   },
 
   defaultMonsterAI: function(monster) {
@@ -408,8 +414,7 @@ BattleSystem.prototype = {
     if (!fight || fight.isContainer) {
       fight = BASIC_FIGHT_CMD;
     }
-
-    var target = this.chooseRandomEnemy("monster");
+    var target = "random_pc";
     return {
       cmd: fight,
       target: target
@@ -466,8 +471,17 @@ BattleSystem.prototype = {
       }
       var fighter = fighters[fighterIndex];
       var action = fighter.getLockedInCmd();
+      var target = action.target;
+
+      // choose random targets now, right before executing:
+      if (target = "random_monster") {
+        target = self.chooseRandomEnemy("monster");
+      } else if (target = "random_pc") {
+        target = self.chooseRandomEnemy("pc");
+      }
+
       if (action) {
-        action.cmd.effect(self, fighter, action.target);
+        action.cmd.effect(self, fighter, target);
       } else {
         self.showMsg(fighter.name + " has no idea what to do!");
       }
@@ -515,6 +529,55 @@ BattleSystem.prototype = {
 
   onEndBattle: function(callback) {
     this.endBattleCallbacks.push(callback);
+  },
+
+  sendEffect: function(target, effectName, data) {
+    // 1. if target has a handler for this name, call that
+    // (target.takeEffect)
+    console.log("battle.sendEffect was called.");
+
+    data = target.takeEffect(effectName, data);
+    // takeEffect will return null to mean prevent default, or
+    // will return modified data....
+    if (!data) {
+      console.log("target's custom effect handler prevented default");
+      return;
+    }
+
+    // 2. if not, if i have a default handler, call the default handler
+    console.log("Checking if i have a handler...");
+    if (this._effectHandlers[effectName]) {
+      console.log("I have a handler!");
+      var result = this._effectHandlers[effectName](target, data);
+    }
+  },
+
+  removeFromBattle: function(target) {
+    if (this.party.indexOf(target) > -1) {
+      // if it's a player...
+
+      // uhhh... we shouldn't remove them entirely, because they
+      // still need to show up as a choice on target menus etc.
+      // but they shouldn't get turns, or menus!!
+
+    }
+
+    var index = this.monsters.indexOf(target);
+    if (index > -1) {
+      // if it's a monster...
+      this.monsters.splice(index, 1);
+      // just remove it from the list
+
+      if (this.monsters.length == 0) {
+        // if all monsters die, you win!
+        this.endBattle("win");
+      } else {
+        // redraw so we see what's gone missing:
+        this.draw();
+      }
+
+    }
+    
   }
 };
 
@@ -562,24 +625,31 @@ function MonsterType(img, name, statBlock) {
   // TODO: need a way to set some generic functions, like, default monster
   // AI, default monster on-die handler, etc. I guess we set those on
   // the battle system?
+
+  this._effectHandlers = {};
 }
 MonsterType.prototype = {
+  onEffect: function(effectName, callback) {
+    this._effectHandlers[effectName] = callback;
+  },
+
   instantiate: function() {
     // return a Monster instance
     var cloneStats = {};
     for (var name in this.statBlock) {
       cloneStats[name] = this.statBlock[name];
     }
-    return new Monster(this.img, cloneStats);
+    return new Monster(this.img, cloneStats, this._effectHandlers);
   }
 };
 
-function Monster(img, statBlock) {
+function Monster(img, statBlock, effectHandlers) {
   this.img = img;
-  this.statBlock = statBlock;
+  this._statBlock = statBlock;
   this.x = null;
   this.y = null;
   this.name = "A Monster";
+  this._effectHandlers = effectHandlers; // shallow copy, not cloned
 };
 Monster.prototype = {
   setName: function(name) {
@@ -590,13 +660,13 @@ Monster.prototype = {
     this.y = y;
   },
   setStat: function(statName, value) {
-    this.statBlock[statName] = value;
+    this._statBlock[statName] = value;
   },
   getStat: function(statName) {
-    return this.statBlock[statName];
+    return this._statBlock[statName];
   },
   modifyStat: function(statName, delta) {
-    this.statBlock[statName] += delta;
+    this._statBlock[statName] += delta;
   },
   plot: function(ctx) {
     ctx.drawImage(this.img, this.x, this.y);
@@ -607,6 +677,18 @@ Monster.prototype = {
   },
   getLockedInCmd: function() {
     return this._lockedAction;
+  },
+  takeEffect: function(effectName, data) {
+    console.log("monster.takeEffect was called.");
+    if (this._effectHandlers[effectName]) {
+      console.log("monster have a handler");
+      data = this._effectHandlers[effectName](this, data);
+      // return null to prevent default
+    }
+
+    // otherwise, return (possibly modified) data to continue
+    // with the default handler.
+    return data;
   }
 };
 
@@ -630,8 +712,8 @@ Part I: Monster Actions
 6. initiative callback to determine order of actions (default: it's random)
 
 Part II: Game Mechanics
-7. getStats and setStats
-8. Message passing, registering message handlers
+(done) 7. getStats and setStats
+(done) 8. Message passing, registering message handlers
 9. 'remove this guy from combat' function
 10. write handler for "take damage" that removes guy from combat if hp drops to 0
 11. have the fight command send the "take damage" message.

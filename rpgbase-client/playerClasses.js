@@ -115,14 +115,15 @@ Player.prototype = {
 
 }
 
-function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY) {
-  this._init(spriteSheet, width, height, offsetX, offsetY);
+function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock) {
+  this._init(spriteSheet, width, height, offsetX, offsetY, statBlock);
 }
 PlayerCharacter.prototype = {
-  _init: function(spriteSheet, width, height, offsetX, offsetY) {
+  _init: function(spriteSheet, width, height, offsetX, offsetY, statBlock) {
     this._img = spriteSheet;
     /*this._stuckInEncounter = false;
     this._inventory = [];*/
+    this._statBlock = statBlock;
 
     this._x = 0;
     this._y = 0;
@@ -138,6 +139,7 @@ PlayerCharacter.prototype = {
     this._animationCallback = null;
 
     this.lastMoved = {x: 0, y: 0};
+    this._effectHandlers = {};
   },
   
   setSprite: function(sliceX, sliceY) {
@@ -240,6 +242,9 @@ PlayerCharacter.prototype = {
     return this.lastMoved;
   },
 
+  // Everything from here on is copy-pasted from monster class.
+  // really need like a "combatant" base class or something.
+
   // used by the battle system:
   lockInCmd: function(cmd, target) {
     this._lockedAction = {cmd: cmd,
@@ -247,5 +252,28 @@ PlayerCharacter.prototype = {
   },
   getLockedInCmd: function() {
     return this._lockedAction;
+  },
+
+  setStat: function(statName, value) {
+    this._statBlock[statName] = value;
+  },
+  getStat: function(statName) {
+    return this._statBlock[statName];
+  },
+  modifyStat: function(statName, delta) {
+    this._statBlock[statName] += delta;
+  },
+  onEffect: function(effectName, callback) {
+    this._effectHandlers[effectName] = callback;
+  },
+  takeEffect: function(effectName, data) {
+    if (this._effectHandlers[effectName]) {
+      data = this._effectHandlers[effectName](this, data);
+      // return null to prevent default
+    }
+
+    // otherwise, return (possibly modified) data to continue
+    // with the default handler.
+    return data;
   }
 };

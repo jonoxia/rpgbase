@@ -51,7 +51,7 @@ function makeOnePC(name, spriteSheet, spriteSheetRow) {
   /* Returns a new PlayerCharacter that uses the given row of the
    * given spriteSheet for its walk animation. */
 
-  var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8);
+  var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8, {hp: 20});
   pc.name = name;
 
   var frameCount = 0;
@@ -163,6 +163,7 @@ function setUpBattleSystem(canvas, loader) {
     target: "random_enemy",
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " attacks " + target.name + "!");
+      battle.sendEffect(target, "damage", {amount: rollDice(1, 6)});
     }
   }));
   // Here is how you nest a sub-menu inside the main menu:
@@ -247,6 +248,17 @@ function setUpBattleSystem(canvas, loader) {
     return [];
   });*/
 
+  battleSystem.onEffect("damage", function(target, data) {
+    console.log("damage handler was called.");
+    target.modifyStat("hp", (-1) * data.amount);
+
+    battleSystem.showMsg(target.name + "'s HP drops to " + target.getStat("hp"));
+    // check for death:
+    if (target.getStat("hp") <= 0) {
+      battleSystem.removeFromBattle(target);
+    }
+  });
+
   return battleSystem;
 }
 
@@ -289,10 +301,10 @@ function setUpMonstrousManuel(loader) {
   var manuel = {
     biteWorm: new MonsterType(loader.add("monsters/biteworm.png"),
                               "Biteworm",
-                              {}),
+                              {hp: 10}),
     groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                                  "Groundsnake",
-                                 {})
+                                 {hp: 15})
     // TODO - Add more monster definitions here. Comma-separated.
   };
   return manuel;
@@ -342,19 +354,24 @@ $(document).ready( function() {
 
   var townMap = setUpTownMap(loader);
 
-  /* Enter the town: */
-  overworld.onStep({x: 8, y: 17}, function(pc, x, y) {
-    mapScreen.setNewDomain(townMap);
-    player.enterMapScreen(mapScreen, 4, 4);
-    mapScreen.render();
-  });
 
-  /* To get back out of the town: */
-  townMap.onStep({edge: "any"}, function() {
-    mapScreen.setNewDomain(overworld);
-    player.enterMapScreen(mapScreen, 8, 17);
-    mapScreen.render();
-  });
+  function situateTown(theTownMap, theOverworldMap, x1, y1, x2, y2) {
+    /* Enter the town: */
+    theOverworldMap.onStep({x: x1, y: y1}, function(pc, x, y) {
+      mapScreen.setNewDomain(theTownMap);
+      player.enterMapScreen(mapScreen, x2, y2);
+      mapScreen.render();
+    });
+    /* To get back out of the town: */
+    theTownMap.onStep({edge: "any"}, function(pc, x, y) {
+      mapScreen.setNewDomain(theOverworldMap);
+      player.enterMapScreen(mapScreen, x1, y1);
+      mapScreen.render();
+    });
+  }
+
+  situateTown(townMap, overworld, 8, 17, 4, 4);
+
 
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
@@ -374,5 +391,10 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     mapScreen.render();
+    inputHandler.stopListening();
+    battleInputHandler.startListening();
+    battleSystem.startBattle(player, {type: manuel.biteWorm,
+                                      number: 3}, 1);
+
   });
 });
