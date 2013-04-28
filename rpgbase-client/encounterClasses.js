@@ -223,6 +223,10 @@ BattleSystem.prototype = {
   },
 
   getAliveParty: function() {
+    // TODO this duplicates some code in Player.marchInOrder...
+    // BattleSystem and Player are both separately maintaining the
+    // aliveParty list. Should probably just maintain it in Player
+    // and query it from here.
     var aliveParty = [];
     for (var i =0 ; i< this.party.length; i++) {
       if (!this.party[i].dead) {
@@ -538,6 +542,11 @@ BattleSystem.prototype = {
       window.clearInterval(this.timer);
     }
     this.htmlElem.hide();
+
+    // tell player to re-jigger party in case people died during
+    // battle
+    this.player.marchInOrder();
+
     for (i = 0; i < this.endBattleCallbacks.length; i++) {
       this.endBattleCallbacks[i](winLoseRun);
     }
@@ -746,11 +755,11 @@ Part I: Monster Actions
 Part II: Game Mechanics
 (done) 7. getStats and setStats
 (done) 8. Message passing, registering message handlers
-9. 'remove this guy from combat' function
-10. write handler for "take damage" that removes guy from combat if hp drops to 0
-11. have the fight command send the "take damage" message.
+(done) 9. 'remove this guy from combat' function
+(done) 10. write handler for "take damage" that removes guy from combat if hp drops to 0
+(done) 11. have the fight command send the "take damage" message.
 12. display PCs stats (at least HP) somewhere
-13. trigger end battle (win or lose) when everybody on one side are wiped out
+(done) 13. trigger end battle (win or lose) when everybody on one side are wiped out
 14. allow individual PC /individual monster types to override default command list with their own custom commands.
 */
 

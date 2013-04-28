@@ -202,7 +202,7 @@ MapScreen.prototype = {
       }
     }
 
-    var party = this.player.getParty().slice();
+    var party = this.player.getAliveParty().slice();
     party.sort(function(a, b) {
       if (a._y != b._y) {
         return (a._y - b._y);

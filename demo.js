@@ -93,6 +93,8 @@ function setUpParty(loader) {
   };
 
   var hero = makeOnePC("ALIS", spriteSheet, 1);
+  // for debugging main character death
+  hero.setStat("hp", 1);
   var sidekick = makeOnePC("MYAU", spriteSheet, 0);
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);

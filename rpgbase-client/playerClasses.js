@@ -1,6 +1,7 @@
 function Player() {
   this.mapScreen = null;
   this.party = [];
+  this.aliveParty = this.party;
   this.moveListeners = [];
 }
 Player.prototype = {
@@ -15,15 +16,30 @@ Player.prototype = {
     mapScreen.scrollToShow(x, y);
   },
 
+  marchInOrder: function() {
+    var x = this.party[0]._x;
+    var y = this.party[0]._y;
+    for (var i = 0; i < this.party.length; i++) {
+      this.party[i].setPos(x, y);
+      this.party[i].lastMoved = {x: 0, y: 0};
+    }
+    this.aliveParty = [];
+    for (var i =0 ; i< this.party.length; i++) {
+      if (!this.party[i].dead) {
+        this.aliveParty.push(this.party[i]);
+      }
+    }
+  },
+
   move: function(deltaX, deltaY, numAnimFrames) {
     var self = this;
-
+    
     var partyMoveDirections = [{x: deltaX, y: deltaY}];
-    for (var i = 0; i < this.party.length - 1; i++) {
-      partyMoveDirections.push(this.party[i].getLastMoved());
+    for (var i = 0; i < this.aliveParty.length - 1; i++) {
+      partyMoveDirections.push(this.aliveParty[i].getLastMoved());
     }
 
-    var mainChar = this.party[0];
+    var mainChar = this.aliveParty[0];
 
     var canMove = mainChar.canMove(self.mapScreen, deltaX, deltaY);
     var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
@@ -40,12 +56,12 @@ Player.prototype = {
 
     var finishCallback = function() {
       var i;
-      for (i = 0; i < self.party.length; i++) {
-        self.party[i].setAnimationOffset({x: 0, y: 0});
+      for (i = 0; i < self.aliveParty.length; i++) {
+        self.aliveParty[i].setAnimationOffset({x: 0, y: 0});
         if (canMove) {
-          self.party[i].move(self.mapScreen,
-                             partyMoveDirections[i].x,
-                             partyMoveDirections[i].y);
+          self.aliveParty[i].move(self.mapScreen,
+                                  partyMoveDirections[i].x,
+                                  partyMoveDirections[i].y);
         }
       }
       self.mapScreen.render();
@@ -68,21 +84,22 @@ Player.prototype = {
       var i;
       if (canMove) {
         var pixels = currFrame * 16 / numAnimFrames;
-        for (var i = 0; i < self.party.length; i++) {
+        for (var i = 0; i < self.aliveParty.length; i++) {
           var offset = {
             x: pixels * partyMoveDirections[i].x,
             y: pixels * partyMoveDirections[i].y
           };
-          self.party[i].setAnimationOffset(offset);
+          self.aliveParty[i].setAnimationOffset(offset);
         }
       }
 
       // Change the sprites for each party member:
-      for (i = 0; i < self.party.length; i++) {
-        if (self.party[i]._animationCallback) {
-          self.party[i]._animationCallback(partyMoveDirections[i].x,
-                                           partyMoveDirections[i].y,
-                                           currFrame);
+      for (i = 0; i < self.aliveParty.length; i++) {
+        if (self.aliveParty[i]._animationCallback) {
+          self.aliveParty[i]._animationCallback(
+            partyMoveDirections[i].x,
+            partyMoveDirections[i].y,
+            currFrame);
         }
       }
 
@@ -107,6 +124,10 @@ Player.prototype = {
 
   getParty: function() {
     return this.party;
+  },
+
+  getAliveParty: function() {
+    return this.aliveParty;
   },
 
   onMove: function(callback) {
