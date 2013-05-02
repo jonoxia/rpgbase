@@ -201,19 +201,22 @@ function MapSpriteMixin() {
   };
 
   this.canMove = function(mapScreen, deltaX, deltaY) {
-    var canMove = true;
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
     if (!mapScreen.pointInBounds(newX, newY)) {
-      canMove = false;
+      // don't go off the map
+      return false;
     }
-    if (canMove) {
-      var nextStepLandType = mapScreen.getLandType(newX, newY);
-      if (!this.canCross(nextStepLandType)) {
-        canMove = false;
-      }
+    if (mapScreen.getNPCAt(newX, newY)) {
+      // don't walk through an NPC
+      return false;
     }
-    return canMove;
+    // don't walk through impassible terrain types
+    var nextStepLandType = mapScreen.getLandType(newX, newY);
+    if (!this.canCross(nextStepLandType)) {
+      return false;
+    }
+    return true;
   };
 
   this.move = function( mapScreen, deltaX, deltaY ) {
@@ -228,6 +231,10 @@ function MapSpriteMixin() {
   this.setPos = function( x, y ) {
     this._x = x;
     this._y = y;
+  };
+
+  this.getPos = function() {
+    return {x: this._x, y: this._y};
   };
 
   this.getLastMoved = function() {

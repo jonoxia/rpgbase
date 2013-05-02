@@ -133,7 +133,12 @@ function setUpOverworldMap(loader) {
 }
 
 function setUpTownMap(loader) {
-  return (new Map(townData, loader.add("terrain.png")));
+  var town = new Map(townData, loader.add("terrain.png"));
+  var spriteSheet = loader.add("mapsprites.png");
+  var shopkeeper = new NPC(spriteSheet, 16, 24, 0, -8);
+  shopkeeper.setSprite(0, 2);
+  town.addNPC(shopkeeper, 5, 5);
+  return town;
 }
 
 
@@ -377,7 +382,7 @@ $(document).ready( function() {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onEndBattle(function() {
-    battleInputHandler.stopListening();
+    battleInputHandler.ostopListening();
     inputHandler.startListening();
     mapScreen.render();
   });
@@ -392,10 +397,10 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     mapScreen.render();
-    inputHandler.stopListening();
+    /*inputHandler.stopListening();
     battleInputHandler.startListening();
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                      number: 3}, 1);
+                                      number: 3}, 1);*/
 
   });
 });

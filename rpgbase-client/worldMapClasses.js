@@ -7,6 +7,7 @@ function Map(data, spritesheet) {
   this._img = spritesheet;
 
   this._stepHandlers = [];
+  this._npcs = [];
 }
 Map.prototype = {
   getTileForCode: function(mapCode) {
@@ -63,6 +64,26 @@ Map.prototype = {
         result(player, x, y, landType);
       }
     }
+  },
+
+  addNPC: function(npc, x, y) {
+    this._npcs.push(npc);
+    npc.setPos(x, y);
+  },
+
+  getNPCAt: function(x, y) {
+    // returns npc object, or null if there is nobody
+    for (var i = 0; i < this._npcs.length; i++) {
+      var pos = this._npcs[i].getPos();
+      if (pos.x == x && pos.y == y) {
+        return this._npcs[i];
+      }
+    }
+    return null;
+  },
+
+  getAllNPCs: function() {
+    return this._npcs;
   }
 }
 
@@ -202,8 +223,14 @@ MapScreen.prototype = {
       }
     }
 
-    var party = this.player.getAliveParty().slice();
-    party.sort(function(a, b) {
+    // make an array of all player and NPC sprites:
+    var party = this.player.getAliveParty();
+    var npcs = this._currentDomain.getAllNPCs();
+    // TODO - only get the ones on the screen given current scroll?
+    mapSprites = party.concat(npcs);
+
+    // sort them all so southernmost are drawn last:
+    mapSprites.sort(function(a, b) {
       if (a._y != b._y) {
         return (a._y - b._y);
       }
@@ -212,8 +239,8 @@ MapScreen.prototype = {
       }
       return (b._marchOrder - a._marchOrder);
     });
-    for (var i = 0; i < party.length; i++) {
-      party[i].plot(this, pixelAdjustment);
+    for (var i = 0; i < mapSprites.length; i++) {
+      mapSprites[i].plot(this, pixelAdjustment);
     }
   },
 
@@ -277,13 +304,17 @@ MapScreen.prototype = {
 
   processStep: function( player, x, y ) {
     this._currentDomain.processStep(x, y, player);
+  },
+
+  getNPCAt: function(x, y) {
+    return this._currentDomain.getNPCAt(x, y);
   }
 };
 
 
 /* TODO:
- * 1. implement/test loading a new map from an onStep handler, so this
- *  can be used for town and cave maps etc.
+ * (done) 1. implement/test loading a new map from an onStep handler,
+ *  so this can be used for town and cave maps etc.
  * 2. implement ability to draw non-PC sprites on the map
  *   (NPCs, the boat)
  * 3. write a Vehicle class, and have it take over player.move when
