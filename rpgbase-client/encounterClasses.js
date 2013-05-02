@@ -692,6 +692,57 @@ MonsterType.prototype = {
   }
 };
 
+var BattlerMixin = function() {
+  /* Used for Monsters and PlayerCharacters - anybody who can take
+   * part in a battle. Syntax for using mixin:
+   * BattlerMixin.call(class.prototype);  */
+  this.lockInCmd = function(cmd, target) {
+    this._lockedAction = {cmd: cmd,
+                          target: target};
+  };
+  this.getLockedInCmd =function() {
+    return this._lockedAction;
+  };
+  this.setStats = function(statBlock) {
+    this._statBlock = statBlock;
+  };
+  this.die = function() {
+    this._dead = true;
+  };
+  this.isAlive = function() {
+    return !this._dead;
+  };
+  this.setStat = function(statName, value) {
+    this._statBlock[statName] = value;
+  };
+  this.getStat = function(statName) {
+    return this._statBlock[statName];
+  };
+  this.modifyStat = function(statName, delta) {
+    this._statBlock[statName] += delta;
+  };
+  this.onEffect = function(effectName, callback) {
+    if (!this._effectHandlers) {
+      this._effectHandlers = [];
+    }
+    this._effectHandlers[effectName] = callback;
+  };
+  this.takeEffect = function(effectName, data) {
+    if (!this._effectHandlers) {
+      this._effectHandlers = [];
+    }
+    if (this._effectHandlers[effectName]) {
+      data = this._effectHandlers[effectName](this, data);
+      // return null to prevent default
+    }
+
+    // otherwise, return (possibly modified) data to continue
+    // with the default handler.
+    return data;
+  }
+}
+
+
 function Monster(img, statBlock, effectHandlers) {
   this.img = img;
   this._statBlock = statBlock;
@@ -708,37 +759,11 @@ Monster.prototype = {
     this.x = x;
     this.y = y;
   },
-  setStat: function(statName, value) {
-    this._statBlock[statName] = value;
-  },
-  getStat: function(statName) {
-    return this._statBlock[statName];
-  },
-  modifyStat: function(statName, delta) {
-    this._statBlock[statName] += delta;
-  },
   plot: function(ctx) {
     ctx.drawImage(this.img, this.x, this.y);
-  },
-  lockInCmd: function(cmd, target) {
-    this._lockedAction = {cmd: cmd,
-                          target: target};
-  },
-  getLockedInCmd: function() {
-    return this._lockedAction;
-  },
-  takeEffect: function(effectName, data) {
-    if (this._effectHandlers[effectName]) {
-      data = this._effectHandlers[effectName](this, data);
-      // return null to prevent default
-    }
-
-    // otherwise, return (possibly modified) data to continue
-    // with the default handler.
-    return data;
   }
 };
-
+BattlerMixin.call(Monster.prototype);
 
 BASIC_FIGHT_CMD = new BatCmd({
   target: "random_enemy",

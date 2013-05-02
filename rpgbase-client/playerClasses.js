@@ -252,40 +252,9 @@ PlayerCharacter.prototype = {
 
   getLastMoved: function() {
     return this.lastMoved;
-  },
+  }
 
   // Everything from here on is copy-pasted from monster class.
   // really need like a "combatant" base class or something.
-
-  // used by the battle system:
-  lockInCmd: function(cmd, target) {
-    this._lockedAction = {cmd: cmd,
-                          target: target};
-  },
-  getLockedInCmd: function() {
-    return this._lockedAction;
-  },
-
-  setStat: function(statName, value) {
-    this._statBlock[statName] = value;
-  },
-  getStat: function(statName) {
-    return this._statBlock[statName];
-  },
-  modifyStat: function(statName, delta) {
-    this._statBlock[statName] += delta;
-  },
-  onEffect: function(effectName, callback) {
-    this._effectHandlers[effectName] = callback;
-  },
-  takeEffect: function(effectName, data) {
-    if (this._effectHandlers[effectName]) {
-      data = this._effectHandlers[effectName](this, data);
-      // return null to prevent default
-    }
-
-    // otherwise, return (possibly modified) data to continue
-    // with the default handler.
-    return data;
-  }
 };
+BattlerMixin.call(PlayerCharacter.prototype);
