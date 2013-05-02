@@ -235,7 +235,7 @@ BattleSystem.prototype = {
     // and query it from here.
     var aliveParty = [];
     for (var i =0 ; i< this.party.length; i++) {
-      if (!this.party[i].dead) {
+      if (this.party[i].isAlive()) {
         aliveParty.push(this.party[i]);
       }
     }
@@ -503,7 +503,7 @@ BattleSystem.prototype = {
         return;
       }
       var fighter = fighters[fighterIndex];
-      if (fighter.dead) {
+      if (!fighter.isAlive()) {
         // If fighter died earlier in the turn before taking their
         // action, then skip them.
         self.showMsg(fighter.name + " is dead!");
@@ -595,14 +595,14 @@ BattleSystem.prototype = {
 
   removeFromBattle: function(target) {
     // dead fighters will be skipped during command input and execution
-    target.dead = true;
+    target.die();
     
     if (this.party.indexOf(target) > -1) {
       // if it's a player...
       // check for tpk:
       var tpk = true;
       for (var i = 0; i < this.party.length; i++) {
-        if (!this.party[i].dead) {
+        if (this.party[i].isAlive()) {
           tpk = false;
         }
       }

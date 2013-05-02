@@ -10,9 +10,8 @@ Player.prototype = {
     mapScreen.setPlayer(this);
     for (var i = 0; i < this.party.length; i++) {
       this.party[i].setPos(x, y);
-      this.party[i].lastMoved = {x: 0, y: 0};
+      this.party[i].clearLastMoved();
     }
-
     mapScreen.scrollToShow(x, y);
   },
 
@@ -21,11 +20,11 @@ Player.prototype = {
     var y = this.party[0]._y;
     for (var i = 0; i < this.party.length; i++) {
       this.party[i].setPos(x, y);
-      this.party[i].lastMoved = {x: 0, y: 0};
+      this.party[i].clearLastMoved();
     }
     this.aliveParty = [];
     for (var i =0 ; i< this.party.length; i++) {
-      if (!this.party[i].dead) {
+      if (this.party[i].isAlive()) {
         this.aliveParty.push(this.party[i]);
       }
     }
@@ -133,25 +132,17 @@ Player.prototype = {
   onMove: function(callback) {
     this.moveListeners.push(callback);
   }
-
 }
 
-function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock) {
-  this._init(spriteSheet, width, height, offsetX, offsetY, statBlock);
-}
-PlayerCharacter.prototype = {
-  _init: function(spriteSheet, width, height, offsetX, offsetY, statBlock) {
+function MapSpriteMixin() {
+  this.defineSprite = function(spriteSheet, width, height,
+                               offsetX, offsetY) {
     this._img = spriteSheet;
-    /*this._stuckInEncounter = false;
-    this._inventory = [];*/
-    this._statBlock = statBlock;
-
     this._x = 0;
     this._y = 0;
     this._spriteSlice = {x: 0, y: 0};
-
-    this.width = width;
-    this.height = height;
+    this._width = width;
+    this._height = height;
 
     this._offsetX = offsetX;
     this._offsetY = offsetY;
@@ -159,28 +150,24 @@ PlayerCharacter.prototype = {
     this._animationOffset = {x: 0, y: 0};
     this._animationCallback = null;
 
-    this.lastMoved = {x: 0, y: 0};
-    this._effectHandlers = {};
-
-    // TODO replace this with something a little, uh... less dumb:
-    this.dead = false;
-  },
+    this._lastMoved = {x: 0, y: 0};
+  };
   
-  setSprite: function(sliceX, sliceY) {
+  this.setSprite = function(sliceX, sliceY) {
     this._spriteSlice = {x: sliceX, y: sliceY};
-  },
+  };
 
-  setAnimationOffset: function(offset) {
+  this.setAnimationOffset = function(offset) {
     this._animationOffset = offset;
-  },
+  };
 
-  walkAnimation: function(callback) {
+  this.walkAnimation = function(callback) {
     this._animationCallback = callback;
-  },
+  };
 
-  plot: function(mapScreen, adjustment) {
+  this.plot = function(mapScreen, adjustment) {
 
-    if (this.dead) {
+    if (!this.isAlive()) {
       return; // this will leave a gap in the party... not the best
     }
 
@@ -198,24 +185,22 @@ PlayerCharacter.prototype = {
       y+= adjustment.y;
     }
 
-    var spriteOffsetX = this._spriteSlice.x * this.width;
-    var spriteOffsetY = this._spriteSlice.y * this.height;
+    var spriteOffsetX = this._spriteSlice.x * this._width;
+    var spriteOffsetY = this._spriteSlice.y * this._height;
 
-    mapScreen._ctx.drawImage(this._img, spriteOffsetX, spriteOffsetY, this.width, this.height, x, y, this.width, this.height);
-    
-  },
+    mapScreen._ctx.drawImage(this._img,
+                             spriteOffsetX, spriteOffsetY,
+                             this._width, this._height,
+                             x, y,
+                             this._width, this._height);
+  };
 
-  getItem: function( item ) {
-    this._inventory.push(item);
-    $("#item-menu").html( this.makeItemMenu());
-  },
-
-  canCross: function( landType ) {
+  this.canCross = function( landType ) {
     // OVERRIDE THIS
     return true;
-  },
+  };
 
-  canMove: function(mapScreen, deltaX, deltaY) {
+  this.canMove = function(mapScreen, deltaX, deltaY) {
     var canMove = true;
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
@@ -229,32 +214,36 @@ PlayerCharacter.prototype = {
       }
     }
     return canMove;
-  },
+  };
 
-  move: function( mapScreen, deltaX, deltaY ) {
+  this.move = function( mapScreen, deltaX, deltaY ) {
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
     this._x = newX;
     this._y = newY;
 
-    this.lastMoved = {x: deltaX, y: deltaY};
-  },
+    this._lastMoved = {x: deltaX, y: deltaY};
+  };
 
-  setPos: function( x, y ) {
+  this.setPos = function( x, y ) {
     this._x = x;
     this._y = y;
-    //this._updatePositionToServer();
-  },
+  };
 
-  setDomain: function( domainId ) {
-    this._domainId = domainId;
-  },
+  this.getLastMoved = function() {
+    return this._lastMoved;
+  };
 
-  getLastMoved: function() {
-    return this.lastMoved;
-  }
+  this.clearLastMoved = function() {
+    this._lastMoved = {x: 0, y: 0};
+  };
+}
 
-  // Everything from here on is copy-pasted from monster class.
-  // really need like a "combatant" base class or something.
-};
+function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock) {
+  this._statBlock = statBlock;
+  this._effectHandlers = {};
+  this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+}
+PlayerCharacter.prototype = {};
 BattlerMixin.call(PlayerCharacter.prototype);
+MapSpriteMixin.call(PlayerCharacter.prototype);
