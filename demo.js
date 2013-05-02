@@ -137,6 +137,9 @@ function setUpTownMap(loader) {
   var spriteSheet = loader.add("mapsprites.png");
   var shopkeeper = new NPC(spriteSheet, 16, 24, 0, -8);
   shopkeeper.setSprite(0, 2);
+  shopkeeper.onTalk(function() {
+    console.log("HELLO I AM A SHOMPKEEPER");
+  });
   town.addNPC(shopkeeper, 5, 5);
   return town;
 }
@@ -268,7 +271,7 @@ function setUpBattleSystem(canvas, loader) {
   return battleSystem;
 }
 
-function setUpInputHandler(player) {
+function setUpInputHandler(player, mapScreen) {
   // This is the keyboard input handler for the map screen only
   var inputHandler = new DPadStyleKeyHandler(50, function(key) {
     // Frame-rate = one frame per 50 ms
@@ -289,6 +292,11 @@ function setUpInputHandler(player) {
     case CONFIRM_BUTTON:
       // TODO - maybe hitting this button on map screen will
       // pop open the menus or talk to an NPC or something.
+      var facingSpace = player.getFacingSpace();
+      var npc = mapScreen.getNPCAt(facingSpace.x, facingSpace.y);
+      if (npc) {
+        npc.talk();
+      }
       break;
     case CANCEL_BUTTON:
       break;
@@ -336,7 +344,7 @@ $(document).ready( function() {
   var player = setUpParty(loader);
   var mapScreen = setUpMapScreen(canvas);
   var battleSystem = setUpBattleSystem(canvas, loader);
-  var inputHandler = setUpInputHandler(player); // map-screen input
+  var inputHandler = setUpInputHandler(player, mapScreen); // map-screen input
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
   var overworld = setUpOverworldMap(loader);
 
@@ -382,7 +390,7 @@ $(document).ready( function() {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onEndBattle(function() {
-    battleInputHandler.ostopListening();
+    battleInputHandler.stopListening();
     inputHandler.startListening();
     mapScreen.render();
   });
@@ -392,7 +400,7 @@ $(document).ready( function() {
   inputHandler.startListening();
   // Put the player at position 4, 4 in the overworld:
   mapScreen.setNewDomain(overworld);
-  player.enterMapScreen(mapScreen, 15, 20);
+  player.enterMapScreen(mapScreen, 4, 4);
 
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {

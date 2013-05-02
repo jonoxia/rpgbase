@@ -37,8 +37,10 @@ Player.prototype = {
     for (var i = 0; i < this.aliveParty.length - 1; i++) {
       partyMoveDirections.push(this.aliveParty[i].getLastMoved());
     }
-
     var mainChar = this.aliveParty[0];
+
+    // set facing of main character even if we can't move:
+    mainChar.setFacing(deltaX, deltaY);
 
     var canMove = mainChar.canMove(self.mapScreen, deltaX, deltaY);
     var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
@@ -131,6 +133,14 @@ Player.prototype = {
 
   onMove: function(callback) {
     this.moveListeners.push(callback);
+  },
+
+  getFacingSpace: function() {
+    var mainChar = this.aliveParty[0];
+    var pos = mainChar.getPos();
+    var facing = mainChar.getFacing();
+    var space = {x: pos.x + facing.x, y: pos.y + facing.y};
+    return space;
   }
 }
 
@@ -226,6 +236,7 @@ function MapSpriteMixin() {
     this._y = newY;
 
     this._lastMoved = {x: deltaX, y: deltaY};
+    this._facing = {x: deltaX, y: deltaY};
   };
 
   this.setPos = function( x, y ) {
@@ -243,6 +254,17 @@ function MapSpriteMixin() {
 
   this.clearLastMoved = function() {
     this._lastMoved = {x: 0, y: 0};
+  };
+
+  this.setFacing = function(dx, dy) {
+    this._facing = {x: dx, y: dy};
+  };
+
+  this.getFacing = function(dx, dy) {
+    if (!this._facing) {
+      this._facing = {x: 0, y: 1}; //facing south is default
+    }
+    return this._facing;
   };
 }
 
