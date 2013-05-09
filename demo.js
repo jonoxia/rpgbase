@@ -58,7 +58,7 @@ function makeOnePC(name, spriteSheet, spriteSheetRow) {
   pc.walkAnimation(function(deltaX, deltaY, frame) {
     // "this" refers to pc
     frameCount += 1;
-    walkFrame = (Math.floor(frameCount / 3) % 2);
+    var walkFrame = (Math.floor(frameCount / 3) % 2);
     // switch sprite every 3 animation frames
     if (deltaX < 0) {
       this.setSprite(6+walkFrame, spriteSheetRow);
@@ -137,8 +137,8 @@ function setUpTownMap(loader) {
   var spriteSheet = loader.add("mapsprites.png");
   var shopkeeper = new NPC(spriteSheet, 16, 24, 0, -8);
   shopkeeper.setSprite(0, 2);
-  shopkeeper.onTalk(function() {
-    console.log("HELLO I AM A SHOMPKEEPER");
+  shopkeeper.onTalk(function(dialog) {
+    dialog.show("HELLO I AM A SHOMPKEEPER");
   });
   town.addNPC(shopkeeper, 5, 5);
   return town;
@@ -271,9 +271,61 @@ function setUpBattleSystem(canvas, loader) {
   return battleSystem;
 }
 
-function setUpInputHandler(player, mapScreen) {
-  // This is the keyboard input handler for the map screen only
-  var inputHandler = new DPadStyleKeyHandler(50, function(key) {
+function setUpMonstrousManuel(loader) {
+  var manuel = {
+    biteWorm: new MonsterType(loader.add("monsters/biteworm.png"),
+                              "Biteworm",
+                              {hp: 10}),
+    groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
+                                 "Groundsnake",
+                                 {hp: 15})
+    // TODO - Add more monster definitions here. Comma-separated.
+  };
+  return manuel;
+}
+
+function setUpFieldMenu() {
+  // set up menu system
+  var fieldCommands = {
+    "ITEM": function(menus, party) {
+      menus.showMsg("You can't find any good items in your backpack. You should keep it better organized.");
+    },
+    "SPELL": function(menus, party) {
+      menus.showMsg("You sure magiced up that spell!");
+    },
+    "EQUIP": function(menus, party) {
+      menus.showMsg("You put your recently purchased upgrades on your body");
+    },
+    "STATS": function(menus, party) {
+      menus.showMsg("Each of your characters definitely has stats of some kind");
+    },
+    "ORDER": function(menus, party) {
+      menus.showMsg("You put your squishy wizards and healers in the back!");
+    },
+    "SAVE": function(menus, party) {
+      menus.showMsg("Like this game has a save system yet!");
+    }
+  };
+  
+  var fieldMenu = new MenuSystem($("#battle-system"), fieldCommands);
+  return fieldMenu;
+}
+
+
+
+function setUpInputDispatch(player, mapScreen, fieldMenu) {
+  var theOpenMenu = null;
+  var inputDispatcher;
+
+  var menuInputHandler = new NoRepeatKeyHandler(function(key) {
+    if (theOpenMenu) {
+      theOpenMenu.handleKey(key);
+    }
+  });
+
+  var dialog = new Dialoglog($("#battle-system"));
+
+  var mapInputHandler = new DPadStyleKeyHandler(50, function(key) {
     // Frame-rate = one frame per 50 ms
     var delX = 0, delY =0;
     switch (key) {
@@ -290,38 +342,50 @@ function setUpInputHandler(player, mapScreen) {
       delX = 1; delY = 0;
       break;
     case CONFIRM_BUTTON:
-      // TODO - maybe hitting this button on map screen will
-      // pop open the menus or talk to an NPC or something.
+      // If you're facing an NPC, talk to them!
       var facingSpace = player.getFacingSpace();
       var npc = mapScreen.getNPCAt(facingSpace.x, facingSpace.y);
       if (npc) {
-        npc.talk();
+        npc.talk(dialog);
+        inputDispatcher.menuMode(dialog);
       }
       break;
     case CANCEL_BUTTON:
+      // Pop open the field menu system
+      fieldMenu.open(player.getParty());
+      inputDispatcher.menuMode(fieldMenu);
       break;
     }
 
     if (delX != 0 || delY != 0) {
       // Animate the player moving over the course of 5 frames
-      inputHandler.startAnimation(player.move(delX, delY, 5));
+      mapInputHandler.startAnimation(player.move(delX, delY, 5));
     }
   });
 
-  return inputHandler;
-}
+  inputDispatcher = {
+    menuMode: function(menuSystem) {
+      theOpenMenu = menuSystem;
+      mapInputHandler.stopListening();
+      menuInputHandler.startListening();
+    },
 
-function setUpMonstrousManuel(loader) {
-  var manuel = {
-    biteWorm: new MonsterType(loader.add("monsters/biteworm.png"),
-                              "Biteworm",
-                              {hp: 10}),
-    groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
-                                 "Groundsnake",
-                                 {hp: 15})
-    // TODO - Add more monster definitions here. Comma-separated.
+    mapMode: function() {
+      theOpenMenu = null;
+      menuInputHandler.stopListening();
+      mapInputHandler.startListening();
+    }
   };
-  return manuel;
+
+  // return control to map screen key handler when menus are closed
+  fieldMenu.onClose(function() {
+    inputDispatcher.mapMode();
+  });
+  dialog.onClose(function() {
+    inputDispatcher.mapMode();
+  });
+
+  return inputDispatcher;
 }
 
 
@@ -344,24 +408,18 @@ $(document).ready( function() {
   var player = setUpParty(loader);
   var mapScreen = setUpMapScreen(canvas);
   var battleSystem = setUpBattleSystem(canvas, loader);
-  var inputHandler = setUpInputHandler(player, mapScreen); // map-screen input
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
   var overworld = setUpOverworldMap(loader);
-
+  var fieldMenu = setUpFieldMenu();
 
   // Set up the relationships between the main game components
-
-  // create the special input handler for the battle screen
-  var battleInputHandler = new NoRepeatKeyHandler(function(key) {
-     battleSystem.handleKey(key);
-  });
+  var inputDispatcher = setUpInputDispatch(player, mapScreen, fieldMenu);
 
   /* 5% chance of random encounter on each step through overworld
    * When an encounter happens, switch to the battlescreen-style
    * input, and start the battle */
   overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
-    inputHandler.stopListening();
-    battleInputHandler.startListening();
+    inputDispatcher.menuMode(battleSystem);
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                       number: 3}, landType);
   });
@@ -390,21 +448,22 @@ $(document).ready( function() {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onEndBattle(function() {
-    battleInputHandler.stopListening();
-    inputHandler.startListening();
+    inputDispatcher.mapMode();
     mapScreen.render();
   });
 
+
   /* Prepare for the game to start!
-   * start listening for (map screen) input: */
-  inputHandler.startListening();
-  // Put the player at position 4, 4 in the overworld:
+   * Put the player at position 4, 4 in the overworld: */
   mapScreen.setNewDomain(overworld);
   player.enterMapScreen(mapScreen, 4, 4);
 
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     mapScreen.render();
+    // and start listening for (map screen) input:
+    inputDispatcher.mapMode();
+
     /*inputHandler.stopListening();
     battleInputHandler.startListening();
     battleSystem.startBattle(player, {type: manuel.biteWorm,

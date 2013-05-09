@@ -30,10 +30,9 @@ NPC.prototype = {
     this._talkCallback = callback;
   },
 
-  talk: function() {
+  talk: function(dialoglog) {
     if (this._talkCallback) {
-      this._talkCallback();
-      // will probably be a call to the non-battle menu system
+      this._talkCallback(dialoglog);
     }
   }
 

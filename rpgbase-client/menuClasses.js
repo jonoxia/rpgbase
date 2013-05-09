@@ -195,12 +195,6 @@ MenuSystem.prototype = {
     this.displayElem.empty();
   },
 
-  showDialogMenu: function() {
-    // e.g. showDialogMenu({"yes": function() {},
-    //                      "no": function() {}
-    //                    });
-  },
-
   displayPartyStats: function() {
 
   },
@@ -223,6 +217,45 @@ MenuSystem.prototype = {
       if (this.menuStack.length > 0) {
         this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
       }
+    }
+  }
+};
+
+// maybe factor out a MenuStack class?
+
+function Dialoglog(htmlElem) {
+  this.menuStack = [];
+  this._htmlElem = htmlElem;
+  this.displayElem = this._htmlElem.find(".msg-display");
+}
+Dialoglog.prototype = {
+  show: function(msg) {
+    this._htmlElem.show();
+    this.displayElem.append($("<span></span>").html(msg));
+    this.displayElem.append($("<br>"));
+    this.displayElem.show();
+  },
+  hide: function() {
+    this.displayElem.hide();
+    this._htmlElem.hide();
+    this.displayElem.empty();
+  },
+  onClose: function(callback) {
+    this._closeCallback = callback;
+  },
+  showMenu: function() {
+    // e.g. showDialogMenu({"yes": function() {},
+    //                      "no": function() {}
+    //                    });
+  },
+  handleKey: function(keyCode) {
+    // if there's a menu, pass key code along to menu
+    // if end of the dialog is onscreen, hide it
+    // if a screen before the end of long dialog is onscreen,
+    // scroll to next screen of dialog.
+    this.hide();
+    if (this._closeCallback) {
+      this._closeCallback();
     }
   }
 };
