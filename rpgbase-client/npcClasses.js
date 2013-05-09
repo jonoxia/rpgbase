@@ -1,3 +1,16 @@
+function NonCombatMenuSystem() {
+  // TODO - support both CSS menus and Canvas menus?
+}
+NonCombatMenuSystem.prototype = {
+
+  // TODO this shares a lot of code with battle system's menus
+  // actually factor that out and start with it.
+  // userland should be able to customize both battle and nonbattle
+  // menus at the same time, since they probably want the same style.
+};
+
+
+
 
 // http://javascriptweblog.wordpress.com/2011/05/31/a-fresh-look-at-javascript-mixins/
 
@@ -28,6 +41,6 @@ NPC.prototype = {
 };
 MapSpriteMixin.call(NPC.prototype);
 
-/* TODO:  NPCs belong to a Map.
- * MapScreen only draws NPCs for teh current Map.
+/* NPCs belong to a Map.
+ * MapScreen only draws NPCs for the current Map.
  * An NPC on a square makes the square impassible! */

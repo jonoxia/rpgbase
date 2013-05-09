@@ -4,14 +4,16 @@ function AssetLoader() {
     this._thingsLoaded = 0;
 }
 AssetLoader.prototype = {
-    add: function(url) {
-	this._thingsToLoad++;
-	var tag = new Image();
-	var thing = { url: url,
-	              tag: tag };
-	this._things.push(thing);
-	return tag;
-    },
+  add: function(url) {
+    // TODO if we've already been asked to load this URL,
+    // just return the tag we already have!
+    this._thingsToLoad++;
+    var tag = new Image();
+    var thing = { url: url,
+	          tag: tag };
+    this._things.push(thing);
+    return tag;
+  },
 
     loadThemAll: function(callback, updateFunc) {
 	var self = this;

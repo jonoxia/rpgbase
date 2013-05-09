@@ -227,7 +227,7 @@ MapScreen.prototype = {
     var party = this.player.getAliveParty();
     var npcs = this._currentDomain.getAllNPCs();
     // TODO - only get the ones on the screen given current scroll?
-    mapSprites = party.concat(npcs);
+    var mapSprites = party.concat(npcs);
 
     // sort them all so southernmost are drawn last:
     mapSprites.sort(function(a, b) {
