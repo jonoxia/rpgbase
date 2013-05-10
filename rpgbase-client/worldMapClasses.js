@@ -84,6 +84,24 @@ Map.prototype = {
 
   getAllNPCs: function() {
     return this._npcs;
+  },
+
+  load: function() {
+    // called when player enters this map
+    // TODO allow registering onLoad handlers
+    // wake up all npcs on this map:
+    for (var i = 0; i < this._npcs.length; i++) {
+      this._npcs[i].wake();
+    }
+  },
+
+  unload: function() {
+    // called when player leaves this map
+    // TODO allow registering onUnload handlers
+    // sleep all npcs on this map:
+    for (var i = 0; i < this._npcs.length; i++) {
+      this._npcs[i].sleep();
+    }
   }
 }
 
@@ -123,9 +141,14 @@ MapScreen.prototype = {
   },
 
   setNewDomain: function( domain ) {
+
+    if (this._currentDomain) {
+      this._currentDomain.unload();
+    }
     this._currentDomain = domain;
     this._scrollX = 0;
     this._scrollY = 0;
+    this._currentDomain.load();
   },
 
   getLandType: function( x, y ) {
@@ -319,9 +342,9 @@ MapScreen.prototype = {
  *   (NPCs, the boat)
  * 3. write a Vehicle class, and have it take over player.move when
  *   the party is embarked.
- * 4. hit a button on the map screen to pop open the stats menus
+ * (done) 4. hit a button on the map screen to pop open the stats menus
  *   (you know, for equipping stuff, casting heals, etc.)
- * 5. hit another button on the map screen to find if any NPC is
+ * (done) 5. hit another button on the map screen to find if any NPC is
  *    in front of you, and if so call their onTalk method.
 
 */

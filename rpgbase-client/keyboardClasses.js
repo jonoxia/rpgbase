@@ -190,7 +190,6 @@ Animation.prototype = {
     this.frameCallback(this.currFrame);
     
     if (this.currFrame == this.numFrames) {
-      console.log("Finishing animation");
       this.done = true;
       for (var i = 0; i < this.finishCallbacks.length; i++) {
         this.finishCallbacks[i]();

@@ -132,10 +132,11 @@ function setUpOverworldMap(loader) {
   return map;
 }
 
-function setUpTownMap(loader) {
+function setUpTownMap(loader, animator, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
   var spriteSheet = loader.add("mapsprites.png");
   var shopkeeper = new NPC(spriteSheet, 16, 24, 0, -8);
+  shopkeeper.wander(mapScreen, animator);
   shopkeeper.setSprite(0, 2);
   shopkeeper.onTalk(function(dialog) {
     dialog.show("HELLO I AM A SHOMPKEEPER");
@@ -313,8 +314,7 @@ function setUpFieldMenu() {
 
 
 
-function setUpInputDispatch(player, mapScreen) {
-  var animator = new Animator(50);
+function setUpInputDispatch(player, mapScreen, animator) {
   var dispatcher = makeInputDispatcher(50, function(key) {
     // Frame-rate = one frame per 50 ms
     var delX = 0, delY =0;
@@ -353,8 +353,6 @@ function setUpInputDispatch(player, mapScreen) {
     }
   });
 
-  animator.start();
-
   dispatcher.addMenuMode("dialog", new Dialoglog($("#battle-system")));
 
   return dispatcher;
@@ -375,6 +373,8 @@ $(document).ready( function() {
 
   // Create the loader (to load all images)
   var loader = new AssetLoader();
+  // animator with one frame per 50 ms
+  var animator = new Animator(50);
 
   // Create the main game components (see the various setUp functions)
   var player = setUpParty(loader);
@@ -385,7 +385,7 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
 
   // Set up the relationships between the main game components
-  var inputDispatcher = setUpInputDispatch(player, mapScreen);
+  var inputDispatcher = setUpInputDispatch(player, mapScreen, animator);
   inputDispatcher.addMenuMode("field", fieldMenu);
   inputDispatcher.addMenuMode("battle", battleSystem);
 
@@ -398,7 +398,7 @@ $(document).ready( function() {
                                       number: 3}, landType);
   });
 
-  var townMap = setUpTownMap(loader);
+  var townMap = setUpTownMap(loader, animator, mapScreen);
 
 
   function situateTown(theTownMap, theOverworldMap, x1, y1, x2, y2) {
@@ -436,6 +436,8 @@ $(document).ready( function() {
     mapScreen.render();
     // and start listening for (map screen) input:
     inputDispatcher.mapMode();
+    // and begin animation:
+    animator.start();
 
     /*inputHandler.stopListening();
     battleInputHandler.startListening();

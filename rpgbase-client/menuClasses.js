@@ -226,6 +226,8 @@ MenuSystem.prototype = {
 function Dialoglog(htmlElem) {
   this.menuStack = [];
   this._htmlElem = htmlElem;
+  this._closeCallbacks = [];
+  this._occupiedNPC = null;
   this.displayElem = this._htmlElem.find(".msg-display");
 }
 Dialoglog.prototype = {
@@ -242,7 +244,7 @@ Dialoglog.prototype = {
     this.displayElem.empty();
   },
   onClose: function(callback) {
-    this._closeCallback = callback;
+    this._closeCallbacks.push(callback);
   },
   showMenu: function() {
     // e.g. showDialogMenu({"yes": function() {},
@@ -255,8 +257,19 @@ Dialoglog.prototype = {
     // if a screen before the end of long dialog is onscreen,
     // scroll to next screen of dialog.
     this.hide();
-    if (this._closeCallback) {
-      this._closeCallback();
+    for (var i = 0; i < this._closeCallbacks.length; i++) {
+      this._closeCallbacks[i]();
     }
+    if (this._occupiedNPC) {
+      // release any NPC that this dialog was occupying
+      this._occupiedNPC.wake();
+      this._occupiedNPC = null;
+    }
+  },
+
+  occupyNPC: function(npc) {
+    // don't let this NPC wander away while player is talking to them:
+    npc.sleep();
+    this._occupiedNPC = npc;
   }
 };

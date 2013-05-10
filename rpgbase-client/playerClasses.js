@@ -114,6 +114,11 @@ Player.prototype = {
     };
 
     return new Animation(numAnimFrames, frameCallback, finishCallback);
+
+    // TODO this function would be greatly simplified if we had some
+    // kind of animation compositer -- create individual animations for
+    // each party member and/or the map scroll, then composite them 
+    // into one.
   },
 
   addCharacter: function(playerCharacter) {
@@ -219,6 +224,10 @@ function MapSpriteMixin() {
       // don't walk through an NPC
       return false;
     }
+
+    // TODO if you are an NPC, don't walk through a PC! But PCs can
+    // walk through each other.
+
     // don't walk through impassible terrain types
     var nextStepLandType = mapScreen.getLandType(newX, newY);
     if (!this.canCross(nextStepLandType)) {
