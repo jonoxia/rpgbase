@@ -313,19 +313,8 @@ function setUpFieldMenu() {
 
 
 
-function setUpInputDispatch(player, mapScreen, fieldMenu) {
-  var theOpenMenu = null;
-  var inputDispatcher;
-
-  var menuInputHandler = new NoRepeatKeyHandler(function(key) {
-    if (theOpenMenu) {
-      theOpenMenu.handleKey(key);
-    }
-  });
-
-  var dialog = new Dialoglog($("#battle-system"));
-
-  var mapInputHandler = new DPadStyleKeyHandler(50, function(key) {
+function setUpInputDispatch(player, mapScreen) {
+  var dispatcher = makeInputDispatcher(50, function(key) {
     // Frame-rate = one frame per 50 ms
     var delX = 0, delY =0;
     switch (key) {
@@ -346,46 +335,24 @@ function setUpInputDispatch(player, mapScreen, fieldMenu) {
       var facingSpace = player.getFacingSpace();
       var npc = mapScreen.getNPCAt(facingSpace.x, facingSpace.y);
       if (npc) {
-        npc.talk(dialog);
-        inputDispatcher.menuMode(dialog);
+        npc.talk(dispatcher.menuMode("dialog"));
       }
       break;
     case CANCEL_BUTTON:
       // Pop open the field menu system
-      fieldMenu.open(player.getParty());
-      inputDispatcher.menuMode(fieldMenu);
+      dispatcher.menuMode("field").open(player.getParty());
       break;
     }
 
     if (delX != 0 || delY != 0) {
       // Animate the player moving over the course of 5 frames
-      mapInputHandler.startAnimation(player.move(delX, delY, 5));
+      dispatcher.startAnimation(player.move(delX, delY, 5));
     }
   });
 
-  inputDispatcher = {
-    menuMode: function(menuSystem) {
-      theOpenMenu = menuSystem;
-      mapInputHandler.stopListening();
-      menuInputHandler.startListening();
-    },
+  dispatcher.addMenuMode("dialog", new Dialoglog($("#battle-system")));
 
-    mapMode: function() {
-      theOpenMenu = null;
-      menuInputHandler.stopListening();
-      mapInputHandler.startListening();
-    }
-  };
-
-  // return control to map screen key handler when menus are closed
-  fieldMenu.onClose(function() {
-    inputDispatcher.mapMode();
-  });
-  dialog.onClose(function() {
-    inputDispatcher.mapMode();
-  });
-
-  return inputDispatcher;
+  return dispatcher;
 }
 
 
@@ -413,13 +380,15 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
 
   // Set up the relationships between the main game components
-  var inputDispatcher = setUpInputDispatch(player, mapScreen, fieldMenu);
+  var inputDispatcher = setUpInputDispatch(player, mapScreen);
+  inputDispatcher.addMenuMode("field", fieldMenu);
+  inputDispatcher.addMenuMode("battle", battleSystem);
 
   /* 5% chance of random encounter on each step through overworld
    * When an encounter happens, switch to the battlescreen-style
    * input, and start the battle */
   overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
-    inputDispatcher.menuMode(battleSystem);
+    inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                       number: 3}, landType);
   });
@@ -447,8 +416,7 @@ $(document).ready( function() {
 
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
-  battleSystem.onEndBattle(function() {
-    inputDispatcher.mapMode();
+  battleSystem.onClose(function() {
     mapScreen.render();
   });
 

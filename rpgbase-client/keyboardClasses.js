@@ -160,3 +160,53 @@ DPadStyleKeyHandler.prototype = {
     $(document).unbind("keyup", this.onKeyup);
   }
 };
+
+
+
+function makeInputDispatcher(repeatRate, mapScreenKeyCallback) {
+  /* Handles switching between map screen input mode and any
+   * number of menu input modes */
+  var openMenu = null;
+
+  var menuModes = {};
+
+  var menuInputHandler = new NoRepeatKeyHandler(
+    function(key) {
+      if (openMenu) {
+        openMenu.handleKey(key);
+      }
+    });
+
+  var mapInputHandler = new DPadStyleKeyHandler(repeatRate,
+                                                mapScreenKeyCallback);
+  var dispatcher = {
+    addMenuMode: function(name, menuMode) {
+      // assumes menuMode implements standard menu mode interface
+      // including onClose(callback) and handleKey(key).
+      menuModes[name] = menuMode;
+      menuMode.onClose(function() {
+        dispatcher.mapMode();
+      });
+    },
+
+    menuMode: function(name) {
+      openMenu = menuModes[name];
+      mapInputHandler.stopListening();
+      menuInputHandler.startListening();
+      return openMenu;
+    },
+    
+    mapMode: function() {
+      openMenu = null;
+      menuInputHandler.stopListening();
+      mapInputHandler.startListening();
+    },
+
+    startAnimation: function(animation) {
+      mapInputHandler.startAnimation(animation);
+      // TODO: detatch animation runner from key input handler
+    }
+  };
+
+  return dispatcher;
+}

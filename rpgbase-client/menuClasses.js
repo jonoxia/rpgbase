@@ -145,7 +145,7 @@ function MenuSystem(htmlElem, commandSet) {
   }
   this._mainMenu = menu;
   this._party = null;
-  this,_closeCallback = null;
+  this._closeCallback = null;
 }
 MenuSystem.prototype = {
   open: function(party) {
@@ -231,6 +231,7 @@ function Dialoglog(htmlElem) {
 Dialoglog.prototype = {
   show: function(msg) {
     this._htmlElem.show();
+    this.displayElem.empty();
     this.displayElem.append($("<span></span>").html(msg));
     this.displayElem.append($("<br>"));
     this.displayElem.show();

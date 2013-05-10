@@ -445,7 +445,7 @@ BattleSystem.prototype = {
     }
   },
 
-  onEndBattle: function(callback) {
+  onClose: function(callback) {
     this.endBattleCallbacks.push(callback);
   },
 
