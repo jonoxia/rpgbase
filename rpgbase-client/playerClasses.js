@@ -113,9 +113,7 @@ Player.prototype = {
       }
     };
 
-    return {numFrames: numAnimFrames,
-            frameCallback: frameCallback,
-            finishCallback: finishCallback};
+    return new Animation(numAnimFrames, frameCallback, finishCallback);
   },
 
   addCharacter: function(playerCharacter) {

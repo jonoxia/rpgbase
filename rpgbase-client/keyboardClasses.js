@@ -42,19 +42,11 @@ NoRepeatKeyHandler.prototype = {
 
 function DPadStyleKeyHandler(repeatRate, keyCallback) {
   this.repeatRate = repeatRate;
-
   this.keyCallback = keyCallback;
-  this.frameCallback = null;
-  this.animationFinishCallback = null;
-
-  this.animationRunning = false;
-  this.currFrame = 0;
-  this.numFrames = 0;
   this.queued = null;
   this.processing = null;
-
+  this.busyWaiting = false;
   this.timer = null;
-
   this.keysThatAreDown = [];
 
   var self = this;
@@ -65,41 +57,23 @@ function DPadStyleKeyHandler(repeatRate, keyCallback) {
       self.queueNextKey();
     }
 
-    // if we're ready to start an animation:
-    if (!self.animationRunning && self.queued != null) {
+    // if we're ready to start processing a key:
+    if (!self.busyWaiting && self.queued != null) {
       // pull the key out of the queue
       var key = self.queued;
       self.queued = null;
 
       // process the key:
       self.keyCallback(key);
-      // the keyCallback will call startAnimation if it wants
-      // any animation. Check if an animation has started...
-      if (self.animationRunning) {
+      // the keyCallback will call waitForAnimation if it
+      // wants us to wait. Check if busyWaiting has been set...
+      if (self.busyWaiting) {
         // that means we should consider the key to be in
         // the state of being processed
         self.processing = key;
       }
     }
     
-    if (self.animationRunning) {
-      // if an animation is going on, run one frame of it:
-      self.currFrame ++;
-      if (self.frameCallback) {
-        self.frameCallback(self.currFrame);
-      }
-      
-      // If that was the last frame, finish up the animation:
-      if (self.currFrame == self.numFrames) {
-        if (self.finishCallback) {
-          self.finishCallback();
-        }
-        // clear the state
-        self.animationRunning = false;
-        self.processing = null;
-        self.currFrame = 0;
-      }
-    }
   };
 
   this.onKeyup = function(evt) {
@@ -121,12 +95,13 @@ function DPadStyleKeyHandler(repeatRate, keyCallback) {
   };
 }
 DPadStyleKeyHandler.prototype = {
-  startAnimation: function(animationData) {
-    this.numFrames = animationData.numFrames;
-    this.frameCallback = animationData.frameCallback;
-    this.finishCallback = animationData.finishCallback;
-    this.animationRunning = true;
-    this.currFrame = 0;
+  waitForAnimation: function(animation) {
+    this.busyWaiting = true;
+    var self = this;
+    animation.onFinish(function() {
+      self.busyWaiting = false;
+      self.processing = null;
+    });
   },
 
   queueNextKey: function() {
@@ -145,9 +120,6 @@ DPadStyleKeyHandler.prototype = {
     $(document).bind("keydown", this.onKeydown);
     $(document).bind("keyup", this.onKeyup);
 
-    this.animationRunning = false;
-    this.currFrame = 0;
-    this.numFrames = 0;
     this.queued = null;
     this.processing = null;
     this.keysThatAreDown = [];
@@ -158,6 +130,76 @@ DPadStyleKeyHandler.prototype = {
     this.timer = null;
     $(document).unbind("keydown", this.onKeydown);
     $(document).unbind("keyup", this.onKeyup);
+  }
+};
+
+function Animator(frameLength) {
+  // A loop that can run any number of animations at the same time
+  // just create an animation and pass it to runAnimation.
+  this._frameLength = frameLength;
+  this._timer = null;
+  this._currentAnimations = [];
+
+  var self = this;
+  this._loop = function() {
+    var stillGoingAnims = [];
+    for (var i = 0; i < self._currentAnimations.length; i++) {
+      var anim = self._currentAnimations[i];
+      anim.doOneFrame();
+
+      if (!anim.done) {
+        stillGoingAnims.push(anim);
+      }
+    }
+
+    // remove finished animations:
+    self._currentAnimations = stillGoingAnims;
+  }
+}
+Animator.prototype = {
+  start: function() {
+    this._timer = window.setInterval(this._loop, this._frameLength);
+  },
+
+  stop: function() {
+    if (this._timer) {
+      window.clearInterval(this._timer);
+    }
+    this._timer = null;
+  },
+  
+  runAnimation: function(animation) {
+    animation.currFrame = 0;
+    this._currentAnimations.push(animation);
+  }
+};
+
+function Animation(numFrames, frameCallback, finishCallback) {
+  this.numFrames = numFrames;
+  this.currFrame = 0;
+  this.frameCallback = frameCallback;
+  this.finishCallbacks = [];
+  if (finishCallback) {
+    this.finishCallbacks.push(finishCallback);
+  }
+  this.done = false;
+};
+Animation.prototype = {
+  doOneFrame: function() {
+    this.currFrame ++;
+    this.frameCallback(this.currFrame);
+    
+    if (this.currFrame == this.numFrames) {
+      console.log("Finishing animation");
+      this.done = true;
+      for (var i = 0; i < this.finishCallbacks.length; i++) {
+        this.finishCallbacks[i]();
+      }
+    }
+  },
+
+  onFinish: function(finishCallback) {
+    this.finishCallbacks.push(finishCallback);
   }
 };
 
@@ -202,9 +244,9 @@ function makeInputDispatcher(repeatRate, mapScreenKeyCallback) {
       mapInputHandler.startListening();
     },
 
-    startAnimation: function(animation) {
-      mapInputHandler.startAnimation(animation);
-      // TODO: detatch animation runner from key input handler
+    waitForAnimation: function(animation) {
+      // TODO this is a really weird wart on the interface
+      mapInputHandler.waitForAnimation(animation);
     }
   };
 

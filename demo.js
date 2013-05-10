@@ -314,6 +314,7 @@ function setUpFieldMenu() {
 
 
 function setUpInputDispatch(player, mapScreen) {
+  var animator = new Animator(50);
   var dispatcher = makeInputDispatcher(50, function(key) {
     // Frame-rate = one frame per 50 ms
     var delX = 0, delY =0;
@@ -346,9 +347,13 @@ function setUpInputDispatch(player, mapScreen) {
 
     if (delX != 0 || delY != 0) {
       // Animate the player moving over the course of 5 frames
-      dispatcher.startAnimation(player.move(delX, delY, 5));
+      var anim = player.move(delX, delY, 5);
+      dispatcher.waitForAnimation(anim);
+      animator.runAnimation(anim);
     }
   });
+
+  animator.start();
 
   dispatcher.addMenuMode("dialog", new Dialoglog($("#battle-system")));
 
