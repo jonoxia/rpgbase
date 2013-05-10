@@ -336,7 +336,8 @@ function setUpInputDispatch(player, mapScreen, animator) {
       var facingSpace = player.getFacingSpace();
       var npc = mapScreen.getNPCAt(facingSpace.x, facingSpace.y);
       if (npc) {
-        npc.talk(dispatcher.menuMode("dialog"));
+        var playerFacing = player.getAliveParty()[0].getFacing();
+        npc.talk(dispatcher.menuMode("dialog"), playerFacing);
       }
       break;
     case CANCEL_BUTTON:

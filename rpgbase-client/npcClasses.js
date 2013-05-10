@@ -50,6 +50,7 @@ NPC.prototype = {
       this._animator.runAnimation(stepAnim);
     } else {
       // just turn to face the direction without moving
+      turn(deltaX, deltaY);
     }
 
   },
@@ -128,16 +129,25 @@ NPC.prototype = {
     this._talkCallback = callback;
   },
 
-  talk: function(dialoglog) {
+  talk: function(dialoglog, playerFacing) {
     if (this._talkCallback) {
-      // TODO: turn to face speaker;
-      // don't wander away while i'm talking to you!!
-      dialoglog.occupyNPC(this);
+      if (this._wanders) {
+        // turn to face speaker;
+        this.turn((-1)*playerFacing.x, (-1)*playerFacing.y);
+        // don't wander away while i'm talking to you!!
+        dialoglog.occupyNPC(this);
+      }
       this._talkCallback(dialoglog);
+    }
+  },
+
+  turn: function(deltaX, deltaY){ 
+    if (this._animationCallback) {
+      this._animationCallback(deltaX, deltaY, 0);
+      this._mapScreen.render();
     }
   }
 
-  /* some kind of onTick that makes wandering ones wander around? */
 };
 MapSpriteMixin.call(NPC.prototype);
 
