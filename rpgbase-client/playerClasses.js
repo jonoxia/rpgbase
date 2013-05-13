@@ -30,95 +30,72 @@ Player.prototype = {
     }
   },
 
-  move: function(deltaX, deltaY, numAnimFrames) {
+  move: function(dx, dy, numAnimFrames) {
     var self = this;
     
-    var partyMoveDirections = [{x: deltaX, y: deltaY}];
+    // each person moves in the direction last moved by the person
+    // in front of them
+    var partyMoveDirections = [{x: dx, y: dy}];
     for (var i = 0; i < this.aliveParty.length - 1; i++) {
       partyMoveDirections.push(this.aliveParty[i].getLastMoved());
     }
     var mainChar = this.aliveParty[0];
 
     // set facing of main character even if we can't move:
-    mainChar.setFacing(deltaX, deltaY);
+    mainChar.setFacing(dx, dy);
 
-    var canMove = mainChar.canMove(self.mapScreen, deltaX, deltaY);
+    // can main char take this step or are they blocked?
+    var canMove = mainChar.canMove(self.mapScreen, dx, dy);
     var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
 				                     mainChar._y,
-				                     deltaX,
-				                     deltaY);
-    var mapAnimator = null;
+				                     dx,
+				                     dy);
+    var animation = null;
     if (scrolliness.x != 0 || scrolliness.y != 0) {
       if (canMove) {
-        mapAnimator = this.mapScreen.getScrollAnimator(scrolliness,
-                                                       numAnimFrames);
+        // if screen will scroll, start with the scrolling animation
+        animation = this.mapScreen.getScrollAnimation(scrolliness,
+                                                     numAnimFrames);
       }
     }
+    if (animation == null) {
+      // otherwise start with an empty animation.
+      animation = new Animation(numAnimFrames);
+    }
 
-    var finishCallback = function() {
-      var i;
-      for (i = 0; i < self.aliveParty.length; i++) {
-        self.aliveParty[i].setAnimationOffset({x: 0, y: 0});
-        if (canMove) {
-          self.aliveParty[i].move(self.mapScreen,
-                                  partyMoveDirections[i].x,
-                                  partyMoveDirections[i].y);
-        }
+    // make walking animations for each party member and composite
+    // them.
+    if (canMove) {
+      for (var i = 0; i < this.aliveParty.length; i++) {
+        var member = this.aliveParty[i];
+        var walkDir = partyMoveDirections[i];
+        animation.composite(member.makeStepAnimation
+                            (self.mapScreen, numAnimFrames,
+                             walkDir.x, walkDir.y));
       }
-      self.mapScreen.render();
+    } else {
+      // if you can't move, just wiggle in place
+      animation.onFrame(function(currFrame) {
+        mainChar._animationCallback(dx, dy, currFrame);
+      });
+    } 
 
-      // map effects of the lead character's step
-      if (canMove) {
-        self.mapScreen.processStep(this, mainChar._x, mainChar._y);
-      }
+    // when animation is done, if we moved, trigger
+    // map effects of the lead character's step
+    if (canMove) {
+      animation.onFinish(function() {
+        self.mapScreen.processStep(self, mainChar._x, mainChar._y);
+      });
+    }
 
-      // user-defined callback(s):
+    // When animation is done, call user-defined callbacks!
+    animation.onFinish(function() {
       for (i = 0; i < self.moveListeners.length; i++) {
-        self.moveListeners[i].call(self, deltaX, deltaY, canMove);
+        self.moveListeners[i].call(self, dx, dy, canMove);
       }
-    };
+    });
 
-    var frameCallback = function(currFrame) {
-      // For each animation frame:
-
-      // Adjust each party member's screen position:
-      var i;
-      if (canMove) {
-        var pixels = currFrame * 16 / numAnimFrames;
-        for (var i = 0; i < self.aliveParty.length; i++) {
-          var offset = {
-            x: pixels * partyMoveDirections[i].x,
-            y: pixels * partyMoveDirections[i].y
-          };
-          self.aliveParty[i].setAnimationOffset(offset);
-        }
-      }
-
-      // Change the sprites for each party member:
-      for (i = 0; i < self.aliveParty.length; i++) {
-        if (self.aliveParty[i]._animationCallback) {
-          self.aliveParty[i]._animationCallback(
-            partyMoveDirections[i].x,
-            partyMoveDirections[i].y,
-            currFrame);
-        }
-      }
-
-      // scroll the map if needed:
-      if (mapAnimator) {
-        mapAnimator(currFrame); // this will render
-      } else {
-        // if not scrolling, just redraw our new positions:
-        self.mapScreen.render();
-      }
-    };
-
-    return new Animation(numAnimFrames, frameCallback, finishCallback);
-
-    // TODO this function would be greatly simplified if we had some
-    // kind of animation compositer -- create individual animations for
-    // each party member and/or the map scroll, then composite them 
-    // into one.
+    return animation;
   },
 
   addCharacter: function(playerCharacter) {
@@ -179,16 +156,13 @@ function MapSpriteMixin() {
   };
 
   this.plot = function(mapScreen, adjustment) {
-
     if (!this.isAlive()) {
       return; // this will leave a gap in the party... not the best
     }
-
     //adjustment is optional, but if provided it should have x, y
     var screenCoords = mapScreen.transform(this._x, this._y);
     var x = screenCoords[0] + this._offsetX;
     var y = screenCoords[1] + this._offsetY;
-
     if (this._animationOffset) {
       x+= this._animationOffset.x;
       y+= this._animationOffset.y;
@@ -272,6 +246,27 @@ function MapSpriteMixin() {
       this._facing = {x: 0, y: 1}; //facing south is default
     }
     return this._facing;
+  };
+
+  this.makeStepAnimation = function(mapScreen, numFrames, dx, dy) {
+    var self = this;
+    // total pixels to move in x dir and pixels to move in y dir:
+    var xPixels = mapScreen.tilePixelsX * dx; 
+    var yPixels = mapScreen.tilePixelsY * dy;
+    var finishCallback = function() {
+      self.setAnimationOffset({x: 0, y: 0});
+      self.move(mapScreen, dx, dy);
+    };
+    var frameCallback = function(currFrame) {
+      var offset = {
+        x: xPixels * currFrame / numFrames,
+        y: yPixels * currFrame / numFrames
+      };
+      self.setAnimationOffset(offset);
+      self._animationCallback(dx, dy, currFrame);
+    };
+    return new Animation(numFrames, frameCallback,
+                         finishCallback);
   };
 }
 

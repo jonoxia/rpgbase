@@ -106,7 +106,7 @@ Map.prototype = {
 }
 
 function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
-                  tilePixelsY){
+                   tilePixelsY, frameRate){
   this._currentDomain = null;
   this._scrollX = 0;
   this._scrollY = 0;
@@ -123,8 +123,11 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   // TODO set width and height of canvas element to
   // numTilesX * tilePixelsX, etc.
 
-  this.scrollAnimFrames = 0;
-  this.scrollAnimTime = 0;
+  var self = this;
+  // mapscreen has an animator that renders map screen after
+  // each frame.
+  this._animator = new Animator(frameRate,
+                                function() { self.render(); });
 }
 MapScreen.prototype = {
   setScrollMargins: function( newMargins ) {
@@ -214,7 +217,7 @@ MapScreen.prototype = {
             y: scrollY - this._scrollY};
   },
 
-  render: function(pixelAdjustment) {
+  render: function() {
     // pixel adjustment is optional but if present it should have
     // a .x and .y
     for (var y = 0; y < this.numTilesY; y++) {
@@ -229,9 +232,9 @@ MapScreen.prototype = {
 
         var drawX = x * (this.tilePixelsX ) + this.pixelOffset.x;
         var drawY = y * (this.tilePixelsY ) + this.pixelOffset.y;
-        if (pixelAdjustment) {
-          drawX += pixelAdjustment.x;
-          drawY += pixelAdjustment.y;
+        if (this.scrollAdjustment) {
+          drawX += this.scrollAdjustment.x;
+          drawY += this.scrollAdjustment.y;
         }
 
         this._ctx.drawImage(img,
@@ -263,23 +266,23 @@ MapScreen.prototype = {
       return (b._marchOrder - a._marchOrder);
     });
     for (var i = 0; i < mapSprites.length; i++) {
-      mapSprites[i].plot(this, pixelAdjustment);
+      mapSprites[i].plot(this, this.scrollAdjustment);
     }
   },
 
-  getScrollAnimator: function(delta, numFrames) {
+  getScrollAnimation: function(delta, numFrames) {
     var self = this;
     var xFactor = delta.x / numFrames;
     var yFactor = delta.y / numFrames;
 
     var halfwayPoint = Math.floor(numFrames/2);
-    
-    var animator = function(frame) {
+    var frameCallback = function(frame) {
       // calculate pixel adjustment based on tile size, current
       // frame, and direction of movement:
-      var adj = {x:(-1) * (frame * xFactor* self.tilePixelsX),
-                 y:(-1) * (frame * yFactor * self.tilePixelsY)
-                };
+      self.scrollAdjustment =
+        {x:(-1) * (frame * xFactor* self.tilePixelsX),
+         y:(-1) * (frame * yFactor * self.tilePixelsY)
+        };
       if (frame == halfwayPoint) {
         // update the map's scroll position once,
         // halfway through the animation, so that
@@ -289,12 +292,16 @@ MapScreen.prototype = {
       if (frame >= halfwayPoint) {
         // after updating map's scroll position,
         // correct pixel adjustment by one tile size:
-        adj.x += delta.x * self.tilePixelsX;
-        adj.y += delta.y * self.tilePixelsY;
+        self.scrollAdjustment.x += delta.x * self.tilePixelsX;
+        self.scrollAdjustment.y += delta.y * self.tilePixelsY;
       }
-      self.render(adj);
     };
-    return animator;
+    var finishCallback = function() {
+      // when animation done, reset scroll adjustment:
+      self.scrollAdjustment = {x: 0,y: 0};
+    };
+
+    return new Animation(numFrames, frameCallback, finishCallback);
   },
 
   scroll: function( deltaX, deltaY ) {
@@ -331,6 +338,15 @@ MapScreen.prototype = {
 
   getNPCAt: function(x, y) {
     return this._currentDomain.getNPCAt(x, y);
+  },
+
+  animate: function(animation) {
+    this._animator.runAnimation(animation);
+  },
+
+  start: function() {
+    this._animator.start();
+    this.render();
   }
 };
 

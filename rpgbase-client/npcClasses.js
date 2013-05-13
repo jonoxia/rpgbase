@@ -4,7 +4,6 @@ function NPC(spriteSheet, width, height, offsetX, offsetY) {
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
   this._talkCallback = null;
   this._wanders = false;
-  this._animator = null;
   this._wanderloop = null;
   this._mapScreen = null;
 }
@@ -16,8 +15,6 @@ NPC.prototype = {
   },
 
   step: function(deltaX, deltaY) {
-    // TODO duplicates a LOT of code from Player class. Maybe move
-    // the "walking animation" to the MapSpriteMixin.
     var canMove = this.canMove(this._mapScreen, deltaX, deltaY);
     this.setFacing(deltaX, deltaY);
 
@@ -25,40 +22,20 @@ NPC.prototype = {
 
     if (canMove) {
       var self = this;
-
-      var finishCallback = function() {
-        self.setAnimationOffset({x: 0, y: 0});
-        self.move(self._mapScreen, deltaX, deltaY);
-        self._mapScreen.render(); // TODO have animator attached to
-        // map screen and have it render map screen once after each
-        // frame? Otherwise if multiple people are walking around we're
-        // over-rendering.
-      };
-      var frameCallback = function(currFrame) {
-        var pixels = currFrame * 16 / numAnimFrames;
-        var offset = {
-          x: pixels * deltaX,
-          y: pixels * deltaY,
-        };
-        self.setAnimationOffset(offset);
-        self._animationCallback(deltaX, deltaY, currFrame);
-        self._mapScreen.render();
-      };
-
-      var stepAnim = new Animation(numAnimFrames, frameCallback,
-                                  finishCallback);
-      this._animator.runAnimation(stepAnim);
+      var stepAnim = this.makeStepAnimation(this._mapScreen,
+                                            numAnimFrames,
+                                            deltaX, deltaY);
+      this._mapScreen.animate(stepAnim);
     } else {
       // just turn to face the direction without moving
-      turn(deltaX, deltaY);
+      this.turn(deltaX, deltaY);
     }
 
   },
 
-  wander: function(mapScreen, animator) {
+  wander: function(mapScreen) {
     this._mapScreen = mapScreen;
     this._wanders = true;
-    this._animator = animator;
 
     var frameCount = 0;
     var spriteSheetRow = 2; // HAXXX
@@ -97,9 +74,6 @@ NPC.prototype = {
   wake: function() {
     // TODO maybe it would make more sense to share one wanderloop
     // for all NPCs rather than a separate wanderloop for each!!!
-
-    // maybe we should require a reference to the animator whenever
-    // creating a map screen sprite? just a thought.
 
     var self = this;
     if (this._wanders) {

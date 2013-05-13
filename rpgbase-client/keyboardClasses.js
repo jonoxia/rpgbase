@@ -133,12 +133,17 @@ DPadStyleKeyHandler.prototype = {
   }
 };
 
-function Animator(frameLength) {
+function Animator(frameLength, afterFrame) {
   // A loop that can run any number of animations at the same time
   // just create an animation and pass it to runAnimation.
   this._frameLength = frameLength;
   this._timer = null;
   this._currentAnimations = [];
+  if (afterFrame) {
+    this._afterFrameCallback = afterFrame;
+  } else {
+    this._afterFrameCallback = null;
+  }
 
   var self = this;
   this._loop = function() {
@@ -150,6 +155,10 @@ function Animator(frameLength) {
       if (!anim.done) {
         stillGoingAnims.push(anim);
       }
+    }
+    // do after-frame callback
+    if (self._afterFrameCallback) {
+      self._afterFrameCallback();
     }
 
     // remove finished animations:
@@ -167,6 +176,10 @@ Animator.prototype = {
     }
     this._timer = null;
   },
+
+  onFrameDone: function(callback) {
+    this._afterFrameCallback = callback;
+  },
   
   runAnimation: function(animation) {
     animation.currFrame = 0;
@@ -177,7 +190,10 @@ Animator.prototype = {
 function Animation(numFrames, frameCallback, finishCallback) {
   this.numFrames = numFrames;
   this.currFrame = 0;
-  this.frameCallback = frameCallback;
+  this.frameCallbacks = [];
+  if (frameCallback) {
+    this.frameCallbacks.push(frameCallback);
+  }
   this.finishCallbacks = [];
   if (finishCallback) {
     this.finishCallbacks.push(finishCallback);
@@ -186,19 +202,36 @@ function Animation(numFrames, frameCallback, finishCallback) {
 };
 Animation.prototype = {
   doOneFrame: function() {
+    var i;
     this.currFrame ++;
-    this.frameCallback(this.currFrame);
+    for (i = 0; i < this.frameCallbacks.length; i++) {
+      this.frameCallbacks[i](this.currFrame);
+    }
     
     if (this.currFrame == this.numFrames) {
       this.done = true;
-      for (var i = 0; i < this.finishCallbacks.length; i++) {
+      for (i = 0; i < this.finishCallbacks.length; i++) {
         this.finishCallbacks[i]();
       }
     }
   },
 
+  onFrame: function(frameCallback) {
+    this.frameCallbacks.push(frameCallback);
+  },
+
   onFinish: function(finishCallback) {
     this.finishCallbacks.push(finishCallback);
+  },
+
+  composite: function(otherAnimation) {
+    // adds the other animation to this one, so both can run
+    // at same time.
+    // It is assumed both animations have same number of frames.
+    this.frameCallbacks = this.frameCallbacks.concat(
+      otherAnimation.frameCallbacks);
+    this.finishCallbacks = this.finishCallbacks.concat(
+      otherAnimation.finishCallbacks);
   }
 };
 
