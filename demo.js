@@ -111,7 +111,7 @@ function setUpParty(loader) {
 
 
 function setUpMapScreen(canvas) {
-  var mapScreen = new MapScreen(canvas, 17, 13, 16, 16);
+  var mapScreen = new MapScreen(canvas, 17, 13, 16, 16, 50);
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
   return mapScreen;
@@ -132,11 +132,11 @@ function setUpOverworldMap(loader) {
   return map;
 }
 
-function setUpTownMap(loader, animator, mapScreen) {
+function setUpTownMap(loader, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
   var spriteSheet = loader.add("mapsprites.png");
   var shopkeeper = new NPC(spriteSheet, 16, 24, 0, -8);
-  shopkeeper.wander(mapScreen, animator);
+  shopkeeper.wander(mapScreen);
   shopkeeper.setSprite(0, 2);
   shopkeeper.onTalk(function(dialog) {
     dialog.show("HELLO I AM A SHOMPKEEPER");
@@ -269,6 +269,37 @@ function setUpBattleSystem(canvas, loader) {
     }
   });
 
+  battleSystem.onStartBattle(function(battleSystem) {
+    battleSystem._ctx.save();
+
+    var frameCallback = function(frame) {
+      var halfX = 256/2;
+      var halfY = 192/2;
+      var xStep = frame * halfX / 10;
+      var yStep = frame * halfY / 10;
+      var left = halfX - xStep;
+      var right = halfX + xStep;
+      var top = halfY - yStep;
+      var bottom = halfY + yStep;
+      battleSystem._ctx.restore(); // to clear previous clip rect
+      battleSystem._ctx.save(); // because we need one save for every
+      // restore
+      battleSystem._ctx.beginPath();
+      battleSystem._ctx.moveTo(left, top);
+      battleSystem._ctx.lineTo(right, top);
+      battleSystem._ctx.lineTo(right, bottom);
+      battleSystem._ctx.lineTo(left, bottom);
+      battleSystem._ctx.lineTo(left, top);
+      battleSystem._ctx.clip();
+    };
+    var finishCallback = function() {
+      battleSystem._ctx.restore();
+      battleSystem.showStartRoundMenu();
+    };
+    var animation = new Animation(10, frameCallback, finishCallback);
+    battleSystem.animate(animation);
+  });
+
   return battleSystem;
 }
 
@@ -312,9 +343,7 @@ function setUpFieldMenu() {
   return fieldMenu;
 }
 
-
-
-function setUpInputDispatch(player, mapScreen, animator) {
+function setUpInputDispatch(player, mapScreen) {
   var dispatcher = makeInputDispatcher(50, function(key) {
     // Frame-rate = one frame per 50 ms
     var delX = 0, delY =0;
@@ -350,7 +379,7 @@ function setUpInputDispatch(player, mapScreen, animator) {
       // Animate the player moving over the course of 5 frames
       var anim = player.move(delX, delY, 5);
       dispatcher.waitForAnimation(anim);
-      animator.runAnimation(anim);
+      mapScreen.animate(anim);
     }
   });
 
@@ -374,8 +403,6 @@ $(document).ready( function() {
 
   // Create the loader (to load all images)
   var loader = new AssetLoader();
-  // animator with one frame per 50 ms
-  var animator = new Animator(50);
 
   // Create the main game components (see the various setUp functions)
   var player = setUpParty(loader);
@@ -386,7 +413,7 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
 
   // Set up the relationships between the main game components
-  var inputDispatcher = setUpInputDispatch(player, mapScreen, animator);
+  var inputDispatcher = setUpInputDispatch(player, mapScreen);
   inputDispatcher.addMenuMode("field", fieldMenu);
   inputDispatcher.addMenuMode("battle", battleSystem);
 
@@ -395,11 +422,13 @@ $(document).ready( function() {
    * input, and start the battle */
   overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
     inputDispatcher.menuMode("battle");
+    //stop map screen animator:
+    mapScreen.stop();
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                       number: 3}, landType);
   });
 
-  var townMap = setUpTownMap(loader, animator, mapScreen);
+  var townMap = setUpTownMap(loader, mapScreen);
 
 
   function situateTown(theTownMap, theOverworldMap, x1, y1, x2, y2) {
@@ -423,7 +452,7 @@ $(document).ready( function() {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onClose(function() {
-    mapScreen.render();
+    mapScreen.start();
   });
 
 
@@ -434,11 +463,10 @@ $(document).ready( function() {
 
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
-    mapScreen.render();
     // and start listening for (map screen) input:
     inputDispatcher.mapMode();
-    // and begin animation:
-    animator.start();
+    // and begin map animation:
+    mapScreen.start();
 
     /*inputHandler.stopListening();
     battleInputHandler.startListening();

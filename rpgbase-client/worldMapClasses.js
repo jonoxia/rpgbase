@@ -120,6 +120,7 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
 
   this.margins = {left: 3, top: 3, right: 3, bottom: 3};
   this.pixelOffset = {x: 0, y: 0};
+  this.scrollAdjustment = {x: 0, y: 0};
   // TODO set width and height of canvas element to
   // numTilesX * tilePixelsX, etc.
 
@@ -347,6 +348,10 @@ MapScreen.prototype = {
   start: function() {
     this._animator.start();
     this.render();
+  },
+
+  stop: function() {
+    this._animator.stop();
   }
 };
 

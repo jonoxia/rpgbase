@@ -5,6 +5,7 @@ Encounter.prototype = {
 };
 
 function BattleSystem(htmlElem, canvas, options) {
+  var self = this;
   this.htmlElem = htmlElem;
   this.displayElem = this.htmlElem.find(".msg-display");
   this._ctx = canvas.getContext("2d");
@@ -30,9 +31,12 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onRollInitiative) {
     this._initiativeCallback = options.onRollInitiative;
   }
+  this._startBattleCallback = null;
+  if (options.onStartBattle) {
+    this._startBattleCallback = options.onStartBattle;
+  }
 
   if (options.metaCmdSet) {
-    var self = this;
     function makeMetaMenu(title, cmdSet) {
       var metaMenu = new CmdMenu(self.htmlElem);
       metaMenu.setTitle(title);
@@ -68,7 +72,11 @@ function BattleSystem(htmlElem, canvas, options) {
 
   this._effectHandlers = {};
 
-  this.timer = null;
+  this.timer = null; // TODO use animator instead of timer
+
+  // TODO NOT hard code frame rate
+  this._animator = new Animator(50,
+                                function() {self.draw();});
 }
 BattleSystem.prototype = {
   showMsg: function(msg) {
@@ -216,6 +224,10 @@ BattleSystem.prototype = {
     }
     return cmdMenu;
   },
+ 
+  onStartBattle: function(callback) {
+    this._startBattleCallback = callback;
+  },
   
   startBattle: function(player, encounter, landType) {
     this.htmlElem.show();
@@ -243,8 +255,15 @@ BattleSystem.prototype = {
       this.pcMenus.push(this.makeMenuForPC(this.party[i],
                                            this.defaultCmdSet));
     }
-    this.draw();
-    this.showStartRoundMenu();
+    this._animator.start();
+
+    if (this._startBattleCallback) {
+      // do any start-battle animation
+      this._startBattleCallback(this);
+    } else {
+      // just start the round!
+      this.showStartRoundMenu();
+    }
   },
 
   draw: function() {
@@ -363,6 +382,7 @@ BattleSystem.prototype = {
 
     self.showMsg("A round of battle is starting!");
     if (this.timer != null) {
+      // TODO use animator instead of timer
       window.clearInterval(this.timer);
     }
     this.timer = window.setInterval(function() {
@@ -420,6 +440,7 @@ BattleSystem.prototype = {
     if (this.timer != null) {
       window.clearInterval(this.timer);
     }
+    this._animator.stop();
     this.htmlElem.hide();
 
     // tell player to re-jigger party in case people died during
@@ -500,6 +521,10 @@ BattleSystem.prototype = {
 
     }
     
+  },
+
+  animate: function(animation) {
+    this._animator.runAnimation(animation);
   }
 };
 
