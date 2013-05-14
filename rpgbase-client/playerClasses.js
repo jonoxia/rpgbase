@@ -199,8 +199,16 @@ function MapSpriteMixin() {
       return false;
     }
 
-    // TODO if you are an NPC, don't walk through a PC! But PCs can
-    // walk through each other.
+    if (!this._walksThroughPCs) {
+      if (mapScreen.getPCAt(newX, newY)) {
+        // don't walk through a PC either (unless you are also a PC)
+        return false;
+      }
+      // TODO: make NPCs not start walking into the space a PC
+      // has *started* moving into, otherwise there may be a collision
+      // maybe PC needs to lay claim to the space in front as soon
+      // as they start walking?
+    }
 
     // don't walk through impassible terrain types
     var nextStepLandType = mapScreen.getLandType(newX, newY);
@@ -274,6 +282,7 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
   this._statBlock = statBlock;
   this._effectHandlers = {};
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+  this._walksThroughPCs = true;
 }
 PlayerCharacter.prototype = {};
 BattlerMixin.call(PlayerCharacter.prototype);
