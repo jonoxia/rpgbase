@@ -388,6 +388,59 @@ function setUpInputDispatch(player, mapScreen) {
   return dispatcher;
 }
 
+function makeBoat(loader, overworld) {
+  var boat = new Vehicle(loader.add("ship.png"), 16, 16, 0, 0);
+  boat.canCross = function(landType) {
+    if ( landType == 36 ) { 
+      // deep water
+      return true;
+    } else {
+      return false;
+    }
+  };
+  boat.setSprite(2, 0);
+  var frameCount = 0;
+  boat.walkAnimation(function(deltaX, deltaY, frame) {
+    frameCount += 1;
+    var walkFrame = (Math.floor(frameCount / 3) % 2);
+    if (deltaX < 0) {
+      this.setSprite(6+walkFrame, 0);
+    }
+    if (deltaX > 0) {
+      this.setSprite(2 +walkFrame, 0);
+    }
+    if (deltaY < 0) {
+      this.setSprite(4+walkFrame, 0);
+    }
+    if (deltaY > 0) {
+      this.setSprite(0+walkFrame, 0);
+    }
+  });
+
+  boat.onEmbark(function(boat, polayer) {
+    console.log("You got on the boat!!");
+    // TODO: embarking animation
+  });
+  boat.onBump(function(mapScreen, x, y, landType) {
+    // check if land type is beach:
+    var beachTypes = [4, 6, 9, 10, 11];
+    if (beachTypes.indexOf(landType) > -1) {
+      boat.disembark();
+    }
+
+    // TODO if land type is river:
+    // deploy the canoe in the space in front of me
+    // then disembark
+    // which will let the player step forward
+    // which will trigger embarking into the canoe
+    // then in the canoe's bump method
+    // check if the boat is in front of me
+    // and if it is, then disembark and then remove canoe from map
+  });
+  overworld.addVehicle(boat, 2, 4);
+  return boat;
+}
+
 
 /* Main function - Everything starts here */
 $(document).ready( function() {
@@ -411,6 +464,7 @@ $(document).ready( function() {
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
   var overworld = setUpOverworldMap(loader);
   var fieldMenu = setUpFieldMenu();
+  var boat = makeBoat(loader, overworld);
 
   // Set up the relationships between the main game components
   var inputDispatcher = setUpInputDispatch(player, mapScreen);

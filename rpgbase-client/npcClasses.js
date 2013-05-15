@@ -8,12 +8,6 @@ function NPC(spriteSheet, width, height, offsetX, offsetY) {
   this._mapScreen = null;
 }
 NPC.prototype = {
-  isAlive: function() {
-    // unless they're a combatant, they can't die, but they need this
-    // because plot() queries it.
-    return true;
-  },
-
   step: function(deltaX, deltaY) {
     var canMove = this.canMove(this._mapScreen, deltaX, deltaY);
     this.setFacing(deltaX, deltaY);

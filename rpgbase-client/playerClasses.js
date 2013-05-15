@@ -3,6 +3,8 @@ function Player() {
   this.party = [];
   this.aliveParty = this.party;
   this.moveListeners = [];
+
+  this.inVehicle = null;
 }
 Player.prototype = {
   enterMapScreen: function(mapScreen, x, y) {
@@ -16,6 +18,9 @@ Player.prototype = {
   },
 
   marchInOrder: function() {
+    // call after any change in party order or any party member
+    // killed/revived in order to wrangle sprites so they'll appear
+    // in correct order.
     var x = this.party[0]._x;
     var y = this.party[0]._y;
     for (var i = 0; i < this.party.length; i++) {
@@ -27,25 +32,40 @@ Player.prototype = {
       if (this.party[i].isAlive()) {
         this.aliveParty.push(this.party[i]);
       }
+
+      if (!this.inVehicle && this.party[i].isAlive()) {
+        this.party[i].show();
+      } else {
+        // don't draw dead people, or people on boats
+        this.party[i].hide();
+      }
     }
   },
 
   move: function(dx, dy, numAnimFrames) {
     var self = this;
-    
-    // each person moves in the direction last moved by the person
-    // in front of them
-    var partyMoveDirections = [{x: dx, y: dy}];
-    for (var i = 0; i < this.aliveParty.length - 1; i++) {
-      partyMoveDirections.push(this.aliveParty[i].getLastMoved());
-    }
     var mainChar = this.aliveParty[0];
-
     // set facing of main character even if we can't move:
     mainChar.setFacing(dx, dy);
 
-    // can main char take this step or are they blocked?
-    var canMove = mainChar.canMove(self.mapScreen, dx, dy);
+    // if we're in vehicle, use the vehicle's canMove method to
+    // decide if we can move forward; otherwise use the mainChar
+    var canMove
+    if (this.inVehicle) {
+      canMove = this.inVehicle.canMove(self.mapScreen, dx, dy);
+      // vehicle not being able to move MAY be a sign to
+      // disembark.
+      if (!canMove) {
+        this.inVehicle.bump(self.mapScreen, dx, dy);
+      }
+    }
+
+    if (!this.inVehicle) {
+      // this is a separate check because we may have just left vehicle
+      // or we may never have been in one.
+      // can main char take this step or are they blocked?
+      canMove = mainChar.canMove(self.mapScreen, dx, dy);
+    }
     var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
 				                     mainChar._y,
 				                     dx,
@@ -66,23 +86,56 @@ Player.prototype = {
     // make walking animations for each party member and composite
     // them.
     if (canMove) {
-      for (var i = 0; i < this.aliveParty.length; i++) {
-        var member = this.aliveParty[i];
-        var walkDir = partyMoveDirections[i];
-        animation.composite(member.makeStepAnimation
-                            (self.mapScreen, numAnimFrames,
-                             walkDir.x, walkDir.y));
+      if (this.inVehicle) {
+        // show the vehicle moving
+        animation.composite(this.inVehicle.makeStepAnimation(self.mapScreen, numAnimFrames, dx, dy));
+        // when vehicle animation finished, update all party member
+        // positions to equal vehicle's position.
+        animation.onFinish(function() {
+          for (var i = 0; i < self.aliveParty.length; i++) {
+            var member = self.aliveParty[i];
+            member.move(self.mapScreen, dx, dy);
+          }
+        });
+      } else {
+        // show the party members moving
+        // each person moves in the direction last moved by the person
+        // in front of them
+        var partyMoveDirections = [{x: dx, y: dy}];
+        for (var i = 0; i < this.aliveParty.length - 1; i++) {
+          partyMoveDirections.push(this.aliveParty[i].getLastMoved());
+        }
+
+        for (var i = 0; i < this.aliveParty.length; i++) {
+          var member = this.aliveParty[i];
+          var walkDir = partyMoveDirections[i];
+          animation.composite(member.makeStepAnimation
+                              (self.mapScreen, numAnimFrames,
+                               walkDir.x, walkDir.y));
+        }
       }
     } else {
-      // if you can't move, just wiggle in place
-      animation.onFrame(function(currFrame) {
-        mainChar._animationCallback(dx, dy, currFrame);
-      });
+      if (this.inVehicle) { // on vehicle, can't move
+        // show the vehicle wiggling in place
+        animation.onFrame(function(currFrame) {
+          if (self.inVehicle) {
+            self.inVehicle._animationCallback(dx, dy, currFrame);
+          }
+        });
+      } else { // not on a vehicle, can't move
+        // show main character wiggling in place
+        animation.onFrame(function(currFrame) {
+          mainChar._animationCallback(dx, dy, currFrame);
+        });
+      }
     } 
 
     // when animation is done, if we moved, trigger
     // map effects of the lead character's step
     if (canMove) {
+      if (this.inVehicle) {
+        // TODO if in vehicle, process vehicle's step too ?
+      }
       animation.onFinish(function() {
         self.mapScreen.processStep(self, mainChar._x, mainChar._y);
       });
@@ -121,6 +174,26 @@ Player.prototype = {
     var facing = mainChar.getFacing();
     var space = {x: pos.x + facing.x, y: pos.y + facing.y};
     return space;
+  },
+
+  boardVehicle: function(vehicle) {
+    this.inVehicle = vehicle;
+    // hide party
+    var vehiclePos = vehicle.getPos();
+    for (var i = 0; i < this.party.length; i++) {
+      // literally put everybody on board:
+      this.party[i].setPos(vehiclePos.x, vehiclePos.y);
+      this.party[i].hide();
+    }
+  },
+
+  exitVehicle: function() {
+    this.inVehicle = null;
+    // show party
+    for (var i = 0; i < this.party.length; i++) {
+      this.party[i].show();
+    }
+    this.marchInOrder();
   }
 }
 
@@ -141,6 +214,7 @@ function MapSpriteMixin() {
     this._animationCallback = null;
 
     this._lastMoved = {x: 0, y: 0};
+    this._isVisible = true;
   };
   
   this.setSprite = function(sliceX, sliceY) {
@@ -155,9 +229,21 @@ function MapSpriteMixin() {
     this._animationCallback = callback;
   };
 
+  this.isVisible = function() {
+    return this._isVisible;
+  };
+
+  this.hide = function() {
+    this._isVisible = false;
+  };
+
+  this.show = function() {
+    this._isVisible = true;
+  };
+
   this.plot = function(mapScreen, adjustment) {
-    if (!this.isAlive()) {
-      return; // this will leave a gap in the party... not the best
+    if (!this.isVisible()) {
+      return;
     }
     //adjustment is optional, but if provided it should have x, y
     var screenCoords = mapScreen.transform(this._x, this._y);
@@ -208,6 +294,13 @@ function MapSpriteMixin() {
       // has *started* moving into, otherwise there may be a collision
       // maybe PC needs to lay claim to the space in front as soon
       // as they start walking?
+    }
+
+    // if there's a vehicle in the space we're walking into,
+    // we're always allowed to enter it, even if it's on an otherwise
+    // impassible land type:
+    if (mapScreen.getVehicleAt(newX, newY)) {
+      return true;
     }
 
     // don't walk through impassible terrain types
@@ -287,3 +380,59 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
 PlayerCharacter.prototype = {};
 BattlerMixin.call(PlayerCharacter.prototype);
 MapSpriteMixin.call(PlayerCharacter.prototype);
+
+
+function Vehicle(spriteSheet, width, height, offsetX, offsetY) {
+  this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+  // TODO
+
+  this._playerOnboard = null;
+  this._embarkCallback = null;
+  this._bumpCallback = null;
+}
+Vehicle.prototype = {
+  embark: function(player) {
+    // called when party tries to walk onto space with vehicle
+    this._playerOnboard = player;
+    player.boardVehicle(this);
+
+    if (this._embarkCallback) {
+      this._embarkCallback(this, player);
+    }
+  },
+  disembark: function() {
+    console.log("You are disembarking");
+    this._playerOnboard.exitVehicle();
+    this._playerOnboard = null;
+  },
+  bump: function(mapScreen, dx, dy) {
+    // just failed to move in {dx, dy} direction.
+    // TODO this duplicates some code from canMove
+    var newX = this._x + dx;
+    var newY = this._y + dy;
+    if (!mapScreen.pointInBounds(newX, newY)) {
+      // going off the map is not a bump
+      return;
+    }
+    if (mapScreen.getNPCAt(newX, newY)) {
+      // if you somehow bump into a seagoing NPC, do not try to
+      // disembark on the NPC's head
+      return;
+    }
+
+    var landType = mapScreen.getLandType(newX, newY);
+    if (this._bumpCallback) {
+      this._bumpCallback(mapScreen, newX, newY, landType);
+      // bump callback MAY lead to disembarking
+    }
+  },
+  onEmbark: function(callback) {
+    this._embarkCallback = callback;
+  },
+  onBump: function(callback) {
+    this._bumpCallback = callback;
+    // callback will be called when vehicle tries to move into
+    // a tile it can't cross -- this can be signal to disembark.
+  }
+};
+MapSpriteMixin.call(Vehicle.prototype);

@@ -8,6 +8,7 @@ function Map(data, spritesheet) {
 
   this._stepHandlers = [];
   this._npcs = [];
+  this._vehicles = [];
 }
 Map.prototype = {
   getTileForCode: function(mapCode) {
@@ -24,6 +25,15 @@ Map.prototype = {
   },
 
   processStep: function(x, y, player) {
+    // check if we're stepping into a vehicle:
+    if (!player.inVehicle) {
+      var vehicle = this.getVehicleAt(x, y);
+      if (vehicle) {
+        vehicle.embark(player);
+      }
+    }
+
+    // check all the step handlers:
     for (var i = 0; i < this._stepHandlers.length; i++) {
 
       var trigger = this._stepHandlers[i].trigger;
@@ -71,6 +81,11 @@ Map.prototype = {
     npc.setPos(x, y);
   },
 
+  addVehicle: function(vehicle, x, y) {
+    this._vehicles.push(vehicle);
+    vehicle.setPos(x, y);
+  },
+
   getNPCAt: function(x, y) {
     // returns npc object, or null if there is nobody
     for (var i = 0; i < this._npcs.length; i++) {
@@ -82,8 +97,23 @@ Map.prototype = {
     return null;
   },
 
+  getVehicleAt: function(x, y) {
+    // returns vehicle object, or null if there is nobody
+    for (var i = 0; i < this._vehicles.length; i++) {
+      var pos = this._vehicles[i].getPos();
+      if (pos.x == x && pos.y == y) {
+        return this._vehicles[i];
+      }
+    }
+    return null;
+  },
+
   getAllNPCs: function() {
     return this._npcs;
+  },
+
+  getAllVehicles: function() {
+    return this._vehicles;
   },
 
   load: function() {
@@ -255,6 +285,8 @@ MapScreen.prototype = {
     var npcs = this._currentDomain.getAllNPCs();
     // TODO - only get the ones on the screen given current scroll?
     var mapSprites = party.concat(npcs);
+    var vehicles = this._currentDomain.getAllVehicles();
+    mapSprites = mapSprites.concat(vehicles);
 
     // sort them all so southernmost are drawn last:
     mapSprites.sort(function(a, b) {
@@ -339,6 +371,23 @@ MapScreen.prototype = {
 
   getNPCAt: function(x, y) {
     return this._currentDomain.getNPCAt(x, y);
+  },
+
+  getVehicleAt: function(x, y) {
+    return this._currentDomain.getVehicleAt(x, y);
+  },
+
+  getPCAt: function(x, y) {
+    if (this.player) {
+      var party = this.player.getAliveParty();
+      for (var i = 0; i < party.length; i++) {
+        var pos = party[i].getPos();
+        if (pos.x == x && pos.y == y) {
+          return party[i];
+        }
+      }
+    }
+    return null;
   },
 
   animate: function(animation) {
