@@ -197,8 +197,26 @@ Player.prototype = {
   }
 }
 
-function MapSpriteMixin() {
-  this.defineSprite = function(spriteSheet, width, height,
+
+// Prototype hackery!
+var MapSprite = {
+  _subClassPrototypes: [],
+  defaultCrossable: function(callback) {
+    for (var i = 0; i < this._subClassPrototypes.length; i++) {
+      this._subClassPrototypes[i].canCross = callback;
+    }
+  },
+  defaultSpritePicker: function(callback) {
+    for (var i = 0; i < this._subClassPrototypes.length; i++) {
+      this._subClassPrototypes[i]._animationCallback = callback;
+    }
+  }
+};
+
+function MapSpriteMixin(subClassPrototype) {
+  MapSprite._subClassPrototypes.push(subClassPrototype);
+
+  subClassPrototype.defineSprite = function(spriteSheet, width, height,
                                offsetX, offsetY) {
     this._img = spriteSheet;
     this._x = 0;
@@ -211,37 +229,45 @@ function MapSpriteMixin() {
     this._offsetY = offsetY;
 
     this._animationOffset = {x: 0, y: 0};
-    this._animationCallback = null;
+    //this._animationCallback = null;
 
     this._lastMoved = {x: 0, y: 0};
     this._isVisible = true;
   };
   
-  this.setSprite = function(sliceX, sliceY) {
+  subClassPrototype.setSprite = function(sliceX, sliceY) {
     this._spriteSlice = {x: sliceX, y: sliceY};
   };
 
-  this.setAnimationOffset = function(offset) {
+  subClassPrototype.useSpriteRow = function(sliceY) {
+    this._spriteSlice.y = sliceY;
+  };
+
+  subClassPrototype.useSpriteCol = function(sliceX) {
+    this._spriteSlice.x = sliceX;
+  };
+
+  subClassPrototype.setAnimationOffset = function(offset) {
     this._animationOffset = offset;
   };
 
-  this.walkAnimation = function(callback) {
+  subClassPrototype.walkAnimation = function(callback) {
     this._animationCallback = callback;
   };
 
-  this.isVisible = function() {
+  subClassPrototype.isVisible = function() {
     return this._isVisible;
   };
 
-  this.hide = function() {
+  subClassPrototype.hide = function() {
     this._isVisible = false;
   };
 
-  this.show = function() {
+  subClassPrototype.show = function() {
     this._isVisible = true;
   };
 
-  this.plot = function(mapScreen, adjustment) {
+  subClassPrototype.plot = function(mapScreen, adjustment) {
     if (!this.isVisible()) {
       return;
     }
@@ -268,12 +294,7 @@ function MapSpriteMixin() {
                              this._width, this._height);
   };
 
-  this.canCross = function( landType ) {
-    // OVERRIDE THIS
-    return true;
-  };
-
-  this.canMove = function(mapScreen, deltaX, deltaY) {
+  subClassPrototype.canMove = function(mapScreen, deltaX, deltaY) {
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
     if (!mapScreen.pointInBounds(newX, newY)) {
@@ -304,14 +325,16 @@ function MapSpriteMixin() {
     }
 
     // don't walk through impassible terrain types
-    var nextStepLandType = mapScreen.getLandType(newX, newY);
-    if (!this.canCross(nextStepLandType)) {
-      return false;
+    if (this.canCross) { // i.e. if method has been defined
+      var nextStepLandType = mapScreen.getLandType(newX, newY);
+      if (!this.canCross(nextStepLandType)) {
+        return false;
+      }
     }
     return true;
   };
 
-  this.move = function( mapScreen, deltaX, deltaY ) {
+  subClassPrototype.move = function( mapScreen, deltaX, deltaY ) {
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
     this._x = newX;
@@ -321,35 +344,35 @@ function MapSpriteMixin() {
     this._facing = {x: deltaX, y: deltaY};
   };
 
-  this.setPos = function( x, y ) {
+  subClassPrototype.setPos = function( x, y ) {
     this._x = x;
     this._y = y;
   };
 
-  this.getPos = function() {
+  subClassPrototype.getPos = function() {
     return {x: this._x, y: this._y};
   };
 
-  this.getLastMoved = function() {
+  subClassPrototype.getLastMoved = function() {
     return this._lastMoved;
   };
 
-  this.clearLastMoved = function() {
+  subClassPrototype.clearLastMoved = function() {
     this._lastMoved = {x: 0, y: 0};
   };
 
-  this.setFacing = function(dx, dy) {
+  subClassPrototype.setFacing = function(dx, dy) {
     this._facing = {x: dx, y: dy};
   };
 
-  this.getFacing = function(dx, dy) {
+  subClassPrototype.getFacing = function(dx, dy) {
     if (!this._facing) {
       this._facing = {x: 0, y: 1}; //facing south is default
     }
     return this._facing;
   };
 
-  this.makeStepAnimation = function(mapScreen, numFrames, dx, dy) {
+  subClassPrototype.makeStepAnimation = function(mapScreen, numFrames, dx, dy) {
     var self = this;
     // total pixels to move in x dir and pixels to move in y dir:
     var xPixels = mapScreen.tilePixelsX * dx; 
@@ -364,7 +387,9 @@ function MapSpriteMixin() {
         y: yPixels * currFrame / numFrames
       };
       self.setAnimationOffset(offset);
-      self._animationCallback(dx, dy, currFrame);
+      if (self._animationCallback) {
+        self._animationCallback(dx, dy, currFrame);
+      }
     };
     return new Animation(numFrames, frameCallback,
                          finishCallback);
@@ -379,13 +404,11 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
 }
 PlayerCharacter.prototype = {};
 BattlerMixin.call(PlayerCharacter.prototype);
-MapSpriteMixin.call(PlayerCharacter.prototype);
+MapSpriteMixin(PlayerCharacter.prototype);
 
 
 function Vehicle(spriteSheet, width, height, offsetX, offsetY) {
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
-  // TODO
-
   this._playerOnboard = null;
   this._embarkCallback = null;
   this._bumpCallback = null;
@@ -435,4 +458,4 @@ Vehicle.prototype = {
     // a tile it can't cross -- this can be signal to disembark.
   }
 };
-MapSpriteMixin.call(Vehicle.prototype);
+MapSpriteMixin(Vehicle.prototype);

@@ -46,34 +46,12 @@ var townData = [
  * multiple functions (e.g. day/night, phase of moon, etc)
  * should be declared here, before all functions. */
 
-
 function makeOnePC(name, spriteSheet, spriteSheetRow) {
   /* Returns a new PlayerCharacter that uses the given row of the
    * given spriteSheet for its walk animation. */
 
   var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8, {hp: 20});
   pc.name = name;
-
-  var frameCount = 0;
-  pc.walkAnimation(function(deltaX, deltaY, frame) {
-    // "this" refers to pc
-    frameCount += 1;
-    var walkFrame = (Math.floor(frameCount / 3) % 2);
-    // switch sprite every 3 animation frames
-    if (deltaX < 0) {
-      this.setSprite(6+walkFrame, spriteSheetRow);
-    }
-    if (deltaX > 0) {
-      this.setSprite(2 +walkFrame, spriteSheetRow);
-    }
-    if (deltaY < 0) {
-      this.setSprite(4+walkFrame, spriteSheetRow);
-    }
-    if (deltaY > 0) {
-      this.setSprite(0+walkFrame, spriteSheetRow);
-    }
-  });
-
   pc.setSprite(0, spriteSheetRow);
   return pc;
 }
@@ -84,13 +62,32 @@ function setUpParty(loader) {
 
   var spriteSheet = loader.add("mapsprites.png");
 
-  var canCross = function(landType) {
+  MapSprite.defaultCrossable(function(landType) {
     if ( landType == 36 || landType == 12 || landType == 13 || landType == 14 || landType == 15 || landType == 17 || landType == 40) {
       return false;
     } else {
       return true;
     }
-  };
+  });
+
+  MapSprite.defaultSpritePicker(function(deltaX,
+                                         deltaY,
+                                         currFrame) {
+    var walkFrame = (Math.floor(currFrame / 3) % 2);
+    // switch sprite every 3 animation frames
+    if (deltaX < 0) {
+      this.useSpriteCol(6+walkFrame);
+    }
+    if (deltaX > 0) {
+      this.useSpriteCol(2 +walkFrame);
+    }
+    if (deltaY < 0) {
+      this.useSpriteCol(4+walkFrame);
+    }
+    if (deltaY > 0) {
+      this.useSpriteCol(0+walkFrame);
+    }
+  });
 
   var hero = makeOnePC("ALIS", spriteSheet, 1);
   // for debugging main character death
@@ -98,8 +95,6 @@ function setUpParty(loader) {
   var sidekick = makeOnePC("MYAU", spriteSheet, 0);
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);
-
-  hero.canCross = canCross;
 
   player.addCharacter(hero);
   player.addCharacter(sidekick);
@@ -399,23 +394,6 @@ function makeBoat(loader, overworld) {
     }
   };
   boat.setSprite(2, 0);
-  var frameCount = 0;
-  boat.walkAnimation(function(deltaX, deltaY, frame) {
-    frameCount += 1;
-    var walkFrame = (Math.floor(frameCount / 3) % 2);
-    if (deltaX < 0) {
-      this.setSprite(6+walkFrame, 0);
-    }
-    if (deltaX > 0) {
-      this.setSprite(2 +walkFrame, 0);
-    }
-    if (deltaY < 0) {
-      this.setSprite(4+walkFrame, 0);
-    }
-    if (deltaY > 0) {
-      this.setSprite(0+walkFrame, 0);
-    }
-  });
 
   boat.onEmbark(function(boat, polayer) {
     console.log("You got on the boat!!");

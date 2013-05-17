@@ -31,29 +31,7 @@ NPC.prototype = {
     this._mapScreen = mapScreen;
     this._wanders = true;
 
-    var frameCount = 0;
     var spriteSheetRow = 2; // HAXXX
-    // TODO standardize this walkAnimation thing!!
-    // maybe attach it to a SpriteSheet object which we create
-    // ONCE and use for many PCs and NPCs...
-    this.walkAnimation(function(deltaX, deltaY, frame) {
-      frameCount += 1;
-      var walkFrame = (Math.floor(frameCount / 3) % 2);
-      // switch sprite every 3 animation frames
-      if (deltaX < 0) {
-        this.setSprite(6+walkFrame, spriteSheetRow);
-      }
-      if (deltaX > 0) {
-        this.setSprite(2 +walkFrame, spriteSheetRow);
-      }
-      if (deltaY < 0) {
-        this.setSprite(4+walkFrame, spriteSheetRow);
-      }
-      if (deltaY > 0) {
-        this.setSprite(0+walkFrame, spriteSheetRow);
-      }
-      
-    });
 
     // TODO set the canCross method to some reasonable default!!!
   },
@@ -117,7 +95,7 @@ NPC.prototype = {
   }
 
 };
-MapSpriteMixin.call(NPC.prototype);
+MapSpriteMixin(NPC.prototype);
 
 /* NPCs belong to a Map.
  * MapScreen only draws NPCs for the current Map.
