@@ -96,6 +96,32 @@ function setUpParty(loader) {
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);
 
+  var medicalHerb = new ItemType("Medical Herb", 1);
+  medicalHerb.useEffect({target: "ally",
+                         inBattle: true,
+                         outOfBattle: true,
+                         effect: function(system, user, target) {
+                           system.showMsg(user.name + " applies the medical herb to " + target.name);
+                         }
+                        });
+  var homingDevice = new ItemType("Homing Device", 1);
+  homingDevice.useEffect({target: "party",
+                         inBattle: false,
+                         outOfBattle: true,
+                         effect: function(system, user, target) {
+                           system.showMsg(user.name + " thows the homing device in the air, and the party is teleported back to town.");
+                         }
+                        });
+
+  hero.gainItem(new ItemType("Crummy Sword"));
+  hero.gainItem(medicalHerb);
+  hero.gainItem(homingDevice);
+  sidekick.gainItem(new ItemType("Crummy Fur"));
+  sidekick2.gainItem(new ItemType("Crummy Axe"));
+  sidekick3.gainItem(new ItemType("Crummy Robes"));
+
+
+
   player.addCharacter(hero);
   player.addCharacter(sidekick);
   player.addCharacter(sidekick2);
@@ -315,7 +341,9 @@ function setUpFieldMenu() {
   // set up menu system
   var fieldCommands = {
     "ITEM": function(menus, party) {
-      menus.showMsg("You can't find any good items in your backpack. You should keep it better organized.");
+      menus.chooseCharacter(function(character) {
+        menus.pushMenu(character.inventoryMenu(menus, false));
+      });
     },
     "SPELL": function(menus, party) {
       menus.showMsg("You sure magiced up that spell!");

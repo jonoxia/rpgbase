@@ -155,6 +155,10 @@ MenuSystem.prototype = {
     this.clearMsg();
   },
 
+  makeMenu: function() {
+    return new CmdMenu(this._htmlElem);
+  },
+
   pushMenu: function(newMenu) {
     // TODO duplicated code from battle system
     var x = 25;
@@ -169,9 +173,14 @@ MenuSystem.prototype = {
   popMenu: function() {
     // TODO duplicated code from battle system
     if (this.menuStack.length > 0) {
-      console.log("Menu stack is a poppin");
       this.menuStack[ this.menuStack.length - 1].close();
       this.menuStack.pop();
+    }
+  },
+
+  returnToRoot: function() {
+    while(this.menuStack.length > 1) {
+      this.popMenu();
     }
   },
 
@@ -197,6 +206,22 @@ MenuSystem.prototype = {
 
   displayPartyStats: function() {
 
+  },
+  
+  chooseCharacter: function(callback) {
+    // TODO duplicates a lot of code form encounterClasses.js
+    var charMenu = this.makeMenu();
+    charMenu.setTitle("Whose?");
+    var self = this;
+    var addOneCmd = function(target) {
+      charMenu.addCommand(target.name, function() {
+        callback(target);
+      });
+    };
+    for (var i = 0; i < this._party.length; i++) {
+      addOneCmd(this._party[i]);
+    }
+    this.pushMenu(charMenu);
   },
 
   handleKey: function(keyCode) {

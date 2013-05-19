@@ -401,8 +401,17 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
   this._effectHandlers = {};
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
   this._walksThroughPCs = true;
+
+  this._inventory = new Inventory(8); // TODO hackery most foul
 }
-PlayerCharacter.prototype = {};
+PlayerCharacter.prototype = {
+  gainItem: function(itemType) {
+    this._inventory.gainItem(itemType);
+  },
+  inventoryMenu: function(menuSystem, isBattle) {
+    return this._inventory.makeMenu(menuSystem, isBattle, this);
+  }
+};
 BattlerMixin.call(PlayerCharacter.prototype);
 MapSpriteMixin(PlayerCharacter.prototype);
 
