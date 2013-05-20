@@ -208,10 +208,10 @@ MenuSystem.prototype = {
 
   },
   
-  chooseCharacter: function(callback) {
+  chooseCharacter: function(title, callback) {
     // TODO duplicates a lot of code form encounterClasses.js
     var charMenu = this.makeMenu();
-    charMenu.setTitle("Whose?");
+    charMenu.setTitle(title);
     var self = this;
     var addOneCmd = function(target) {
       charMenu.addCommand(target.name, function() {
@@ -243,6 +243,41 @@ MenuSystem.prototype = {
         this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
       }
     }
+  },
+
+  showItemMenu: function(character) {
+    // This is all special-case for the field menu
+    var self = this;
+    var menu = this.makeMenu();
+    menu.setTitle("Items:");
+
+    // TODO what to show if inventory is empty?
+    var makeItemSelectFunc = function(itemData) {
+      // upon selecting item, if the item requires a target,
+      // then ask user for target, then execute. Otherwise,
+      // execute immediately.
+      if (itemData.target == "ally") {
+        return function() {
+          self.chooseCharacter("Use on?", function(target) {
+            itemData.effect(self, character, target);
+            self.returnToRoot();
+          });
+        }
+      } else {
+        // TODO are there other target types?
+        return function() {
+          itemData.effect(self, character, null);
+          self.returnToRoot();
+        }
+      }
+    };
+    
+    var itemCmds = character.getInventoryCmds(false); // isBattle=false
+    for (var i = 0; i < itemCmds.length; i++) {
+      menu.addCommand(itemCmds[i].name,
+                      makeItemSelectFunc(itemCmds[i]));
+    }
+    this.pushMenu(menu);
   }
 };
 

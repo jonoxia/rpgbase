@@ -341,8 +341,8 @@ function setUpFieldMenu() {
   // set up menu system
   var fieldCommands = {
     "ITEM": function(menus, party) {
-      menus.chooseCharacter(function(character) {
-        menus.pushMenu(character.inventoryMenu(menus, false));
+      menus.chooseCharacter("Whose?", function(character) {
+        menus.showItemMenu(character);
       });
     },
     "SPELL": function(menus, party) {

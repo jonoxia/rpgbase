@@ -402,14 +402,35 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
   this._walksThroughPCs = true;
 
-  this._inventory = new Inventory(8); // TODO hackery most foul
+  this._inventory = new Inventory(8); // TODO don't hard-code
+  // TODO this is assuming that inventory is a per-PC thing
+  // and that each PC will always have an ITEM command in battle
+  // these assumptions might not be true for some games
+  // so this should really go in userland.
 }
 PlayerCharacter.prototype = {
   gainItem: function(itemType) {
     this._inventory.gainItem(itemType);
   },
-  inventoryMenu: function(menuSystem, isBattle) {
-    return this._inventory.makeMenu(menuSystem, isBattle, this);
+  getInventoryCmds: function(isBattle) {
+    return this._inventory.getItemNamesAndUses(isBattle);
+  },
+  customizeCmds: function(defaultCmds) {
+    // called at beginning of battle to allow us a chance to override
+    // the default cmds with our own spell list, item list, etc.
+    
+    // TODO make a deep copy so we're not modifying the original
+    // (not that it matters for now)
+    //var defaultCmds = defaultCmds.clone();
+    var myItemCmd = new BattleCommandSet();
+    var myItems = this.getInventoryCmds(true);
+    for (var i = 0; i < myItems.length; i++) {
+      myItemCmd.add(myItems[i].name, new BatCmd(myItems[i]));
+    }
+    defaultCmds.add("ITEM", myItemCmd);
+    return defaultCmds;
+    // TODO what happens if you REPEAT a round of battle in which
+    // somebody used a one-use item?
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

@@ -48,58 +48,38 @@ Inventory.prototype = {
   },
 
   makeBattleCommand: function(item) {
-    // TODO let's do battle commands later, because they're complicated,
-    // because they require customizing a particular PC to have a
-    // command set different from the other PCs, and they require the
-    // batCmd hierarchy to be dynamically generated rather than
-    // static (it could change every round of battle) and somewhere
-    // in there the battle system needs to query the inventory somehow
+    return {name: item.getName(),
+            target: item.getTargetType(),
+            effect: function(system, user, target) {
+              item.useInBattle(system, user, target);
+            }
+           };
   },
 
-  makeNonBattleCommand: function(item, menuSystem, character) {
-    if (!item.canUseInField()) {
-      return function() {
-        menuSystem.showMsg(character.name 
-                           + " tries to use the "
-                           + item.getName()
-                           + "... but nothing happens.");
-        menuSystem.returnToRoot();
-      }
-    }
-
-    if (item.getTargetType() == "ally") {
-        return function() {
-          menuSystem.chooseCharacter(function(target) {
-            item.useInField(menuSystem, character, target);
-            menuSystem.returnToRoot();
-          });
-        }
-    } else {
-      // TODO are there other target types?
-      return function() {
-        item.useInField(menuSystem, character, null);
-        menuSystem.returnToRoot();
-      }
-    }
+  makeNonBattleCommand: function(item) {
+    return {name: item.getName(),
+            target: item.getTargetType(),
+            effect: function(system, user, target) {
+              item.useInField(system, user, target);
+            }
+           };
   },
 
-  makeMenu: function(menuSystem, isBattle, character) {
-    var menu = menuSystem.makeMenu();
+  getItemNamesAndUses: function(isBattle) {
+    // to avoid having dependency with the menu system or battle
+    // system, just return {name, target, effect} objects (suitable for
+    // passing into BatCmd constructor OR for immediate execution)
+    var namesAndUses = [];
+    var itemCmd;
     for (var i = 0; i < this._itemList.length; i++) {
-      var execFunc;
       if (isBattle) {
-        execFunc = this.makeBattleCommand(this._itemList[i],
-                                          menuSystem, character);
+        itemCmd = this.makeBattleCommand(this._itemList[i]);
       } else {
-        execFunc = this.makeNonBattleCommand(this._itemList[i], 
-                                             menuSystem, character);
+        itemCmd = this.makeNonBattleCommand(this._itemList[i]);
       }
-      menu.addCommand(this._itemList[i].getName(), execFunc);
+      namesAndUses.push(itemCmd);
     }
-    // creates a menu using menuSystem with one choice for each item in 
-    // this inventory
-    return menu;
-    // TODO: share as much code as possible between in-battle inventory and out-of-battle inventory!  the key difference i suppose is that in-battle inventory locks in the command, while out-of-battle just does the thing now.
+    return namesAndUses;
   }
 };
 
@@ -210,6 +190,11 @@ ItemInstance.prototype = {
     if (this._battleEffect) {
       this.checkUsesLeft();
       this._battleEffect(system, user, target);
+    } else {
+      system.showMsg(user.name 
+                     + " tries to use the "
+                     + this._name
+                     + "... but nothing happens.");
     }
   },
 
@@ -217,6 +202,11 @@ ItemInstance.prototype = {
     if (this._fieldEffect) {
       this.checkUsesLeft();
       this._fieldEffect(system, user, target);
+    } else {
+      system.showMsg(user.name 
+                     + " tries to use the "
+                     + this._name
+                     + "... but nothing happens.");
     }
   },
 

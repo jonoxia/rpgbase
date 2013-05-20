@@ -251,9 +251,9 @@ BattleSystem.prototype = {
     this.emptyMenuStack();
     this.pcMenus = [];
     for (var i = 0; i < this.party.length; i++) {
-      // TODO callback to userland to let menu be customized for this PC
-      this.pcMenus.push(this.makeMenuForPC(this.party[i],
-                                           this.defaultCmdSet));
+      // callback to userland to let menu be customized for this PC:
+      var customCmds = this.party[i].customizeCmds(this.defaultCmdSet);
+      this.pcMenus.push(this.makeMenuForPC(this.party[i], customCmds));
     }
     this._animator.start();
 
