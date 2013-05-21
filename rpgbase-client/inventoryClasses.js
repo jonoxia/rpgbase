@@ -37,6 +37,7 @@ Inventory.prototype = {
 
   gainInstance: function(instance) {
     this._itemList.push(instance);
+    instance.inventory = this;
   },
 
   removeItem: function(instance) {
@@ -103,12 +104,11 @@ function ItemType(name, numUses) {
   this._equipStats = null;
 }
 ItemType.prototype = {
-  instantiate: function(inventory) {
+  instantiate: function() {
     var instance = new ItemInstance(this._name, this._numUses,
                             this._battleEffect, this._battleTarget,
                             this._fieldEffect,
                             this._equipSlot, this._equipType, this._equipStats);
-    instance.inventory = inventory;
     return instance;
   },
 

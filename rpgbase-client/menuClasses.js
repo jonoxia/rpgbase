@@ -312,7 +312,7 @@ FieldMenu.prototype = {
         });
       } else {
         // TODO are there other target types?
-        itemData.effect(self, character, null);
+        item.effect(self, character, null);
         self.returnToRoot();
       }
     });
@@ -327,7 +327,7 @@ FieldMenu.prototype = {
       self.chooseCharacter("Give to?", function(target) {
         self.showMsg(character.name + " gives the " + item.name
                     + " to " + target.name);
-        character.transferItem(item.reference, target);
+        target.receiveItemFrom(item.reference, character);
         self.returnToRoot();
       });
     });
