@@ -361,7 +361,7 @@ function setUpFieldMenu() {
     }});
   fieldCommands.add("STATS",{
     effect: function(menus, party) {
-      menus.showMsg("Each of your characters definitely has stats of some kind");
+      menus.showPartyStats();
     }});
   fieldCommands.add("ORDER",{
     effect: function(menus, party) {

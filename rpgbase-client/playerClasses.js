@@ -431,6 +431,14 @@ PlayerCharacter.prototype = {
     return defaultCmds;
     // TODO what happens if you REPEAT a round of battle in which
     // somebody used a one-use item?
+  },
+  getStatDisplay: function() {
+    var html = this.name;
+    html += "<br>";
+    for (var propName in this._statBlock) {
+      html+= propName + " : " + this._statBlock[propName] + "<br>";
+    }
+    return html;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

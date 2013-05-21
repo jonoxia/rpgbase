@@ -58,3 +58,19 @@ span.menu {
    -moz-border-radius: 10px;
    border-radius: 10px;
 }
+
+div.stats {
+    float: left;
+   background-color: black;
+   color: white;
+   font-weight: bold;
+   border-color: white;
+   border-style: ridge;
+   border-width: 3px;
+   padding: 1em;
+   
+   -webkit-border-radius: 10px;
+   -moz-border-radius: 10px;
+   border-radius: 10px;
+
+}

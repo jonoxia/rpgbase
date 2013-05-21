@@ -168,9 +168,13 @@ function MenuSystemMixin(subClassPrototype) {
     this._htmlElem.show();
     this.pushMenu(this._rootMenu);
     this.clearMsg();
+    this.hidePartyStats();
   };
 
   subClassPrototype.close = function() {
+    if (this._rootMenu) {
+      this._rootMenu.reset();
+    }
     this.hide();
     for (var i = 0; i < this._closeCallbacks.length; i++) {
       this._closeCallbacks[i]();
@@ -243,6 +247,20 @@ function MenuSystemMixin(subClassPrototype) {
       addOneCmd(this._party[i]);
     }
     this.pushMenu(charMenu);
+  };
+  
+  subClassPrototype.showPartyStats = function() {
+    this._htmlElem.find(".stats").remove();
+    for (var i = 0; i < this._party.length; i++) {
+      var statHtml = this._party[i].getStatDisplay();
+      var statBox = $("<div></div>").html(statHtml);
+      statBox.addClass("stats");
+      this._htmlElem.append(statBox);
+    }
+  };
+
+  subClassPrototype.hidePartyStats = function() {
+    this._htmlElem.find(".stats").remove();
   };
   
   subClassPrototype.handleKey = function(keyCode) {
