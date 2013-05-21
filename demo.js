@@ -339,30 +339,40 @@ function setUpMonstrousManuel(loader) {
 
 function setUpFieldMenu() {
   // set up menu system
-  var fieldCommands = {
-    "ITEM": function(menus, party) {
+  var fieldCommands = new BattleCommandSet();
+  // TODO: this really shouldn't be called a
+  // BattleCommandSet then should it?
+  // TODO cheating a little here because i'm not creating BatCmd
+  // instances but just throwing in an anoymous object with an 
+  
+  fieldCommands.add("ITEM",{
+    effect: function(menus, party) {
       menus.chooseCharacter("Whose?", function(character) {
         menus.showItemMenu(character);
       });
-    },
-    "SPELL": function(menus, party) {
+    }});
+  fieldCommands.add("SPELL",{
+    effect: function(menus, party) {
       menus.showMsg("You sure magiced up that spell!");
-    },
-    "EQUIP": function(menus, party) {
+    }});
+  fieldCommands.add( "EQUIP",{
+    effect: function(menus, party) {
       menus.showMsg("You put your recently purchased upgrades on your body");
-    },
-    "STATS": function(menus, party) {
+    }});
+  fieldCommands.add("STATS",{
+    effect: function(menus, party) {
       menus.showMsg("Each of your characters definitely has stats of some kind");
-    },
-    "ORDER": function(menus, party) {
+    }});
+  fieldCommands.add("ORDER",{
+    effect: function(menus, party) {
       menus.showMsg("You put your squishy wizards and healers in the back!");
-    },
-    "SAVE": function(menus, party) {
+    }});
+  fieldCommands.add("SAVE",{
+    effect: function(menus, party) {
       menus.showMsg("Like this game has a save system yet!");
-    }
-  };
+    }});
   
-  var fieldMenu = new MenuSystem($("#battle-system"), fieldCommands);
+  var fieldMenu = new FieldMenu($("#battle-system"), fieldCommands);
   return fieldMenu;
 }
 

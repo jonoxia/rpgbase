@@ -6,12 +6,9 @@ Encounter.prototype = {
 
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
-  this.htmlElem = htmlElem;
-  this.displayElem = this.htmlElem.find(".msg-display");
+  this._init(htmlElem);
   this._ctx = canvas.getContext("2d");
-  this.menuStack = [];
-
-  this.htmlElem.hide();
+  this.hide();
   this.endBattleCallbacks = [];
 
   if (options.defaultMsg) {
@@ -35,79 +32,35 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onStartBattle) {
     this._startBattleCallback = options.onStartBattle;
   }
-
-  if (options.metaCmdSet) {
-    function makeMetaMenu(title, cmdSet) {
-      var metaMenu = new CmdMenu(self.htmlElem);
-      metaMenu.setTitle(title);
-
-      var addOneCmd = function(name, cmd) {
-        // allow recursive submenus
-        if (cmd.isContainer) {
-          metaMenu.addCommand(name, function() {
-            self.pushMenu(makeMetaMenu(name, cmd));
-          });
-        } else {
-          metaMenu.addCommand(name, function() {
-            cmd.effect(self, self.party);
-          });
-        }
-      };
-      for (var name in cmdSet.cmds) {
-        addOneCmd(name, cmdSet.cmds[name]);
-      }
-      return metaMenu;
-    }
-
-    this.metaMenu = makeMetaMenu("Party", options.metaCmdSet);
-  } else {
-    this.metaMenu =null;
-  }
-
   if (options.msgDelay) {
     this._msgDelay = options.msgDelay;
   } else {
     this._msgDelay = 750;
   }
+  if (options.metaCmdSet) {
+    this._rootMenu = this.menuFromCmdSet("Party", options.metaCmdSet);
+  } else {
+    this._rootMenu = null;
+  }
 
   this._effectHandlers = {};
 
   this.timer = null; // TODO use animator instead of timer
+  this._freelyExit = false;
 
   // TODO NOT hard code frame rate
   this._animator = new Animator(50,
                                 function() {self.draw();});
 }
 BattleSystem.prototype = {
-  showMsg: function(msg) {
-    this.displayElem.append($("<span></span>").html(msg));
-    this.displayElem.append($("<br>"));
-    this.displayElem.show();
-  },
-
-  pushMenu: function(newMenu) {
-    var x = 25;
-    for (var i = 0; i < this.menuStack.length; i++) {
-      x += 80;
-    }
-    newMenu.setPos(x, 250);
-    this.menuStack.push(newMenu);
-    newMenu.display();
-  },
-  
-  popMenu: function() {
-    if (this.menuStack.length > 1) {
-      this.menuStack[ this.menuStack.length - 1].close();
-      this.menuStack.pop();
-    }
-  },
-
-  emptyMenuStack: function() {
-    for (var i = 0; i < this.menuStack.length; i++) {
-      this.menuStack[i].close();
-    }
-    this.menuStack = [];
-  },
+  // defined in menu system but not here:
+  // open -- could simplify startBattle
+  //    (key difference: player passed in vs. party)
+  // makeMenu
+  // returnToRoot
+  // hide()
+  // clearMsg
+  // chooseCharacter
 
   getAliveParty: function() {
     // TODO this duplicates some code in Player.marchInOrder...
@@ -115,9 +68,9 @@ BattleSystem.prototype = {
     // aliveParty list. Should probably just maintain it in Player
     // and query it from here.
     var aliveParty = [];
-    for (var i =0 ; i< this.party.length; i++) {
-      if (this.party[i].isAlive()) {
-        aliveParty.push(this.party[i]);
+    for (var i =0 ; i< this._party.length; i++) {
+      if (this._party[i].isAlive()) {
+        aliveParty.push(this._party[i]);
       }
     }
     return aliveParty;
@@ -126,7 +79,7 @@ BattleSystem.prototype = {
   getMenuForPC: function(pc) {
     // kind of a hack to allow non-index-based access to menus
     // in case some pcs are dead:
-    var index = this.party.indexOf(pc);
+    var index = this._party.indexOf(pc);
     return this.pcMenus[index];
   },
 
@@ -150,21 +103,6 @@ BattleSystem.prototype = {
     }
   },
 
-  makeAllyTargetMenu: function(pc, cmd) {
-    var cmdMenu = new CmdMenu(this.htmlElem);
-    cmdMenu.setTitle("Target?");
-    var self = this;
-    var addOneCmd = function(target) {
-      cmdMenu.addCommand(target.name, function() {
-        self.choosePCCommand(pc, cmd, target);
-      });
-    };
-    for (var i = 0; i < this.party.length; i++) {
-      addOneCmd(this.party[i]);
-    }
-    return cmdMenu;
-  },
-
   randomElementFromArray: function(arr) {
     // TODO allow registering a callback to override this function
     // choose random PC:
@@ -183,7 +121,7 @@ BattleSystem.prototype = {
 
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
-    var cmdMenu = new CmdMenu(this.htmlElem);
+    var cmdMenu = this.makeMenu();
     cmdMenu.setTitle(pc.name);
 
     var addOneCmd = function(name, cmd) {
@@ -206,7 +144,9 @@ BattleSystem.prototype = {
           // if it targets one ally, then picking it pops open
           // the ally menu:
           cmdMenu.addCommand(name, function() {
-            self.pushMenu(self.makeAllyTargetMenu(pc,cmd));
+            self.chooseCharacter("Target?", function(target) {
+              self.choosePCCommand(pc, cmd, target);
+            });
           });
           break;
         default:
@@ -228,13 +168,19 @@ BattleSystem.prototype = {
   onStartBattle: function(callback) {
     this._startBattleCallback = callback;
   },
+
+  onEndBattle: function(callback) {
+    this.endBattleCallbacks.push(callback);
+  },
   
   startBattle: function(player, encounter, landType) {
-    this.htmlElem.show();
-    this.displayElem.empty();
-    this.landType = landType;
+    // TODO this is similar to MenuSystemMixin.open() but not quite
+    // the same:
     this.player = player;
-    this.party = this.player.getParty();
+    this._party = player.getParty();
+    this._htmlElem.show();
+    this.clearMsg();
+    this.landType = landType;
 
     this.monsters = [];
     if (encounter.number) {
@@ -250,10 +196,12 @@ BattleSystem.prototype = {
     this.showMsg(this.defaultMsg);
     this.emptyMenuStack();
     this.pcMenus = [];
-    for (var i = 0; i < this.party.length; i++) {
+    for (var i = 0; i < this._party.length; i++) {
       // callback to userland to let menu be customized for this PC:
-      var customCmds = this.party[i].customizeCmds(this.defaultCmdSet);
-      this.pcMenus.push(this.makeMenuForPC(this.party[i], customCmds));
+      var customCmds = this._party[i].customizeCmds(
+        this.defaultCmdSet);
+      this.pcMenus.push(this.makeMenuForPC(this._party[i],
+                                           customCmds));
     }
     this._animator.start();
 
@@ -299,9 +247,9 @@ BattleSystem.prototype = {
     for (var i = 0; i < this.pcMenus.length; i++) {
       this.pcMenus[i].reset();
     }
-    if (this.metaMenu) {
-      this.metaMenu.reset();
-      this.pushMenu(this.metaMenu);
+    if (this._rootMenu) {
+      this._rootMenu.reset();
+      this.pushMenu(this._rootMenu);
     } else {
       this.showFirstPCMenu();
     }
@@ -318,8 +266,8 @@ BattleSystem.prototype = {
 
     // make sure everyone has a command:
     var everyoneHasCommands = true;
-    for (var i = 0; i < this.party.length; i++) {
-      if (!this.party[i].getLockedInCmd()) {
+    for (var i = 0; i < this._party.length; i++) {
+      if (!this._party[i].getLockedInCmd()) {
         everyoneHasCommands = false;
       }
     }
@@ -434,14 +382,13 @@ BattleSystem.prototype = {
       $("#debug").html("You lost!");
       break;
     case "run":
-      $("#debug").html("You ran away!");
+      $("#debug").html("You bravely ran away, away!");
       break;
     }
     if (this.timer != null) {
       window.clearInterval(this.timer);
     }
     this._animator.stop();
-    this.htmlElem.hide();
 
     // tell player to re-jigger party in case people died during
     // battle
@@ -450,24 +397,7 @@ BattleSystem.prototype = {
     for (i = 0; i < this.endBattleCallbacks.length; i++) {
       this.endBattleCallbacks[i](winLoseRun);
     }
-  },
-
-  handleKey: function(keyCode) {
-    if (keyCode == CANCEL_BUTTON) {
-      // cancel -> pop top menu off menu stack, go back to previous one
-      if (this.menuStack.length > 1) {
-        this.popMenu();
-      }
-    } else {
-      // send keystroke to menu on top of stack
-      if (this.menuStack.length > 0) {
-        this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
-      }
-    }
-  },
-
-  onClose: function(callback) {
-    this.endBattleCallbacks.push(callback);
+    this.close();
   },
 
   sendEffect: function(target, effectName, data) {
@@ -491,12 +421,12 @@ BattleSystem.prototype = {
     // dead fighters will be skipped during command input and execution
     target.die();
     
-    if (this.party.indexOf(target) > -1) {
+    if (this._party.indexOf(target) > -1) {
       // if it's a player...
       // check for tpk:
       var tpk = true;
-      for (var i = 0; i < this.party.length; i++) {
-        if (this.party[i].isAlive()) {
+      for (var i = 0; i < this._party.length; i++) {
+        if (this._party[i].isAlive()) {
           tpk = false;
         }
       }
@@ -527,6 +457,7 @@ BattleSystem.prototype = {
     this._animator.runAnimation(animation);
   }
 };
+MenuSystemMixin(BattleSystem.prototype);
 
 
 function BatCmd(options) {

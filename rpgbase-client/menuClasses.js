@@ -125,42 +125,61 @@ CmdMenu.prototype = {
   }
 };
 
+/* TODO:  modify MenuSystemMixin to allow substituting a
+ * canvas-based menu for a CSS-based menu. */
 
-function MenuSystem(htmlElem, commandSet) {
-  // a lot of this is copied from battle system
-  this.menuStack = [];
-  this._htmlElem = htmlElem;
-  this.displayElem = this._htmlElem.find(".msg-display");
-  var self = this;
-  var menu = new CmdMenu(htmlElem);
-  var addOneCmd = function(name, cmd) {
-    menu.addCommand(name, function() {
-      self.clearMsg();
-      // pass menu system and party to the command
-      cmd(self, self._party);
-    });
+function MenuSystemMixin(subClassPrototype) {
+  subClassPrototype._init = function(htmlElem) {
+    this.menuStack = [];
+    this._htmlElem = htmlElem;
+    this.displayElem = this._htmlElem.find(".msg-display");
+    this._rootMenu = null;
+    this._party = null;
+    this._closeCallbacks = [];
   };
-  for (var name in commandSet) {
-    addOneCmd(name, commandSet[name]);
-  }
-  this._mainMenu = menu;
-  this._party = null;
-  this._closeCallback = null;
-}
-MenuSystem.prototype = {
-  open: function(party) {
+
+  subClassPrototype.menuFromCmdSet = function (title, cmdSet) {
+    var self = this;
+    var subMenu = new CmdMenu(self._htmlElem);
+    subMenu.setTitle(title);
+    
+    var addOneCmd = function(name, cmd) {
+      // allow recursive submenus
+      if (cmd.isContainer) {
+        subMenu.addCommand(name, function() {
+          self.pushMenu(self.menuFromCmdSet(name, cmd));
+        });
+      } else {
+        subMenu.addCommand(name, function() {
+          cmd.effect(self, self._party);
+        });
+      }
+    };
+    for (var name in cmdSet.cmds) {
+      addOneCmd(name, cmdSet.cmds[name]);
+    }
+    return subMenu;
+  };
+
+  subClassPrototype.open = function(party) {
     this._party = party;
     this._htmlElem.show();
-    this.pushMenu(this._mainMenu);
+    this.pushMenu(this._rootMenu);
     this.clearMsg();
-  },
+  };
 
-  makeMenu: function() {
+  subClassPrototype.close = function() {
+    this.hide();
+    for (var i = 0; i < this._closeCallbacks.length; i++) {
+      this._closeCallbacks[i]();
+    }
+  };
+
+  subClassPrototype.makeMenu = function() {
     return new CmdMenu(this._htmlElem);
-  },
+  };
 
-  pushMenu: function(newMenu) {
-    // TODO duplicated code from battle system
+  subClassPrototype.pushMenu = function(newMenu) {
     var x = 25;
     for (var i = 0; i < this.menuStack.length; i++) {
       x += 80;
@@ -168,48 +187,48 @@ MenuSystem.prototype = {
     newMenu.setPos(x, 250);
     this.menuStack.push(newMenu);
     newMenu.display();
-  },
+  };
 
-  popMenu: function() {
-    // TODO duplicated code from battle system
+  subClassPrototype.popMenu = function() {
     if (this.menuStack.length > 0) {
       this.menuStack[ this.menuStack.length - 1].close();
       this.menuStack.pop();
     }
-  },
+  };
 
-  returnToRoot: function() {
+  subClassPrototype.returnToRoot = function() {
     while(this.menuStack.length > 1) {
       this.popMenu();
     }
-  },
+  };
 
-  hide: function() {
+  subClassPrototype.emptyMenuStack = function() {
+    for (var i = 0; i < this.menuStack.length; i++) {
+      this.menuStack[i].close();
+    }
+    this.menuStack = [];
+  };
+
+  subClassPrototype.hide = function() {
     this._htmlElem.hide();
+  };
+
+  subClassPrototype.onClose = function(callback) {
+    this._closeCallbacks.push(callback);
   },
 
-  onClose: function(callback) {
-    this._closeCallback = callback;
-  },
-
-  showMsg: function(msg) {
-    // TODO copied from battle system
+  subClassPrototype.showMsg = function(msg) {
     this.displayElem.append($("<span></span>").html(msg));
     this.displayElem.append($("<br>"));
     this.displayElem.show();
-  },
+  };
 
-  clearMsg: function() {
+  subClassPrototype.clearMsg = function() {
     this.displayElem.hide();
     this.displayElem.empty();
-  },
+  };
 
-  displayPartyStats: function() {
-
-  },
-  
-  chooseCharacter: function(title, callback) {
-    // TODO duplicates a lot of code form encounterClasses.js
+  subClassPrototype.chooseCharacter = function(title, callback) {
     var charMenu = this.makeMenu();
     charMenu.setTitle(title);
     var self = this;
@@ -222,29 +241,43 @@ MenuSystem.prototype = {
       addOneCmd(this._party[i]);
     }
     this.pushMenu(charMenu);
-  },
-
-  handleKey: function(keyCode) {
-    // TODO duplicates a lot of code from encounterClasses.js
+  };
+  
+  subClassPrototype.handleKey = function(keyCode) {
     if (keyCode == CANCEL_BUTTON) {
-      console.log("U hit cancel button in a menu");
       // cancel -> pop top menu off menu stack, go back to previous one
+      if (!this._freelyExit) {
+        if (this.menuStack.length == 1) {
+          // But if freelyExit is false, then don't let us exit the
+          // root menu!
+          return;
+        }
+      }
       if (this.menuStack.length > 0) {
         this.popMenu();
       }
       if (this.menuStack.length == 0) {
-        this.hide();
-        if (this._closeCallback) {
-          this._closeCallback();
-        }
+        // If you just closed the root menu, close whole menu sysetm:
+        this.close();
       }
     } else {
+      // if it's not the cancel button, pass it on to the topmost
+      // menu of the stack:
       if (this.menuStack.length > 0) {
         this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
       }
     }
-  },
+  };
+}
 
+function FieldMenu(htmlElem, commandSet) {
+  this._init(htmlElem);
+  this._rootMenu = this.menuFromCmdSet("What?", commandSet);
+  this._freelyExit = true;
+  // field menu can always be exited with cancel button,
+  // unlike battle menu.
+}
+FieldMenu.prototype = {
   showItemMenu: function(character) {
     // This is all special-case for the field menu
     var self = this;
@@ -280,8 +313,9 @@ MenuSystem.prototype = {
     this.pushMenu(menu);
   }
 };
+MenuSystemMixin(FieldMenu.prototype);
 
-// maybe factor out a MenuStack class?
+
 
 function Dialoglog(htmlElem) {
   this.menuStack = [];
