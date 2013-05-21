@@ -141,7 +141,9 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.menuFromCmdSet = function (title, cmdSet) {
     var self = this;
     var subMenu = new CmdMenu(self._htmlElem);
-    subMenu.setTitle(title);
+    if (title && title != "") {
+      subMenu.setTitle(title);
+    }
     
     var addOneCmd = function(name, cmd) {
       // allow recursive submenus
@@ -272,7 +274,7 @@ function MenuSystemMixin(subClassPrototype) {
 
 function FieldMenu(htmlElem, commandSet) {
   this._init(htmlElem);
-  this._rootMenu = this.menuFromCmdSet("What?", commandSet);
+  this._rootMenu = this.menuFromCmdSet("", commandSet);
   this._freelyExit = true;
   // field menu can always be exited with cancel button,
   // unlike battle menu.
