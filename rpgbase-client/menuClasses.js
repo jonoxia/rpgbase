@@ -318,8 +318,14 @@ FieldMenu.prototype = {
     });
 
     subMenu.addCommand("Equip", function() {
-      self.showMsg("Equipping the " + item.name);
-      // TODO implement equip command
+      if (character.canEquipItem(item.reference)) {
+        self.showMsg(character.name + " equips "
+                     + item.name);
+        character.equipItem(item.reference);
+      } else {
+        self.showMsg(character.name + " can't equip "
+                     + item.name);
+      }
       self.returnToRoot();
     });
 

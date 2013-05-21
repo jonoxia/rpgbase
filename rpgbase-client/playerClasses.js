@@ -407,12 +407,18 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
   // and that each PC will always have an ITEM command in battle
   // these assumptions might not be true for some games
   // so this should really go in userland.
+
+  this._equippableTypes = [];
+  this._equippedItems = {};
 }
 PlayerCharacter.prototype = {
   gainItem: function(itemType) {
     this._inventory.gainItem(itemType);
   },
   loseItem: function(instance) {
+    if (this.isEquipped(instance)) {
+      this.unEquipItem(instance);
+    }
     this._inventory.removeItem(instance);
   },
   receiveItemFrom: function(instance, giver) {
@@ -445,7 +451,52 @@ PlayerCharacter.prototype = {
     for (var propName in this._statBlock) {
       html+= propName + " : " + this._statBlock[propName] + "<br>";
     }
+    for (var slot in this._equippedItems) {
+      if (this._equippedItems[slot]) {
+        html+= slot + " : " 
+          + this._equippedItems[slot].getName() + "<br>";
+      }
+    }
     return html;
+  },
+
+  setEquippableTypes: function(typeList) {
+    // takes an array of strings
+    this._equippableTypes = typeList;
+  },
+
+  canEquipItem: function(item) {
+    // returns true or false
+    if (!item.isEquippable()) {
+      return false;
+    }
+    var equipType = item.getEquipType();
+    return (this._equippableTypes.indexOf(equipType) > -1);
+  },
+
+  equipItem: function(item) {
+    // TODO check if item is in my inventory, just as a sanity check?
+    if (this.canEquipItem(item)) {
+      var slot = item.getEquipSlot();
+      this._equippedItems[slot] = item;
+      // TODO do anything with the item that used to be there?
+    }
+  },
+
+  isEquipped: function(instance) {
+    for (var slot in this._equippedItems) {
+      if (this._equippedItems[slot] == instance) {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  unEquipItem: function(instance) {
+    if (this.isEquipped(instance)) {
+      var slot = instance.getEquipSlot();
+      this._equippedItems[slot] = null;
+    }
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

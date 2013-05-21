@@ -113,13 +113,26 @@ function setUpParty(loader) {
                          }
                         });
 
-  hero.gainItem(new ItemType("Crummy Sword"));
+  var sword = new ItemType("Crummy Sword");
+  sword.equippable("hand", "sword", {atk: 5});
+  var fur = new ItemType("Crummy Fur");
+  fur.equippable("body", "fur", {def: 5});
+  var axe = new ItemType("Crummy Axe");
+  axe.equippable("hand", "axe", {atk: 10});
+  var robes = new ItemType("Crummy Robes");
+  robes.equippable("body", "cloth", {def: 5});
+
+  hero.setEquippableTypes(["sword", "chain", "shield", "plate"]);
+  sidekick.setEquippableTypes(["fang", "fur"]);
+  sidekick2.setEquippableTypes(["sword", "axe", "chain", "shield", "plate"]);
+  sidekick3.setEquippableTypes(["staff", "cloth"]);
+
+  hero.gainItem(sword);
   hero.gainItem(medicalHerb);
   hero.gainItem(homingDevice);
-  sidekick.gainItem(new ItemType("Crummy Fur"));
-  sidekick2.gainItem(new ItemType("Crummy Axe"));
-  sidekick3.gainItem(new ItemType("Crummy Robes"));
-
+  sidekick.gainItem(fur);
+  sidekick2.gainItem(axe);
+  sidekick3.gainItem(robes);
 
 
   player.addCharacter(hero);
