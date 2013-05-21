@@ -412,6 +412,17 @@ PlayerCharacter.prototype = {
   gainItem: function(itemType) {
     this._inventory.gainItem(itemType);
   },
+  loseItem: function(instance) {
+    this._inventory.removeItem(instance);
+  },
+  transferItem: function(instance, receiver) {
+    // this breaks all kinds of encapsulation
+    this.loseItem(instance);
+    instance.inventory = receiver._inventory;
+    // have to set that so the item knows whose inventory to 
+    // disappear from if it's used up
+    receiver._inventory.gainInstance(instance);
+  },
   getInventoryCmds: function(isBattle) {
     return this._inventory.getItemNamesAndUses(isBattle);
   },

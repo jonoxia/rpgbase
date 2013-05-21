@@ -298,37 +298,67 @@ function FieldMenu(htmlElem, commandSet) {
   // unlike battle menu.
 }
 FieldMenu.prototype = {
+  showItemSubMenu: function(item, character) {
+    // do what with this item?
+    var self = this;
+    var subMenu = this.makeMenu();
+    subMenu.setTitle("Do what?");
+    subMenu.addCommand("Use", function() {
+      if (item.target == "ally") {
+        // If using it requires selecting a target...
+        self.chooseCharacter("Use on?", function(target) {
+          item.effect(self, character, target);
+          self.returnToRoot();
+        });
+      } else {
+        // TODO are there other target types?
+        itemData.effect(self, character, null);
+        self.returnToRoot();
+      }
+    });
+
+    subMenu.addCommand("Equip", function() {
+      self.showMsg("Equipping the " + item.name);
+      // TODO implement equip command
+      self.returnToRoot();
+    });
+
+    subMenu.addCommand("Give", function() {
+      self.chooseCharacter("Give to?", function(target) {
+        self.showMsg(character.name + " gives the " + item.name
+                    + " to " + target.name);
+        character.transferItem(item.reference, target);
+        self.returnToRoot();
+      });
+    });
+
+    subMenu.addCommand("Drop", function() {
+      self.showMsg(character.name + " drops the " + item.name);
+      character.loseItem(item.reference);
+      self.returnToRoot();
+    });
+
+    this.pushMenu(subMenu);
+  },
+
   showItemMenu: function(character) {
-    // This is all special-case for the field menu
+    // TODO will have a lot of parallel code for casting spells
+    // outside of battle.
+    // TODO what to show if inventory is empty?
     var self = this;
     var menu = this.makeMenu();
     menu.setTitle("Items:");
 
-    // TODO what to show if inventory is empty?
-    var makeItemSelectFunc = function(itemData) {
-      // upon selecting item, if the item requires a target,
-      // then ask user for target, then execute. Otherwise,
-      // execute immediately.
-      if (itemData.target == "ally") {
-        return function() {
-          self.chooseCharacter("Use on?", function(target) {
-            itemData.effect(self, character, target);
-            self.returnToRoot();
-          });
-        }
-      } else {
-        // TODO are there other target types?
-        return function() {
-          itemData.effect(self, character, null);
-          self.returnToRoot();
-        }
-      }
-    };
-    
+    // After selecting an item, give options of
+    // Use, Equip, Give, or Drop.
     var itemCmds = character.getInventoryCmds(false); // isBattle=false
     for (var i = 0; i < itemCmds.length; i++) {
-      menu.addCommand(itemCmds[i].name,
-                      makeItemSelectFunc(itemCmds[i]));
+      (function(item) {
+        menu.addCommand(item.name,
+                      function() {
+                        self.showItemSubMenu(item, character);
+                      });
+      })(itemCmds[i]);
     }
     this.pushMenu(menu);
   }

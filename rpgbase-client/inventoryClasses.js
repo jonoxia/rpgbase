@@ -31,9 +31,12 @@ Inventory.prototype = {
     if (this._itemList.length >= this._limit) {
       return false;
     }
-    var instance = itemType.instantiate(this);
-    this._itemList.push(instance);
+    this.gainInstance(itemType.instantiate(this));
     return true;
+  },
+
+  gainInstance: function(instance) {
+    this._itemList.push(instance);
   },
 
   removeItem: function(instance) {
@@ -52,7 +55,8 @@ Inventory.prototype = {
             target: item.getTargetType(),
             effect: function(system, user, target) {
               item.useInBattle(system, user, target);
-            }
+            },
+            reference: item
            };
   },
 
@@ -61,7 +65,8 @@ Inventory.prototype = {
             target: item.getTargetType(),
             effect: function(system, user, target) {
               item.useInField(system, user, target);
-            }
+            },
+            reference: item
            };
   },
 
