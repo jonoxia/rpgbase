@@ -130,9 +130,14 @@ function setUpParty(loader) {
   hero.gainItem(sword);
   hero.gainItem(medicalHerb);
   hero.gainItem(homingDevice);
+  var i;
+  for (var i = 0; i < 5; i++) { hero.gainItem(medicalHerb); }
   sidekick.gainItem(fur);
+  for (var i = 0; i < 7; i++) { sidekick.gainItem(medicalHerb); }
   sidekick2.gainItem(axe);
+  for (var i = 0; i < 7; i++) { sidekick2.gainItem(medicalHerb); }
   sidekick3.gainItem(robes);
+  for (var i = 0; i < 7; i++) { sidekick3.gainItem(medicalHerb); }
 
 
   player.addCharacter(hero);
@@ -176,6 +181,14 @@ function setUpTownMap(loader, mapScreen) {
     dialog.show("HELLO I AM A SHOMPKEEPER");
   });
   town.addNPC(shopkeeper, 5, 5);
+
+  var treasureSheet = loader.add("treasure.png");
+  var shield = new ItemType("Crummy Shield");
+  shield.equippable("hand", "shield", {def: 5});
+  var box = new TreasureChest(shield, treasureSheet, 16, 16, 0, 0);
+
+  town.addNPC(box, 6, 4);
+
   return town;
 }
 
@@ -411,8 +424,7 @@ function setUpInputDispatch(player, mapScreen) {
       var facingSpace = player.getFacingSpace();
       var npc = mapScreen.getNPCAt(facingSpace.x, facingSpace.y);
       if (npc) {
-        var playerFacing = player.getAliveParty()[0].getFacing();
-        npc.talk(dispatcher.menuMode("dialog"), playerFacing);
+        npc.talk(dispatcher.menuMode("dialog"), player);
       }
       break;
     case CANCEL_BUTTON:

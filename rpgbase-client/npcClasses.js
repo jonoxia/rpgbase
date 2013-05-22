@@ -75,10 +75,11 @@ NPC.prototype = {
     this._talkCallback = callback;
   },
 
-  talk: function(dialoglog, playerFacing) {
+  talk: function(dialoglog, player) {
     if (this._talkCallback) {
       if (this._wanders) {
         // turn to face speaker;
+        var playerFacing = player.getAliveParty()[0].getFacing();
         this.turn((-1)*playerFacing.x, (-1)*playerFacing.y);
         // don't wander away while i'm talking to you!!
         dialoglog.occupyNPC(this);
@@ -100,3 +101,35 @@ MapSpriteMixin(NPC.prototype);
 /* NPCs belong to a Map.
  * MapScreen only draws NPCs for the current Map.
  * An NPC on a square makes the square impassible! */
+
+function TreasureChest(itemType, spriteSheet, width, height, offsetX, offsetY) {
+  this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+  this.setSprite(0, 0);
+
+  this._itemType = itemType;
+  this._taken = false;
+}
+TreasureChest.prototype = {
+  wake: function() {
+    // will be treated as NPCs so must satisfy NPC interface
+  },
+  sleep: function() {
+  },
+  
+  talk: function(dialoglog, player) {
+    if (!this._taken) {
+      // give it to first character with open inventory slot...
+      var self = this;
+      player.findRoomForAnItem(dialoglog, self._itemType._name,
+                               function(receiver) {
+        dialoglog.show(receiver.name + " got a " + self._itemType._name + "!");
+        //self._taken = true;
+        //self.setSprite(1, 0);
+        receiver.gainItem(self._itemType);
+      });
+    } else {
+      dialoglog.show("It's empty. :-(");
+    }
+  },
+};
+MapSpriteMixin(TreasureChest.prototype);

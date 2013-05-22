@@ -28,7 +28,7 @@ function Inventory(limit) {
 Inventory.prototype = {
   gainItem: function(itemType) {
     // returns false if item cannot be gained
-    if (this._itemList.length >= this._limit) {
+    if (this.isFull()) {
       return false;
     }
     this.gainInstance(itemType.instantiate(this));
@@ -86,6 +86,10 @@ Inventory.prototype = {
       namesAndUses.push(itemCmd);
     }
     return namesAndUses;
+  },
+
+  isFull: function() {
+    return (this._itemList.length >= this._limit);
   }
 };
 

@@ -194,6 +194,56 @@ Player.prototype = {
       this.party[i].show();
     }
     this.marchInOrder();
+  },
+
+  findRoomForAnItem: function(dialoglog, itemName, successCallback) {
+    for (var i = 0; i < this.party.length; i++) {
+      if (!this.party[i].inventoryIsFull()) {
+        successCallback(this.party[i]);
+        return;
+      }
+    }
+
+    // TODO should this stuff be moved to the menu class or what?
+
+    // Nobody has room - prompt if you want to drop something
+    var dialogMenu = dialoglog.openMenu(this.party);
+    dialogMenu.showMsg("There's a " + itemName + " here, but everybody's hands are full. Drop something to pick it up?");
+    dialogMenu.yesOrNo(function(choice) {
+      if (choice) {
+        dialogMenu.chooseCharacter("Who will drop something?", function(receiver) {
+          var menu = dialogMenu.makeMenu();
+          menu.setTitle("Drop what?");
+
+          // TODO this part duplicates code from FieldMenu
+          var itemCmds = receiver.getInventoryCmds(false);
+          for (var i = 0; i < itemCmds.length; i++) {
+            (function(trash) {
+              menu.addCommand(trash.name,
+                              function() {
+                                dialogMenu.showMsg("Drop " + trash.name 
+                                               + " to pick up " +
+                                               itemName + "?");
+                                dialogMenu.yesOrNo(function(choice) {
+                                  if (choice) {
+                                    receiver.loseItem(trash.reference);
+                                    dialoglog.closeMenu();
+                                    successCallback(receiver);
+                                  } else {
+                                    dialogMenu.popMenu();
+                                    dialogMenu.popMenu();
+                                  }
+                                });
+                              });
+            })(itemCmds[i]);
+          }
+          dialogMenu.pushMenu(menu);
+        });
+      } else {
+        dialoglog.closeMenu();
+        dialoglog.show("Leaving the " + itemName + " here for now.");
+      }
+    });
   }
 }
 
@@ -427,6 +477,9 @@ PlayerCharacter.prototype = {
   },
   getInventoryCmds: function(isBattle) {
     return this._inventory.getItemNamesAndUses(isBattle);
+  },
+  inventoryIsFull: function() {
+    return this._inventory.isFull();
   },
   customizeCmds: function(defaultCmds) {
     // called at beginning of battle to allow us a chance to override

@@ -166,12 +166,15 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.open = function(party) {
     this._party = party;
     this._htmlElem.show();
-    this.pushMenu(this._rootMenu);
+    if (this._rootMenu) {
+      this.pushMenu(this._rootMenu);
+    }
     this.clearMsg();
     this.hidePartyStats();
   };
 
   subClassPrototype.close = function() {
+    this.emptyMenuStack();
     if (this._rootMenu) {
       this._rootMenu.reset();
     }
@@ -262,6 +265,17 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.hidePartyStats = function() {
     this._htmlElem.find(".stats").remove();
   };
+
+  subClassPrototype.yesOrNo = function(callback) {
+    var yesOrNoMenu = this.makeMenu();
+    yesOrNoMenu.addCommand("Yes", function() {
+      callback(true);
+    });
+    yesOrNoMenu.addCommand("No", function() {
+      callback(false);
+    });
+    this.pushMenu(yesOrNoMenu);
+  },
   
   subClassPrototype.handleKey = function(keyCode) {
     if (keyCode == CANCEL_BUTTON) {
@@ -371,14 +385,19 @@ FieldMenu.prototype = {
 };
 MenuSystemMixin(FieldMenu.prototype);
 
-
-
 function Dialoglog(htmlElem) {
   this.menuStack = [];
   this._htmlElem = htmlElem;
   this._closeCallbacks = [];
   this._occupiedNPC = null;
   this.displayElem = this._htmlElem.find(".msg-display");
+
+  // weird hacky way of directly instantiating the mixin:
+  this.dialogMenu = {};
+  MenuSystemMixin(this.dialogMenu);
+  this.dialogMenu._init(htmlElem);
+
+  this._menuIsOpen = false;
 }
 Dialoglog.prototype = {
   show: function(msg) {
@@ -393,19 +412,10 @@ Dialoglog.prototype = {
     this._htmlElem.hide();
     this.displayElem.empty();
   },
-  onClose: function(callback) {
-    this._closeCallbacks.push(callback);
-  },
-  showMenu: function() {
-    // e.g. showDialogMenu({"yes": function() {},
-    //                      "no": function() {}
-    //                    });
-  },
-  handleKey: function(keyCode) {
-    // if there's a menu, pass key code along to menu
-    // if end of the dialog is onscreen, hide it
-    // if a screen before the end of long dialog is onscreen,
-    // scroll to next screen of dialog.
+  close: function() {
+    if (this.dialogMenu.isOpen) {
+      this.closeMenu();
+    }
     this.hide();
     for (var i = 0; i < this._closeCallbacks.length; i++) {
       this._closeCallbacks[i]();
@@ -414,6 +424,29 @@ Dialoglog.prototype = {
       // release any NPC that this dialog was occupying
       this._occupiedNPC.wake();
       this._occupiedNPC = null;
+    }
+  },
+  onClose: function(callback) {
+    this._closeCallbacks.push(callback);
+  },
+  openMenu: function(player) {
+    this.dialogMenu.open(player);
+    this._menuIsOpen = true;
+    return this.dialogMenu;
+  },
+  closeMenu: function() {
+    this.dialogMenu.close();
+    this._menuIsOpen = false;
+  },
+  handleKey: function(keyCode) {
+    // if there's a menu, pass key code along to menu
+    // if end of the dialog is onscreen, hide it
+    // TODO if a screen before the end of long dialog is onscreen,
+    // scroll to next screen of dialog.
+    if (this._menuIsOpen) {
+      this.dialogMenu.handleKey(keyCode);
+    } else {
+      this.close();
     }
   },
 
