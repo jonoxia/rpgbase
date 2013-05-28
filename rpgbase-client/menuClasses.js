@@ -1,44 +1,230 @@
-function CmdMenu(container) {
+function CmdMenuMixin(subClassProto) {
+  subClassProto._init = function() {
     this.cmdList = [];
     this.selectedIndex = 0;
-    this.container = container;
-    this.cursorHtml = "<blink>&#x25B6;</blink>";
     this.title = null;
-}
-CmdMenu.prototype = {
-    clear: function() {
-      this.cmdList = [];
-    },
+  };
 
-    setTitle: function(title) {
-      this.title = title;
-    },
+  subClassProto.clear = function() {
+    this.cmdList = [];
+  };
 
-    addCommand: function(name, callback) {
-	this.cmdList.push({name: name, execute: callback});
-    },
+  subClassProto.setTitle = function(title) {
+    this.title = title;
+  };
+
+  subClassProto.addCommand = function(name, callback) {
+    this.cmdList.push({name: name, execute: callback});
+  };
     
-    moveSelectionUp: function() {
-	this.selectedIndex --;
-	if (this.selectedIndex < 0) {
-	    this.selectedIndex = this.cmdList.length - 1;
-	}
-	this.showArrowAtIndex(this.selectedIndex);
-    },
+  subClassProto.moveSelectionUp = function() {
+    this.selectedIndex --;
+    if (this.selectedIndex < 0) {
+      this.selectedIndex = this.cmdList.length - 1;
+    }
+    this.showArrowAtIndex(this.selectedIndex);
+  };
+  
+  subClassProto.moveSelectionDown = function() {
+    this.selectedIndex ++;
+    if (this.selectedIndex >= this.cmdList.length) {
+      this.selectedIndex = 0;
+    }
+    this.showArrowAtIndex(this.selectedIndex);
+  };
 
-    moveSelectionDown: function() {
-	this.selectedIndex ++;
-	if (this.selectedIndex >= this.cmdList.length) {
-	    this.selectedIndex = 0;
-	}
-	this.showArrowAtIndex(this.selectedIndex);
-    },
+  subClassProto.chooseSelected =  function() {
+    var cmd = this.cmdList[this.selectedIndex];
+    cmd.execute();
+  };
 
-    chooseSelected: function() {
-      var cmd = this.cmdList[this.selectedIndex];
-      cmd.execute();
-    },
+  subClassProto.onKey = function(keyCode) {
+    switch(keyCode) {
+    case UP_ARROW:
+      this.moveSelectionUp();
+      break;
+    case DOWN_ARROW:
+      this.moveSelectionDown();
+      break;
+    case CONFIRM_BUTTON: // enter or space
+      this.chooseSelected();
+      break;
+    }
+  };
 
+  subClassProto.reset = function() {
+    this.selectedIndex = 0;
+  };
+}
+
+var CanvasTextUtils = {
+  // singleton object
+  drawRoundedTextBox: function(ctx, x, y, width, height) {
+    var cornerRadius = this.getStyles().cornerRadius;
+    ctx.beginPath();
+    // top edge:
+    var right = x + width;
+    var bottom = y + height;
+    ctx.moveTo( x + cornerRadius, y);
+    ctx.lineTo( right - cornerRadius, y);
+    // top-right curve
+    ctx.arc( right - cornerRadius,
+	     y + cornerRadius,
+	     cornerRadius, 3 * Math.PI/2, 0, false);
+    ctx.lineTo( right, bottom - cornerRadius);
+    //bottom-right curve:
+    ctx.arc( right - cornerRadius,
+	     bottom - cornerRadius,
+	     cornerRadius, 0, Math.PI/2, false);
+    ctx.lineTo( x + cornerRadius, bottom);
+    //bottom-left curve:
+    ctx.arc( x + cornerRadius,
+	     bottom - cornerRadius,
+	     cornerRadius, Math.PI/2, Math.PI, false);
+    ctx.lineTo( x, y + cornerRadius);
+    //top-left curve:
+    ctx.arc( x + cornerRadius,
+	     y + cornerRadius,
+	     cornerRadius, Math.PI, 3*Math.PI/2, false);
+
+    // clear area
+    ctx.fillStyle = this.getStyles().bgColor;
+    ctx.strokeStyle = this.getStyles().borderColor;
+    ctx.fill();
+    ctx.stroke();
+  },
+
+  setStyles: function(options) {
+    for (var prop in options) {
+      this.styles[prop] = options[prop];
+    }
+  },
+
+  getStyles: function() {
+    return this.styles;
+  },
+
+  styles: {
+    leftMargin: 10,
+    rightMargin: 5,
+    topMargin: 5,
+    bottomMargin: 5,
+    lineHeight: 12,
+    fontSize: 6,
+    cornerRadius: 3,
+    maxLineLength: 32,
+    font: "6pt monospace",
+    fontColor: "white",
+    bgColor: "black",
+    borderColor: "white"
+  }
+};
+
+
+function CanvasCmdMenu() {
+  this._init();
+  this.x = 0; 
+  this.y = 0;
+  this.width = 50;
+  this.height = 150;
+}
+CanvasCmdMenu.prototype = {
+  showArrowAtIndex: function(index) {
+    // TODO  -- if display is getting called on
+    // the animation loop, do I even need this?
+  },
+  display: function(ctx) {
+    if (!ctx) {
+      return;
+    }
+    var styles = CanvasTextUtils.getStyles();
+    // calc width and height based on text size of
+    // contents
+
+    this.width = styles.leftMargin + styles.rightMargin;
+    var longestCommand = 0;
+    for (var i =0; i < this.cmdList.length; i++) {
+      if (this.cmdList[i].name.length > longestCommand) {
+        longestCommand = this.cmdList[i].name.length;
+      }
+    }
+    // TODO use that method that calcs text size:
+    this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * longestCommand;
+    this.height = this.cmdList.length * styles.lineHeight + styles.topMargin + styles.bottomMargin;
+
+    CanvasTextUtils.drawRoundedTextBox(ctx, this.x, this.y,
+                                       this.width, this.height);
+
+    // TODO
+    // the hard way: animator that draws the map, after drawing the
+    // map must display any canvas menus if the field menu is open;
+    // the animator that draws the battle system, after doing so must
+    // display any battle menus if the battle menu is open.
+
+    // the battle one will be much easier so let's start there.
+    ctx.font = styles.font;
+    ctx.fillStyle = styles.fontColor;
+    for (var i =0; i < this.cmdList.length; i++) {
+      ctx.fillText(this.cmdList[i].name, this.x + styles.leftMargin, this.y + styles.topMargin + styles.lineHeight*(i + 0.8));
+    }
+
+    ctx.beginPath();
+    var yBase = this.y + styles.lineHeight * this.selectedIndex;
+    ctx.moveTo(this.x + 4, yBase + 8);
+    ctx.lineTo(this.x + 8, yBase + 12);
+    ctx.lineTo(this.x + 4, yBase + 16);
+    ctx.lineTo(this.x + 4, yBase + 8);;
+    ctx.fill();
+  },
+  close: function() {
+    // TODO anything to do here? Just stop drawing it right?
+  },
+  setPos: function(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+};
+CmdMenuMixin(CanvasCmdMenu.prototype);
+
+/* Canvas menus TODO: 
+   (check) * - the showMsg must be drawn in this way too -- preferrably somewhere NOT overlapping default menu position the way it does now!
+
+   (check) * - share the margins, corner radius, line height, etc etc
+       with the cmd menus. Make some sort of style object owned by
+       the MenuSystem
+
+ * - dialoglog must be drawn in this way.
+ * - dialoglog must be explicitly overlaid over map screen using an
+     afterRender callback.
+ * - Provide userland with an API for specifying font, font size, line height, margins, border radius, colors, border thickness, and positioning of menus.
+     ** - share this style object - store it somewhere where everyone
+          can refer to it. Owned by the MenuSystem?
+     how do they specify position of menus?
+     ** - first chara stats go here
+     ** - each chara stats after that goes at +x +y from there
+     ** - message window goes here
+     ** - set width and height to a number OR 'auto' where auto means
+           calculate based on size of text inside
+     ** - main menu goes here
+     ** - each submenu gets offset by +x +y from there
+
+primary mediasitinal large B-cell lymphoma which is an aggressive non-hodgkins lymphoma
+
+
+ * - don't let canvas menus go off the edge of the canvas -- if bottom is below bottom edge, bump it up. if right is past right edge, bump it left.
+ * - during input of character combat actions, pop or hide some of the already-chosen submenus -- they don't need to take up space on the screen.
+ * - bug: if i have multiple items with the same name, only one seems to show up on the item menu in combat!  (a useful, if accidental, space-saving feature?)
+
+*/
+
+
+
+function CssCmdMenu(container) {
+  this._init();
+  this.container = container;
+  this.cursorHtml = "<blink>&#x25B6;</blink>";
+}
+CssCmdMenu.prototype = {
     showArrowAtIndex: function(index) {
       var rows = this.table.find("tr");
       for (var r = 0; r < rows.length; r++) {
@@ -93,26 +279,8 @@ CmdMenu.prototype = {
 	this.parentTag.focus();
     },
 
-  onKey: function(keyCode) {
-    switch(keyCode) {
-    case UP_ARROW:
-      this.moveSelectionUp();
-      break;
-    case DOWN_ARROW:
-      this.moveSelectionDown();
-      break;
-    case CONFIRM_BUTTON: // enter or space
-      this.chooseSelected();
-      break;
-    }
-  },
-
   close: function() {
     this.parentTag.remove();
-  },
-
-  reset: function() {
-    this.selectedIndex = 0;
   },
 
   setPos: function(x, y) {
@@ -124,12 +292,19 @@ CmdMenu.prototype = {
     }
   }
 };
+CmdMenuMixin(CssCmdMenu.prototype);
+
 
 /* TODO:  modify MenuSystemMixin to allow substituting a
  * canvas-based menu for a CSS-based menu. */
 
 function MenuSystemMixin(subClassPrototype) {
   subClassPrototype._init = function(htmlElem) {
+
+    // TODO make an interface for setting this to either "canvas" 
+    // or "css" but for now we're testing canvas impl
+    this.menuImpl = "canvas";
+
     this.menuStack = [];
     this._htmlElem = htmlElem;
     this.displayElem = this._htmlElem.find(".msg-display");
@@ -140,7 +315,7 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.menuFromCmdSet = function (title, cmdSet) {
     var self = this;
-    var subMenu = new CmdMenu(self._htmlElem);
+    var subMenu = this.makeMenu();
     if (title && title != "") {
       subMenu.setTitle(title);
     }
@@ -178,6 +353,7 @@ function MenuSystemMixin(subClassPrototype) {
     if (this._rootMenu) {
       this._rootMenu.reset();
     }
+    this.canvasStyleMsgText = null;
     this.hide();
     for (var i = 0; i < this._closeCallbacks.length; i++) {
       this._closeCallbacks[i]();
@@ -185,15 +361,28 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.makeMenu = function() {
-    return new CmdMenu(this._htmlElem);
+    if (this.menuImpl == "canvas") {
+      return new CanvasCmdMenu();
+    } else {
+      return new CssCmdMenu(this._htmlElem);
+    }
   };
 
   subClassPrototype.pushMenu = function(newMenu) {
-    var x = 25;
-    for (var i = 0; i < this.menuStack.length; i++) {
-      x += 80;
+    var x;
+    if (this.menuImpl == "canvas") {
+      x = 0;
+      for (var i = 0; i < this.menuStack.length; i++) {
+        x += 40;
+      }
+      newMenu.setPos(x, 0);
+    } else {
+      x = 25;
+      for (var i = 0; i < this.menuStack.length; i++) {
+        x += 80;
+      }
+      newMenu.setPos(x, 250);
     }
-    newMenu.setPos(x, 250);
     this.menuStack.push(newMenu);
     newMenu.display();
   };
@@ -227,14 +416,38 @@ function MenuSystemMixin(subClassPrototype) {
   },
 
   subClassPrototype.showMsg = function(msg) {
-    this.displayElem.append($("<span></span>").html(msg));
-    this.displayElem.append($("<br>"));
-    this.displayElem.show();
+    if (this.menuImpl == "canvas") {
+      this.canvasStyleMsgText = msg;
+      var styles = CanvasTextUtils.getStyles();
+      // split text up into lines:
+      var words = msg.split(" ");
+      var lines = [];
+      var currLine = words.shift();
+      while (words.length > 0) {
+        var word = words.shift();
+        if (currLine.length + word.length + 1 <= styles.maxLineLength) {
+          currLine = currLine + " " + word;
+        } else {
+          lines.push(currLine);
+          currLine = word;
+        }
+      }
+      if (currLine.length > 0) {
+        lines.push(currLine);
+      }
+      this.canvasStyleMsgLines = lines;
+    } else {
+      this.displayElem.append($("<span></span>").html(msg));
+      this.displayElem.append($("<br>"));
+      this.displayElem.show();
+    }
   };
 
   subClassPrototype.clearMsg = function() {
     this.displayElem.hide();
     this.displayElem.empty();
+    this.canvasStyleMsgText = null;
+    this.canvasStyleMsgLines = [];
   };
 
   subClassPrototype.chooseCharacter = function(title, callback) {
@@ -275,6 +488,45 @@ function MenuSystemMixin(subClassPrototype) {
       callback(false);
     });
     this.pushMenu(yesOrNoMenu);
+  },
+
+  subClassPrototype.drawCanvasMenus = function(ctx) {
+    if (this.menuImpl == "canvas") {
+      // do this next part only if using canvas menus and
+      // only if they're open:
+      for (var i = 0; i < this.menuStack.length; i++) {
+        this.menuStack[i].display(ctx);
+      }
+      if (this.canvasStyleMsgText) {
+        // Draw any open message set by showMsg
+        this.drawCanvasMsgText(ctx, this.canvasStyleMsgText);
+      }
+    }
+  };
+
+  subClassPrototype.drawCanvasMsgText = function(ctx, text) {
+    var styles = CanvasTextUtils.getStyles();
+
+    var x = 25;
+    var y = 125; // completely arbitrary!!
+
+    var lines = this.canvasStyleMsgLines;
+    var width = styles.leftMargin + styles.rightMargin 
+      + styles.maxLineLength * styles.fontSize;
+    var numLines = lines.length;
+    var height = styles.topMargin + styles.bottomMargin
+      + numLines * styles.lineHeight;
+
+    CanvasTextUtils.drawRoundedTextBox(ctx, x, y, width, height);
+
+    ctx.font = styles.font;
+    ctx.fillStyle = styles.fontColor;
+    // draw each line:
+    for (var lineNum = 0; lineNum < numLines; lineNum++) {
+      ctx.fillText(lines[lineNum], x + styles.leftMargin,
+                   y + styles.topMargin + styles.lineHeight*(lineNum + 0.8));
+    }
+   
   },
   
   subClassPrototype.handleKey = function(keyCode) {
@@ -384,6 +636,7 @@ FieldMenu.prototype = {
   }
 };
 MenuSystemMixin(FieldMenu.prototype);
+
 
 function Dialoglog(htmlElem) {
   this.menuStack = [];

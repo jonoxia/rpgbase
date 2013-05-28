@@ -507,10 +507,18 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
   var boat = makeBoat(loader, overworld);
 
+  CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12});
+
   // Set up the relationships between the main game components
   var inputDispatcher = setUpInputDispatch(player, mapScreen);
   inputDispatcher.addMenuMode("field", fieldMenu);
   inputDispatcher.addMenuMode("battle", battleSystem);
+
+  // TODO this only needs to happen if menus are canvas mode:
+  mapScreen.afterRender(function(ctx) {
+    fieldMenu.drawCanvasMenus(ctx);
+    // TODO draw dialoglog here too!!!
+  });
 
   /* 5% chance of random encounter on each step through overworld
    * When an encounter happens, switch to the battlescreen-style
@@ -563,10 +571,12 @@ $(document).ready( function() {
     // and begin map animation:
     mapScreen.start();
 
-    /*inputHandler.stopListening();
-    battleInputHandler.startListening();
-    battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                      number: 3}, 1);*/
+    //inputHandler.stopListening();
+
+    //inputDispatcher.menuMode("battle");
+    //battleInputHandler.startListening();
+    //battleSystem.startBattle(player, {type: manuel.biteWorm,
+      //                                number: 3}, 1);
 
   });
 });

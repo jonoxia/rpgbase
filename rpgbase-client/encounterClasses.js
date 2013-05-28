@@ -53,15 +53,6 @@ function BattleSystem(htmlElem, canvas, options) {
                                 function() {self.draw();});
 }
 BattleSystem.prototype = {
-  // defined in menu system but not here:
-  // open -- could simplify startBattle
-  //    (key difference: player passed in vs. party)
-  // makeMenu
-  // returnToRoot
-  // hide()
-  // clearMsg
-  // chooseCharacter
-
   getAliveParty: function() {
     // TODO this duplicates some code in Player.marchInOrder...
     // BattleSystem and Player are both separately maintaining the
@@ -104,8 +95,9 @@ BattleSystem.prototype = {
   },
 
   randomElementFromArray: function(arr) {
-    // TODO allow registering a callback to override this function
-    // choose random PC:
+    // choose random PC
+    // TODO allow registering a callback to override this function,
+    // to implement aggro.
     var index = Math.floor( Math.random() * arr.length);
     return arr[index];
   },
@@ -225,6 +217,10 @@ BattleSystem.prototype = {
         this.monsters[i].setPos(25 + 50 * i, 25);
         this.monsters[i].plot(this._ctx);
       }
+    }
+
+    if (this.menuImpl == "canvas") {
+      this.drawCanvasMenus(this._ctx);
     }
   },
 

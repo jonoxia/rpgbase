@@ -301,6 +301,12 @@ MapScreen.prototype = {
     for (var i = 0; i < mapSprites.length; i++) {
       mapSprites[i].plot(this, this.scrollAdjustment);
     }
+
+    // TODO if a canvas-based fieldMenu or dialogMenu is open,
+    // have to draw that here! Probably do it as yet another callback
+    if (this._afterRenderCallback) {
+      this._afterRenderCallback(this._ctx);
+    }
   },
 
   getScrollAnimation: function(delta, numFrames) {
@@ -401,20 +407,9 @@ MapScreen.prototype = {
 
   stop: function() {
     this._animator.stop();
+  },
+
+  afterRender: function(callback) {
+    this._afterRenderCallback = callback;
   }
 };
-
-
-/* TODO:
- * (done) 1. implement/test loading a new map from an onStep handler,
- *  so this can be used for town and cave maps etc.
- * (done) 2. implement ability to draw non-PC sprites on the map
- *   (NPCs, the boat)
- * 3. write a Vehicle class, and have it take over player.move when
- *   the party is embarked.
- * (done) 4. hit a button on the map screen to pop open the stats menus
- *   (you know, for equipping stuff, casting heals, etc.)
- * (done) 5. hit another button on the map screen to find if any NPC is
- *    in front of you, and if so call their onTalk method.
-
-*/
