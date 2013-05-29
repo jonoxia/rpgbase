@@ -147,7 +147,8 @@ var CanvasTextUtils = {
     font: "6pt monospace",
     fontColor: "white",
     bgColor: "black",
-    borderColor: "white"
+    borderColor: "white",
+    scrollBoxLines: 2
   }
 };
 
@@ -182,22 +183,32 @@ CanvasCmdMenu.prototype = {
     // TODO use that method that calcs text size:
     this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * longestCommand;
     this.height = this.cmdList.length * styles.lineHeight + styles.topMargin + styles.bottomMargin;
+    
+    var x = this.x;
+    var y = this.y;
 
+    if (this.title) {
+      var titleHeight = styles.topMargin + styles.lineHeight 
+        + styles.bottomMargin;
+      CanvasTextUtils.drawTextBox(ctx, x, y, this.width, titleHeight,
+                                 [this.title]);
+      y += titleHeight;
+    }
     var textLines = [];
     for (var i =0; i < this.cmdList.length; i++) {
       textLines.push(this.cmdList[i].name);
     }
     
-    CanvasTextUtils.drawTextBox(ctx, this.x, this.y,
+    CanvasTextUtils.drawTextBox(ctx, x, y,
                                 this.width, this.height, textLines);
 
     // Draw the triangular indicator:
     ctx.beginPath();
-    var yBase = this.y + styles.lineHeight * this.selectedIndex;
-    ctx.moveTo(this.x + 4, yBase + 8);
-    ctx.lineTo(this.x + 8, yBase + 12);
-    ctx.lineTo(this.x + 4, yBase + 16);
-    ctx.lineTo(this.x + 4, yBase + 8);;
+    var yBase = y + styles.lineHeight * this.selectedIndex;
+    ctx.moveTo(x + 4, yBase + 8);
+    ctx.lineTo(x + 8, yBase + 12);
+    ctx.lineTo(x + 4, yBase + 16);
+    ctx.lineTo(x + 4, yBase + 8);;
     ctx.fill();
   },
   close: function() {
@@ -217,10 +228,9 @@ CmdMenuMixin(CanvasCmdMenu.prototype);
        with the cmd menus. Make some sort of style object owned by
        the MenuSystem
 
- * - dialoglog must be drawn in this way.
- * - dialoglog must be explicitly overlaid over map screen using an
-     afterRender callback.
- * - Provide userland with an API for specifying font, font size, line height, margins, border radius, colors, border thickness, and positioning of menus.
+   (check) * - dialoglog must be drawn in this way.
+   (check) * - dialoglog must be explicitly overlaid over map screen using an afterRender callback.
+   (check) * - Provide userland with an API for specifying font, font size, line height, margins, border radius, colors, border thickness, and positioning of menus.
      ** - share this style object - store it somewhere where everyone
           can refer to it. Owned by the MenuSystem?
      how do they specify position of menus?
@@ -239,6 +249,15 @@ primary mediasitinal large B-cell lymphoma which is an aggressive non-hodgkins l
  * - during input of character combat actions, pop or hide some of the already-chosen submenus -- they don't need to take up space on the screen.
  * - bug: if i have multiple items with the same name, only one seems to show up on the item menu in combat!  (a useful, if accidental, space-saving feature?)
 
+
+ * - Show titles on canvas menus! (currently not shown)
+
+ * - Jake's battle system wants main menu for each character to appear
+    - in same place, submenus to appear relative to it. So we can't
+    - just have one xoffset/yoffset that's always applied. Easy enough
+    - to hard code this in but think about how to do it more flexibly.
+    - maybe one of the options to setMenuPositions could be
+    - menus-per-character: reset or relative
 */
 
 
@@ -700,20 +719,13 @@ FieldMenu.prototype = {
 };
 MenuSystemMixin(FieldMenu.prototype);
 
-// TODO make DialogLog into a proper menu system mixin subclass.
-// requirements: make it so the top of the stack can be a "menu"
-// which is just a text window (that goes away when you hit a button)
-// (this will have other uses too!). A "scrollable text message" that
-// obeys the same interface as a menu, and responds to key events
-// by scrolling.
-
 function ScrollingTextBox(text, menuSystem) {
   this.lines = CanvasTextUtils.splitLines(text);
   // currently hard-coded to show 2 lines at a time
-  this.linesAtOnce = 2;
   this.currLine = 0;
   this.menuSystem = menuSystem;
   var styles = CanvasTextUtils.getStyles();
+  this.linesAtOnce = styles.scrollBoxLines;
   this.width = styles.leftMargin + styles.rightMargin 
     + styles.maxLineLength * styles.fontSize;
 
@@ -722,13 +734,13 @@ function ScrollingTextBox(text, menuSystem) {
 }
 ScrollingTextBox.prototype = {
   // Satisfies same interface as a CmdMenu, so it can go on
-  // the MenuStack.
+  // the menu stack.
   onKey: function(key) {
     if (this.currLine + this.linesAtOnce < this.lines.length) { 
       // advance through scroll text, if large
       this.currLine ++;
     } else {
-      // treat any key as cancel button
+      // if done, treat any key as cancel button
       this.menuSystem.handleKey(CANCEL_BUTTON);
     }
   },
