@@ -508,6 +508,17 @@ $(document).ready( function() {
   var boat = makeBoat(loader, overworld);
 
   CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12});
+  fieldMenu.setMenuPositions({msgLeft: 25,
+                              msgTop: 125,
+                              menuLeft: 5,
+                              menuTop: 5,
+                              menuXOffset: 25,
+                              statsLeft: 5,
+                              statsTop: 127,
+                              statsWidth: 50,
+                              statsHeight: 60,
+                              statsXOffset: 50,
+                              statsYOffset: 0});
 
   // Set up the relationships between the main game components
   var inputDispatcher = setUpInputDispatch(player, mapScreen);

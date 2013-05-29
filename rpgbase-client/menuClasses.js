@@ -59,8 +59,8 @@ function CmdMenuMixin(subClassProto) {
 
 var CanvasTextUtils = {
   // singleton object
-  drawRoundedTextBox: function(ctx, x, y, width, height) {
-    var cornerRadius = this.getStyles().cornerRadius;
+  drawTextBox: function(ctx, x, y, width, height, textLines) {
+    var cornerRadius = this.styles.cornerRadius;
     ctx.beginPath();
     // top edge:
     var right = x + width;
@@ -88,10 +88,21 @@ var CanvasTextUtils = {
 	     cornerRadius, Math.PI, 3*Math.PI/2, false);
 
     // clear area
-    ctx.fillStyle = this.getStyles().bgColor;
-    ctx.strokeStyle = this.getStyles().borderColor;
+    ctx.fillStyle = this.styles.bgColor;
+    ctx.strokeStyle = this.styles.borderColor;
     ctx.fill();
     ctx.stroke();
+
+    if (textLines && textLines.length > 0) {
+      ctx.font = this.styles.font;
+      ctx.fillStyle = this.styles.fontColor;
+      // draw each line:
+      for (var i = 0; i < textLines.length; i++) {
+        ctx.fillText(textLines[i], x + this.styles.leftMargin,
+                     y + this.styles.topMargin + this.styles.lineHeight*(i + 0.8));
+      }
+    }
+
   },
 
   setStyles: function(options) {
@@ -152,22 +163,15 @@ CanvasCmdMenu.prototype = {
     this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * longestCommand;
     this.height = this.cmdList.length * styles.lineHeight + styles.topMargin + styles.bottomMargin;
 
-    CanvasTextUtils.drawRoundedTextBox(ctx, this.x, this.y,
-                                       this.width, this.height);
-
-    // TODO
-    // the hard way: animator that draws the map, after drawing the
-    // map must display any canvas menus if the field menu is open;
-    // the animator that draws the battle system, after doing so must
-    // display any battle menus if the battle menu is open.
-
-    // the battle one will be much easier so let's start there.
-    ctx.font = styles.font;
-    ctx.fillStyle = styles.fontColor;
+    var textLines = [];
     for (var i =0; i < this.cmdList.length; i++) {
-      ctx.fillText(this.cmdList[i].name, this.x + styles.leftMargin, this.y + styles.topMargin + styles.lineHeight*(i + 0.8));
+      textLines.push(this.cmdList[i].name);
     }
+    
+    CanvasTextUtils.drawTextBox(ctx, this.x, this.y,
+                                this.width, this.height, textLines);
 
+    // Draw the triangular indicator:
     ctx.beginPath();
     var yBase = this.y + styles.lineHeight * this.selectedIndex;
     ctx.moveTo(this.x + 4, yBase + 8);
@@ -294,7 +298,6 @@ CssCmdMenu.prototype = {
 };
 CmdMenuMixin(CssCmdMenu.prototype);
 
-
 /* TODO:  modify MenuSystemMixin to allow substituting a
  * canvas-based menu for a CSS-based menu. */
 
@@ -311,6 +314,27 @@ function MenuSystemMixin(subClassPrototype) {
     this._rootMenu = null;
     this._party = null;
     this._closeCallbacks = [];
+
+    this._positioning = {
+      statsLeft: 0,
+      statsTop: 0, // stats width and height?
+      statsWidth: "auto",
+      statsHeight: "auto",
+      statsXOffset: 0,
+      statsYOffset: 0,
+      
+      msgLeft: 25,
+      msgTop: 125,
+      msgWidth: "auto", // not yet used
+      msgHeight: "auto", // not yet used
+      
+      menuLeft: 0,
+      menuTop: 0,
+      menuWidth: "auto", // not yet used
+      menuHeight: "auto", // not yet used
+      menuXOffset: 0,
+      menuYOffset: 0
+    };
   };
 
   subClassPrototype.menuFromCmdSet = function (title, cmdSet) {
@@ -371,11 +395,13 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.pushMenu = function(newMenu) {
     var x;
     if (this.menuImpl == "canvas") {
-      x = 0;
+      x = this._positioning.menuLeft;
+      y = this._positioning.menuTop;
       for (var i = 0; i < this.menuStack.length; i++) {
-        x += 40;
+        x += this._positioning.menuXOffset;
+        y += this._positioning.menuYOffset;
       }
-      newMenu.setPos(x, 0);
+      newMenu.setPos(x, y);
     } else {
       x = 25;
       for (var i = 0; i < this.menuStack.length; i++) {
@@ -466,17 +492,30 @@ function MenuSystemMixin(subClassPrototype) {
   };
   
   subClassPrototype.showPartyStats = function() {
+    // TODO if impl is canvas, draw these in canvas instead!!
+    // use this._positioning.statsLeft, statsTop, statsXOffset etc.
     this._htmlElem.find(".stats").remove();
-    for (var i = 0; i < this._party.length; i++) {
-      var statHtml = this._party[i].getStatDisplay();
-      var statBox = $("<div></div>").html(statHtml);
-      statBox.addClass("stats");
-      this._htmlElem.append(statBox);
+    if (this.menuImpl == "canvas") {
+      this.canvasPartyStats = [];
+      for (var i = 0; i < this._party.length; i++) {
+        this.canvasPartyStats.push( this._party[i].getStatDisplay() );
+      }
+    } else {
+      for (var i = 0; i < this._party.length; i++) {
+        var statHtml = this._party[i].getStatDisplay();
+        var statBox = $("<div></div>").html(statHtml);
+        statBox.addClass("stats");
+        this._htmlElem.append(statBox);
+      }
     }
   };
 
   subClassPrototype.hidePartyStats = function() {
-    this._htmlElem.find(".stats").remove();
+    if (this.menuImpl == "canvas") {
+      this.canvasPartyStats = null;
+    } else {
+      this._htmlElem.find(".stats").remove();
+    }
   };
 
   subClassPrototype.yesOrNo = function(callback) {
@@ -501,14 +540,17 @@ function MenuSystemMixin(subClassPrototype) {
         // Draw any open message set by showMsg
         this.drawCanvasMsgText(ctx, this.canvasStyleMsgText);
       }
+      if (this.canvasPartyStats) {
+        this.drawCanvasPartyStats(ctx, this.canvasPartyStats);
+      }
     }
   };
 
   subClassPrototype.drawCanvasMsgText = function(ctx, text) {
     var styles = CanvasTextUtils.getStyles();
 
-    var x = 25;
-    var y = 125; // completely arbitrary!!
+    var x = this._positioning.msgLeft;
+    var y = this._positioning.msgTop;
 
     var lines = this.canvasStyleMsgLines;
     var width = styles.leftMargin + styles.rightMargin 
@@ -517,17 +559,25 @@ function MenuSystemMixin(subClassPrototype) {
     var height = styles.topMargin + styles.bottomMargin
       + numLines * styles.lineHeight;
 
-    CanvasTextUtils.drawRoundedTextBox(ctx, x, y, width, height);
-
-    ctx.font = styles.font;
-    ctx.fillStyle = styles.fontColor;
-    // draw each line:
-    for (var lineNum = 0; lineNum < numLines; lineNum++) {
-      ctx.fillText(lines[lineNum], x + styles.leftMargin,
-                   y + styles.topMargin + styles.lineHeight*(lineNum + 0.8));
-    }
+    // TODO make a scrollable text box for when there are more lines
+    // than will fit in the box at once.
+    CanvasTextUtils.drawTextBox(ctx, x, y, width, height, lines);
    
-  },
+  };
+
+  subClassPrototype.drawCanvasPartyStats = function(ctx, stats) {
+    var x = this._positioning.statsLeft;
+    var y = this._positioning.statsTop;
+    var width = this._positioning.statsWidth;
+    var height = this._positioning.statsHeight;
+    for (var i = 0; i < stats.length; i++) {
+      var textLines = stats[i].split("<br>");
+      CanvasTextUtils.drawTextBox(ctx, x, y, width, height,
+                                 textLines);
+      x += this._positioning.statsXOffset;
+      y += this._positioning.statsYOffset;
+    }
+  };
   
   subClassPrototype.handleKey = function(keyCode) {
     if (keyCode == CANCEL_BUTTON) {
@@ -552,6 +602,14 @@ function MenuSystemMixin(subClassPrototype) {
       if (this.menuStack.length > 0) {
         this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
       }
+    }
+  };
+
+  subClassPrototype.setMenuPositions = function(options) {
+    // TODO these are currently only applied to Canvas menus.
+    // Apply them to CSS menus too?
+    for (var prop in options) {
+      this._positioning[prop] = options[prop];
     }
   };
 }
@@ -637,6 +695,14 @@ FieldMenu.prototype = {
 };
 MenuSystemMixin(FieldMenu.prototype);
 
+// TODO make DialogLog into a proper menu system mixin subclass.
+// requirements: make it so the top of the stack can be a "menu"
+// which is just a text window (that goes away when you hit a button)
+// (this will have other uses too!). A "scrollable text message" that
+// obeys the same interface as a menu, and responds to key events
+// by scrolling.
+
+// TODO make DialogLog work in canvas menu mode
 
 function Dialoglog(htmlElem) {
   this.menuStack = [];
