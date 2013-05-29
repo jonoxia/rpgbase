@@ -77,6 +77,7 @@ BattleSystem.prototype = {
   choosePCCommand: function(pc, cmd, target) {
     // lock in the choice:
     pc.lockInCmd(cmd, target);
+    this.showPartyStats();
 
     // If that was the last party member, then hide the menus
     // and start the round!
@@ -173,6 +174,8 @@ BattleSystem.prototype = {
     this._htmlElem.show();
     this.clearMsg();
     this.landType = landType;
+
+    this.showPartyStats();
 
     this.monsters = [];
     if (encounter.number) {
@@ -362,6 +365,9 @@ BattleSystem.prototype = {
           self.showMsg(fighter.name + " has no idea what to do!");
         }
       }
+      // update stats display so we can see effects of action
+      self.showPartyStats();
+
       fighterIndex++;
     }, this._msgDelay);
   },

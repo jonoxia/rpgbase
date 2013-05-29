@@ -178,7 +178,7 @@ function setUpTownMap(loader, mapScreen) {
   shopkeeper.wander(mapScreen);
   shopkeeper.setSprite(0, 2);
   shopkeeper.onTalk(function(dialog) {
-    dialog.scrollText("Good morning travellers! Let me regale you with an endless, boring story in which I infodump the entire history of the game world! So it all started a thousand years ago when a great evil (who is obviously the last boss) was sealed away by a group of heroes, who you are obviously supposed to emulate...");
+    dialog.scrollText("Good morrow, travellers! Let me regale you with an endless, boring story in which I infodump the entire history of the game world! So it all started a thousand years ago when a great evil (who is obviously the last boss) was sealed away by a group of heroes, who you are obviously supposed to emulate...");
   });
   town.addNPC(shopkeeper, 5, 5);
 
@@ -345,6 +345,19 @@ function setUpBattleSystem(canvas, loader) {
     };
     var animation = new Animation(10, frameCallback, finishCallback);
     battleSystem.animate(animation);
+  });
+
+  battleSystem.setMenuPositions({
+    statsLeft: 0,
+    statsTop: 137,
+    statsWidth: 50,
+    statsHeight: 50,
+    statsXOffset: 50,
+    statsYOffset: 0,
+    msgLeft: 25,
+    msgTop: 115,
+    menuXOffset: 45,
+    menyYOffset: 0
   });
 
   return battleSystem;
@@ -578,16 +591,13 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     // and start listening for (map screen) input:
-    inputDispatcher.mapMode();
+    //inputDispatcher.mapMode();
     // and begin map animation:
-    mapScreen.start();
+    //mapScreen.start();
 
-    //inputHandler.stopListening();
-
-    //inputDispatcher.menuMode("battle");
-    //battleInputHandler.startListening();
-    //battleSystem.startBattle(player, {type: manuel.biteWorm,
-      //                                number: 3}, 1);
+    inputDispatcher.menuMode("battle");
+    battleSystem.startBattle(player, {type: manuel.biteWorm,
+                                    number: 3}, 1);
 
   });
 });

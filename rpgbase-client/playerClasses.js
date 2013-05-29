@@ -508,9 +508,12 @@ PlayerCharacter.prototype = {
     }
     for (var slot in this._equippedItems) {
       if (this._equippedItems[slot]) {
-        html+= slot + " : " 
+        html += slot + " : " 
           + this._equippedItems[slot].getName() + "<br>";
       }
+    }
+    if (this._lockedAction) {
+      html += this._lockedAction.cmd.name;
     }
     return html;
   },
