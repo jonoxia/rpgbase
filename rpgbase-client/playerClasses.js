@@ -204,15 +204,15 @@ Player.prototype = {
       }
     }
 
-    // TODO should this stuff be moved to the menu class or what?
+    // TODO should this stuff be moved to the Dialoglog class or what?
 
     // Nobody has room - prompt if you want to drop something
-    var dialogMenu = dialoglog.openMenu(this.party);
-    dialogMenu.showMsg("There's a " + itemName + " here, but everybody's hands are full. Drop something to pick it up?");
-    dialogMenu.yesOrNo(function(choice) {
+    dialoglog.open(this.party);
+    dialoglog.showMsg("There's a " + itemName + " here, but everybody's hands are full. Drop something to pick it up?");
+    dialoglog.yesOrNo(function(choice) {
       if (choice) {
-        dialogMenu.chooseCharacter("Who will drop something?", function(receiver) {
-          var menu = dialogMenu.makeMenu();
+        dialoglog.chooseCharacter("Who will drop something?", function(receiver) {
+          var menu = dialoglog.makeMenu();
           menu.setTitle("Drop what?");
 
           // TODO this part duplicates code from FieldMenu
@@ -221,27 +221,29 @@ Player.prototype = {
             (function(trash) {
               menu.addCommand(trash.name,
                               function() {
-                                dialogMenu.showMsg("Drop " + trash.name 
+                                dialoglog.showMsg("Drop " + trash.name 
                                                + " to pick up " +
                                                itemName + "?");
-                                dialogMenu.yesOrNo(function(choice) {
+                                dialoglog.yesOrNo(function(choice) {
                                   if (choice) {
                                     receiver.loseItem(trash.reference);
-                                    dialoglog.closeMenu();
+                                    dialoglog.emptyMenuStack();
+                                    dialoglog.clearMsg();
                                     successCallback(receiver);
                                   } else {
-                                    dialogMenu.popMenu();
-                                    dialogMenu.popMenu();
+                                    dialoglog.popMenu();
+                                    dialoglog.popMenu();
                                   }
                                 });
                               });
             })(itemCmds[i]);
           }
-          dialogMenu.pushMenu(menu);
+          dialoglog.pushMenu(menu);
         });
       } else {
-        dialoglog.closeMenu();
-        dialoglog.show("Leaving the " + itemName + " here for now.");
+        dialoglog.popMenu();
+        dialoglog.clearMsg();
+        dialoglog.scrollText("Leaving the " + itemName + " here for now.");
       }
     });
   }

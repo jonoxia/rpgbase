@@ -122,13 +122,13 @@ TreasureChest.prototype = {
       var self = this;
       player.findRoomForAnItem(dialoglog, self._itemType._name,
                                function(receiver) {
-        dialoglog.show(receiver.name + " got a " + self._itemType._name + "!");
+        dialoglog.scrollText(receiver.name + " got a " + self._itemType._name + "!");
         self._taken = true;
         self.setSprite(1, 0);
         receiver.gainItem(self._itemType);
       });
     } else {
-      dialoglog.show("It's empty. :-(");
+      dialoglog.scrollText("It's empty. :-(");
     }
   },
 };

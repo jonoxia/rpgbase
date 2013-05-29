@@ -102,7 +102,27 @@ var CanvasTextUtils = {
                      y + this.styles.topMargin + this.styles.lineHeight*(i + 0.8));
       }
     }
+  },
 
+  splitLines: function(text) {
+    // split text up into lines:
+    var words = text.split(" ");
+    var lines = [];
+    var currLine = words.shift();
+    var maxLineLength = this.styles.maxLineLength;
+    while (words.length > 0) {
+      var word = words.shift();
+      if (currLine.length + word.length + 1 <= maxLineLength) {
+        currLine = currLine + " " + word;
+      } else {
+        lines.push(currLine);
+        currLine = word;
+      }
+    }
+    if (currLine.length > 0) {
+      lines.push(currLine);
+    }
+    return lines;
   },
 
   setStyles: function(options) {
@@ -364,7 +384,9 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.open = function(party) {
     this._party = party;
-    this._htmlElem.show();
+    if (this.menuImpl != "canvas") {
+      this._htmlElem.show();
+    }
     if (this._rootMenu) {
       this.pushMenu(this._rootMenu);
     }
@@ -444,24 +466,7 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.showMsg = function(msg) {
     if (this.menuImpl == "canvas") {
       this.canvasStyleMsgText = msg;
-      var styles = CanvasTextUtils.getStyles();
-      // split text up into lines:
-      var words = msg.split(" ");
-      var lines = [];
-      var currLine = words.shift();
-      while (words.length > 0) {
-        var word = words.shift();
-        if (currLine.length + word.length + 1 <= styles.maxLineLength) {
-          currLine = currLine + " " + word;
-        } else {
-          lines.push(currLine);
-          currLine = word;
-        }
-      }
-      if (currLine.length > 0) {
-        lines.push(currLine);
-      }
-      this.canvasStyleMsgLines = lines;
+      this.canvasStyleMsgLines = CanvasTextUtils.splitLines(msg);
     } else {
       this.displayElem.append($("<span></span>").html(msg));
       this.displayElem.append($("<br>"));
@@ -702,76 +707,80 @@ MenuSystemMixin(FieldMenu.prototype);
 // obeys the same interface as a menu, and responds to key events
 // by scrolling.
 
-// TODO make DialogLog work in canvas menu mode
+function ScrollingTextBox(text, menuSystem) {
+  this.lines = CanvasTextUtils.splitLines(text);
+  // currently hard-coded to show 2 lines at a time
+  this.linesAtOnce = 2;
+  this.currLine = 0;
+  this.menuSystem = menuSystem;
+  var styles = CanvasTextUtils.getStyles();
+  this.width = styles.leftMargin + styles.rightMargin 
+    + styles.maxLineLength * styles.fontSize;
 
-function Dialoglog(htmlElem) {
-  this.menuStack = [];
-  this._htmlElem = htmlElem;
-  this._closeCallbacks = [];
-  this._occupiedNPC = null;
-  this.displayElem = this._htmlElem.find(".msg-display");
-
-  // weird hacky way of directly instantiating the mixin:
-  this.dialogMenu = {};
-  MenuSystemMixin(this.dialogMenu);
-  this.dialogMenu._init(htmlElem);
-
-  this._menuIsOpen = false;
+  this.height = styles.topMargin + styles.bottomMargin
+    + this.linesAtOnce * styles.lineHeight;
 }
-Dialoglog.prototype = {
-  show: function(msg) {
-    this._htmlElem.show();
-    this.displayElem.empty();
-    this.displayElem.append($("<span></span>").html(msg));
-    this.displayElem.append($("<br>"));
-    this.displayElem.show();
+ScrollingTextBox.prototype = {
+  // Satisfies same interface as a CmdMenu, so it can go on
+  // the MenuStack.
+  onKey: function(key) {
+    if (this.currLine + this.linesAtOnce < this.lines.length) { 
+      // advance through scroll text, if large
+      this.currLine ++;
+    } else {
+      // treat any key as cancel button
+      this.menuSystem.handleKey(CANCEL_BUTTON);
+    }
   },
-  hide: function() {
-    this.displayElem.hide();
-    this._htmlElem.hide();
-    this.displayElem.empty();
+  setPos: function(x, y) {
+    this.x = x;
+    this.y = y;
+  },
+  display: function(ctx) {
+    if (!ctx) { return; }
+    var lines = this.lines.slice(this.currLine,
+                                 this.currLine + this.linesAtOnce);
+    CanvasTextUtils.drawTextBox(ctx, this.x, this.y, 
+                                this.width, this.height, lines);
   },
   close: function() {
-    if (this.dialogMenu.isOpen) {
-      this.closeMenu();
-    }
-    this.hide();
-    for (var i = 0; i < this._closeCallbacks.length; i++) {
-      this._closeCallbacks[i]();
-    }
+    // not used
+  }
+};
+
+function Dialoglog(htmlElem) {
+  this._init(htmlElem);
+  this._rootMenu = null;
+  this._freelyExit = true;
+  this._occupiedNPC = null;  
+
+  var self = this;
+  this.onClose(function() {
+    self.releaseNPC();
+  });
+}
+Dialoglog.prototype = {
+  occupyNPC: function(npc) {
+    // don't let this NPC wander away while player is talking to them:
+    npc.sleep();
+    this._occupiedNPC = npc;
+  },
+
+  scrollText: function(dialogText) {
+    // Turn into a scorolling message box and push onto stack
+    this.clearMsg();
+    var textBox = new ScrollingTextBox(dialogText, this);
+    this.pushMenu(textBox);
+    textBox.setPos(this._positioning.msgLeft,
+                   this._positioning.msgTop);
+  },
+
+  releaseNPC: function() {
     if (this._occupiedNPC) {
       // release any NPC that this dialog was occupying
       this._occupiedNPC.wake();
       this._occupiedNPC = null;
     }
-  },
-  onClose: function(callback) {
-    this._closeCallbacks.push(callback);
-  },
-  openMenu: function(player) {
-    this.dialogMenu.open(player);
-    this._menuIsOpen = true;
-    return this.dialogMenu;
-  },
-  closeMenu: function() {
-    this.dialogMenu.close();
-    this._menuIsOpen = false;
-  },
-  handleKey: function(keyCode) {
-    // if there's a menu, pass key code along to menu
-    // if end of the dialog is onscreen, hide it
-    // TODO if a screen before the end of long dialog is onscreen,
-    // scroll to next screen of dialog.
-    if (this._menuIsOpen) {
-      this.dialogMenu.handleKey(keyCode);
-    } else {
-      this.close();
-    }
-  },
-
-  occupyNPC: function(npc) {
-    // don't let this NPC wander away while player is talking to them:
-    npc.sleep();
-    this._occupiedNPC = npc;
   }
 };
+MenuSystemMixin(Dialoglog.prototype);

@@ -178,7 +178,7 @@ function setUpTownMap(loader, mapScreen) {
   shopkeeper.wander(mapScreen);
   shopkeeper.setSprite(0, 2);
   shopkeeper.onTalk(function(dialog) {
-    dialog.show("HELLO I AM A SHOMPKEEPER");
+    dialog.scrollText("Good morning travellers! Let me regale you with an endless, boring story in which I infodump the entire history of the game world! So it all started a thousand years ago when a great evil (who is obviously the last boss) was sealed away by a group of heroes, who you are obviously supposed to emulate...");
   });
   town.addNPC(shopkeeper, 5, 5);
 
@@ -429,7 +429,7 @@ function setUpInputDispatch(player, mapScreen) {
       break;
     case CANCEL_BUTTON:
       // Pop open the field menu system
-      dispatcher.menuMode("field").open(player.getParty());
+      dispatcher.menuMode("menu").open(player.getParty());
       break;
     }
 
@@ -440,8 +440,6 @@ function setUpInputDispatch(player, mapScreen) {
       mapScreen.animate(anim);
     }
   });
-
-  dispatcher.addMenuMode("dialog", new Dialoglog($("#battle-system")));
 
   return dispatcher;
 }
@@ -505,6 +503,7 @@ $(document).ready( function() {
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
   var overworld = setUpOverworldMap(loader);
   var fieldMenu = setUpFieldMenu();
+  var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
 
   CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12});
@@ -522,13 +521,14 @@ $(document).ready( function() {
 
   // Set up the relationships between the main game components
   var inputDispatcher = setUpInputDispatch(player, mapScreen);
-  inputDispatcher.addMenuMode("field", fieldMenu);
+  inputDispatcher.addMenuMode("menu", fieldMenu);
   inputDispatcher.addMenuMode("battle", battleSystem);
+  inputDispatcher.addMenuMode("dialog", dialoglog);
 
   // TODO this only needs to happen if menus are canvas mode:
   mapScreen.afterRender(function(ctx) {
     fieldMenu.drawCanvasMenus(ctx);
-    // TODO draw dialoglog here too!!!
+    dialoglog.drawCanvasMenus(ctx);
   });
 
   /* 5% chance of random encounter on each step through overworld
