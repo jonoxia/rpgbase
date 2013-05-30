@@ -356,8 +356,9 @@ function setUpBattleSystem(canvas, loader) {
     statsYOffset: 0,
     msgLeft: 25,
     msgTop: 115,
-    menuXOffset: 45,
-    menyYOffset: 0
+    menuXOffset: 50,
+    menuYOffset: 25,
+    resetPerPC: true
   });
 
   return battleSystem;

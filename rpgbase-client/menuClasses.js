@@ -217,6 +217,9 @@ CanvasCmdMenu.prototype = {
   setPos: function(x, y) {
     this.x = x;
     this.y = y;
+  },
+  getPos: function() {
+    return {x: this.x, y: this.y};
   }
 };
 CmdMenuMixin(CanvasCmdMenu.prototype);
@@ -242,15 +245,13 @@ CmdMenuMixin(CanvasCmdMenu.prototype);
      ** - main menu goes here
      ** - each submenu gets offset by +x +y from there
 
-primary mediasitinal large B-cell lymphoma which is an aggressive non-hodgkins lymphoma
-
 
  * - don't let canvas menus go off the edge of the canvas -- if bottom is below bottom edge, bump it up. if right is past right edge, bump it left.
  * - during input of character combat actions, pop or hide some of the already-chosen submenus -- they don't need to take up space on the screen.
  * - bug: if i have multiple items with the same name, only one seems to show up on the item menu in combat!  (a useful, if accidental, space-saving feature?)
 
 
- * - Show titles on canvas menus! (currently not shown)
+ (check)  * - Show titles on canvas menus! (currently not shown)
 
  * - Jake's battle system wants main menu for each character to appear
     - in same place, submenus to appear relative to it. So we can't
@@ -333,6 +334,10 @@ CssCmdMenu.prototype = {
       this.parentTag.css("left", x);
       this.parentTag.css("top", y);
     }
+  },
+
+  getPos: function() {
+    return {x: this.screenX, y: this.screenY};
   }
 };
 CmdMenuMixin(CssCmdMenu.prototype);
@@ -353,6 +358,8 @@ function MenuSystemMixin(subClassPrototype) {
     this._rootMenu = null;
     this._party = null;
     this._closeCallbacks = [];
+
+    this._savedStackDepth = 0;
 
     this._positioning = {
       statsLeft: 0,
@@ -434,24 +441,23 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.pushMenu = function(newMenu) {
-    var x;
-    if (this.menuImpl == "canvas") {
+    var x, y;
+    
+    if (this.menuStack.length > 0) {
+      var topMenu = this.menuStack[this.menuStack.length -1];
+      var pos = topMenu.getPos();
+      x = pos.x + this._positioning.menuXOffset;
+      y = pos.y + this._positioning.menuYOffset;
+    } else {
       x = this._positioning.menuLeft;
       y = this._positioning.menuTop;
-      for (var i = 0; i < this.menuStack.length; i++) {
-        x += this._positioning.menuXOffset;
-        y += this._positioning.menuYOffset;
-      }
-      newMenu.setPos(x, y);
-    } else {
-      x = 25;
-      for (var i = 0; i < this.menuStack.length; i++) {
-        x += 80;
-      }
-      newMenu.setPos(x, 250);
     }
+
+    newMenu.setPos(x, y);
     this.menuStack.push(newMenu);
-    newMenu.display();
+    if (this.menuImpl != "canvas") {
+      newMenu.display();
+    }
   };
 
   subClassPrototype.popMenu = function() {
@@ -634,6 +640,16 @@ function MenuSystemMixin(subClassPrototype) {
     // Apply them to CSS menus too?
     for (var prop in options) {
       this._positioning[prop] = options[prop];
+    }
+  };
+
+  subClassPrototype.saveStackDepth = function() {
+    this._savedStackDepth = this.menuStack.length;
+  };
+
+  subClassPrototype.restoreStackDepth = function() {
+    while (this.menuStack.length > this._savedStackDepth) {
+      this.popMenu();
     }
   };
 }

@@ -67,16 +67,25 @@ BattleSystem.prototype = {
     return aliveParty;
   },
 
-  getMenuForPC: function(pc) {
+  showMenuForPC: function(pc) {
     // kind of a hack to allow non-index-based access to menus
     // in case some pcs are dead:
     var index = this._party.indexOf(pc);
-    return this.pcMenus[index];
+    var menu = this.pcMenus[index];
+    this.pushMenu(menu);
+    if (this._positioning.resetPerPC) {
+      menu.setPos(this._positioning.menuLeft,
+                  this._positioning.menuTop);
+    }
+    this.saveStackDepth();
   },
 
   choosePCCommand: function(pc, cmd, target) {
     // lock in the choice:
     pc.lockInCmd(cmd, target);
+    // pop off any sub menus:
+    this.restoreStackDepth();
+    // show stats so player can see what's locked in:
     this.showPartyStats();
 
     // If that was the last party member, then hide the menus
@@ -89,10 +98,9 @@ BattleSystem.prototype = {
       this.fightOneRound();
     } else {
       // Otherwise, show menu for next alive party member!
-
       var nextPC = aliveParty[ pcIndex +1 ];
-      this.pushMenu(this.getMenuForPC(nextPC));
-    }
+      this.showMenuForPC(nextPC); 
+   }
   },
 
   randomElementFromArray: function(arr) {
@@ -112,15 +120,18 @@ BattleSystem.prototype = {
     }
   },
 
+  // TODO need a way to stick a "bookmark" into the menu stack
+  // and then once PC command is locked in, pop menus back down to
+  // that bookmark before pushing on the next menu.
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = this.makeMenu();
-    cmdMenu.setTitle(pc.name);
 
     var addOneCmd = function(name, cmd) {
       // if this command has a submenu, then choosing it
       // just opens the submenu:
       if (cmd.isContainer) {
+        cmdMenu.setTitle(pc.name);
         cmdMenu.addCommand(name, function() {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
@@ -255,8 +266,7 @@ BattleSystem.prototype = {
   },
 
   showFirstPCMenu: function() {
-    var firstAlivePC = this.getAliveParty()[0];
-    this.pushMenu(this.getMenuForPC(firstAlivePC));
+    this.showMenuForPC(this.getAliveParty()[0]);
   },
 
   repeatLastRoundCommands: function() {
