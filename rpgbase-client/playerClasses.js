@@ -504,11 +504,11 @@ PlayerCharacter.prototype = {
     var html = this.name;
     html += "<br>";
     for (var propName in this._statBlock) {
-      html+= propName + " : " + this._statBlock[propName] + "<br>";
+      html+= propName + ": " + this._statBlock[propName] + "<br>";
     }
     for (var slot in this._equippedItems) {
       if (this._equippedItems[slot]) {
-        html += slot + " : " 
+        html += slot + ": " 
           + this._equippedItems[slot].getName() + "<br>";
       }
     }

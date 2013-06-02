@@ -59,6 +59,12 @@ function CmdMenuMixin(subClassProto) {
 
 var CanvasTextUtils = {
   // singleton object
+  _fontImg: null,
+
+  setFontImg: function(img) {
+    this._fontImg = img;
+  },
+
   drawTextBox: function(ctx, x, y, width, height, textLines) {
     var cornerRadius = this.styles.cornerRadius;
     ctx.beginPath();
@@ -98,10 +104,52 @@ var CanvasTextUtils = {
       ctx.fillStyle = this.styles.fontColor;
       // draw each line:
       for (var i = 0; i < textLines.length; i++) {
-        ctx.fillText(textLines[i], x + this.styles.leftMargin,
-                     y + this.styles.topMargin + this.styles.lineHeight*(i + 0.8));
+        var plotX = x + this.styles.leftMargin;
+        var plotY = y + this.styles.topMargin + this.styles.lineHeight*i;
+        this.customRenderText(ctx, textLines[i], plotX, plotY);
       }
     }
+  },
+
+  customRenderText: function(ctx, text, x, y) {
+    if (!this._fontImg) {
+      ctx.fillText(text, x, y);
+      return;
+    }
+    // using jake's font
+    // they're 8 by 8
+    var textSize = 8;
+    for (var i = 0; i < text.length; i++) {
+      var asciiCode = text.charCodeAt(i); 
+      var slice;
+      if (asciiCode >= 97 && asciiCode <= 122) {
+        // lower case letters
+        slice = asciiCode - 87;
+      }
+      else if (asciiCode >= 65 && asciiCode <= 90) {
+        // capital letters
+        slice = asciiCode - 55;
+      }
+      else if (asciiCode >= 48 && asciiCode <= 57) {
+        // numerals
+        slice = asciiCode - 48;
+      }
+      else {
+        var punctuation = ".,!:&/'\"~ ";           // starts at pos 36
+        var index = punctuation.indexOf(text[i]);
+        if (index > -1) {
+          slice = 36 + index;
+        } else {
+          continue;
+        }
+      } 
+      ctx.drawImage(this._fontImg,
+                    textSize*slice, 0,
+                    textSize, textSize,
+                    x + textSize*i, y,
+                    textSize, textSize);
+    }
+    
   },
 
   splitLines: function(text) {
@@ -205,10 +253,10 @@ CanvasCmdMenu.prototype = {
     // Draw the triangular indicator:
     ctx.beginPath();
     var yBase = y + styles.lineHeight * this.selectedIndex;
-    ctx.moveTo(x + 4, yBase + 8);
-    ctx.lineTo(x + 8, yBase + 12);
-    ctx.lineTo(x + 4, yBase + 16);
-    ctx.lineTo(x + 4, yBase + 8);;
+    ctx.moveTo(x + 4, yBase + 5);
+    ctx.lineTo(x + 8, yBase + 9);
+    ctx.lineTo(x + 4, yBase + 13);
+    ctx.lineTo(x + 4, yBase + 5);;
     ctx.fill();
   },
   close: function() {
@@ -247,13 +295,13 @@ CmdMenuMixin(CanvasCmdMenu.prototype);
 
 
  * - don't let canvas menus go off the edge of the canvas -- if bottom is below bottom edge, bump it up. if right is past right edge, bump it left.
- * - during input of character combat actions, pop or hide some of the already-chosen submenus -- they don't need to take up space on the screen.
+ (done) * - during input of character combat actions, pop or hide some of the already-chosen submenus -- they don't need to take up space on the screen.
  * - bug: if i have multiple items with the same name, only one seems to show up on the item menu in combat!  (a useful, if accidental, space-saving feature?)
 
 
  (check)  * - Show titles on canvas menus! (currently not shown)
 
- * - Jake's battle system wants main menu for each character to appear
+ (check) * - Jake's battle system wants main menu for each character to appear
     - in same place, submenus to appear relative to it. So we can't
     - just have one xoffset/yoffset that's always applied. Easy enough
     - to hard code this in but think about how to do it more flexibly.
@@ -589,10 +637,7 @@ function MenuSystemMixin(subClassPrototype) {
     var height = styles.topMargin + styles.bottomMargin
       + numLines * styles.lineHeight;
 
-    // TODO make a scrollable text box for when there are more lines
-    // than will fit in the box at once.
     CanvasTextUtils.drawTextBox(ctx, x, y, width, height, lines);
-   
   };
 
   subClassPrototype.drawCanvasPartyStats = function(ctx, stats) {
@@ -645,12 +690,15 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.saveStackDepth = function() {
     this._savedStackDepth = this.menuStack.length;
+    console.log("Saved stack depth: " + this._savedStackDepth);
   };
 
   subClassPrototype.restoreStackDepth = function() {
+    console.log("Stack is at: " + this.menuStack.length);
     while (this.menuStack.length > this._savedStackDepth) {
       this.popMenu();
     }
+    console.log("Popped stack down to: " + this.menuStack.length);
   };
 }
 

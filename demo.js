@@ -350,14 +350,14 @@ function setUpBattleSystem(canvas, loader) {
   battleSystem.setMenuPositions({
     statsLeft: 0,
     statsTop: 137,
-    statsWidth: 50,
+    statsWidth: 64,
     statsHeight: 50,
-    statsXOffset: 50,
+    statsXOffset: 64,
     statsYOffset: 0,
-    msgLeft: 25,
+    msgLeft: 10,
     msgTop: 115,
     menuXOffset: 50,
-    menuYOffset: 25,
+    menuYOffset: 10,
     resetPerPC: true
   });
 
@@ -520,18 +520,21 @@ $(document).ready( function() {
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
 
-  CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12});
-  fieldMenu.setMenuPositions({msgLeft: 25,
+  CanvasTextUtils.setFontImg(loader.add("font.png"));
+  CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12,
+                            fontSize: 8, maxLineLength: 26});
+  fieldMenu.setMenuPositions({msgLeft: 10,
                               msgTop: 125,
                               menuLeft: 5,
                               menuTop: 5,
                               menuXOffset: 25,
-                              statsLeft: 5,
+                              statsLeft: 0,
                               statsTop: 127,
-                              statsWidth: 50,
+                              statsWidth: 64,
                               statsHeight: 60,
-                              statsXOffset: 50,
-                              statsYOffset: 0});
+                              statsXOffset: 64,
+                              statsYOffset: 0
+                             });
 
   // Set up the relationships between the main game components
   var inputDispatcher = setUpInputDispatch(player, mapScreen);

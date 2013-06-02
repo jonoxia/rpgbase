@@ -120,9 +120,6 @@ BattleSystem.prototype = {
     }
   },
 
-  // TODO need a way to stick a "bookmark" into the menu stack
-  // and then once PC command is locked in, pop menus back down to
-  // that bookmark before pushing on the next menu.
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = this.makeMenu();
@@ -148,7 +145,7 @@ BattleSystem.prototype = {
           // if it targets one ally, then picking it pops open
           // the ally menu:
           cmdMenu.addCommand(name, function() {
-            self.chooseCharacter("Target?", function(target) {
+            self.chooseCharacter("", function(target) {
               self.choosePCCommand(pc, cmd, target);
             });
           });
