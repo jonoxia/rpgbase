@@ -762,7 +762,6 @@ FieldMenu.prototype = {
   showItemMenu: function(character) {
     // TODO will have a lot of parallel code for casting spells
     // outside of battle.
-    // TODO what to show if inventory is empty?
     var self = this;
     var menu = this.makeMenu();
     menu.setTitle("Items:");
@@ -778,6 +777,11 @@ FieldMenu.prototype = {
                       });
       })(itemCmds[i]);
     }
+    // if item menu is empty:
+    if (itemCmds.length == 0) {
+      menu.addCommand("NO ITEMS", function() {});
+    }
+
     this.pushMenu(menu);
   }
 };
