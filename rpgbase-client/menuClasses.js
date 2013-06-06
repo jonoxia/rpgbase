@@ -135,7 +135,7 @@ var CanvasTextUtils = {
         slice = asciiCode - 48;
       }
       else {
-        var punctuation = ".,!:&/'\"~ ";           // starts at pos 36
+        var punctuation = ".,!?:&/'\"~ ";           // starts at pos 36
         var index = punctuation.indexOf(text[i]);
         if (index > -1) {
           slice = 36 + index;
