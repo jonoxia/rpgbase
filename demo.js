@@ -174,8 +174,8 @@ function setUpOverworldMap(loader) {
 function setUpTownMap(loader, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
   var spriteSheet = loader.add("mapsprites.png");
-  var shopkeeper = new NPC(spriteSheet, 16, 24, 0, -8);
-  shopkeeper.wander(mapScreen);
+  var shopkeeper = new NPC(spriteSheet, mapScreen, 16, 24, 0, -8);
+  shopkeeper.wander();
   shopkeeper.setSprite(0, 2);
   shopkeeper.onTalk(function(dialog) {
     dialog.scrollText("Good morrow, travellers! Let me regale you with an endless, boring story in which I infodump the entire history of the game world! So it all started a thousand years ago when a great evil (who is obviously the last boss) was sealed away by a group of heroes, who you are obviously supposed to emulate...");

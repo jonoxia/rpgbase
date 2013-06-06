@@ -1,11 +1,11 @@
 // http://javascriptweblog.wordpress.com/2011/05/31/a-fresh-look-at-javascript-mixins/
 
-function NPC(spriteSheet, width, height, offsetX, offsetY) {
+function NPC(spriteSheet, mapScreen, width, height, offsetX, offsetY) {
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
   this._talkCallback = null;
   this._wanders = false;
   this._wanderloop = null;
-  this._mapScreen = null;
+  this._mapScreen = mapScreen;
 }
 NPC.prototype = {
   step: function(deltaX, deltaY) {
@@ -27,13 +27,8 @@ NPC.prototype = {
 
   },
 
-  wander: function(mapScreen) {
-    this._mapScreen = mapScreen;
+  wander: function() {
     this._wanders = true;
-
-    var spriteSheetRow = 2; // HAXXX
-
-    // TODO set the canCross method to some reasonable default!!!
   },
 
   sleep: function() {
@@ -77,10 +72,10 @@ NPC.prototype = {
 
   talk: function(dialoglog, player) {
     if (this._talkCallback) {
+      // turn to face speaker;
+      var playerFacing = player.getAliveParty()[0].getFacing();
+      this.turn((-1)*playerFacing.x, (-1)*playerFacing.y);
       if (this._wanders) {
-        // turn to face speaker;
-        var playerFacing = player.getAliveParty()[0].getFacing();
-        this.turn((-1)*playerFacing.x, (-1)*playerFacing.y);
         // don't wander away while i'm talking to you!!
         dialoglog.occupyNPC(this);
       }
