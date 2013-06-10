@@ -175,6 +175,8 @@ Animator.prototype = {
       window.clearInterval(this._timer);
     }
     this._timer = null;
+    // cancel all pending animations:
+    this._currentAnimations = [];
   },
 
   onFrameDone: function(callback) {
@@ -190,6 +192,7 @@ Animator.prototype = {
 function Animation(numFrames, frameCallback, finishCallback) {
   this.numFrames = numFrames;
   this.currFrame = 0;
+  this.drawCallback = null;
   this.frameCallbacks = [];
   if (frameCallback) {
     this.frameCallbacks.push(frameCallback);
@@ -224,6 +227,10 @@ Animation.prototype = {
     this.finishCallbacks.push(finishCallback);
   },
 
+  onDraw: function(drawCallback) {
+    this.drawCallback = drawCallback;
+  },
+
   composite: function(otherAnimation) {
     // adds the other animation to this one, so both can run
     // at same time.
@@ -232,6 +239,12 @@ Animation.prototype = {
       otherAnimation.frameCallbacks);
     this.finishCallbacks = this.finishCallbacks.concat(
       otherAnimation.finishCallbacks);
+  },
+
+  draw: function(ctx) {
+    if (this.drawCallback) {
+      this.drawCallback(ctx, this.currFrame);
+    }
   }
 };
 

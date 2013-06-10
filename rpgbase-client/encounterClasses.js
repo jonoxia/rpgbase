@@ -10,6 +10,7 @@ function BattleSystem(htmlElem, canvas, options) {
   this._ctx = canvas.getContext("2d");
   this.hide();
   this.endBattleCallbacks = [];
+  this._attackSFX = null;
 
   if (options.defaultMsg) {
     this.defaultMsg = options.defaultMsg;
@@ -45,7 +46,6 @@ function BattleSystem(htmlElem, canvas, options) {
 
   this._effectHandlers = {};
 
-  this.timer = null; // TODO use animator instead of timer
   this._freelyExit = false;
 
   // TODO NOT hard code frame rate
@@ -182,6 +182,7 @@ BattleSystem.prototype = {
     this._htmlElem.show();
     this.clearMsg();
     this.landType = landType;
+    this._attackSFX = null;
 
     this.showPartyStats();
 
@@ -232,6 +233,11 @@ BattleSystem.prototype = {
 
     if (this.menuImpl == "canvas") {
       this.drawCanvasMenus(this._ctx);
+    }
+
+    // now draw any attack SFX:
+    if (this._attackSFX) {
+      this._attackSFX.draw(this._ctx);
     }
   },
 
@@ -303,8 +309,6 @@ BattleSystem.prototype = {
 
   fightOneRound: function() {
     var fighters = []; // will be an ORDERED array of who goes
-    var self = this;
-    var fighterIndex = 0;
     var i;
 
     // Choose actions for each monster
@@ -333,50 +337,57 @@ BattleSystem.prototype = {
     
     // hide menus
     this.emptyMenuStack();
+    this.showMsg("A round of battle is starting!");
+    this.executeNextFighterAction(fighters);
+  },
 
-    self.showMsg("A round of battle is starting!");
-    if (this.timer != null) {
-      // TODO use animator instead of timer
-      window.clearInterval(this.timer);
+  executeNextFighterAction: function(fightQueue) {
+    this.displayElem.empty();// clear the message
+    // Skip any dead people (they may have died during the round
+    while (fightQueue.length > 0 && !fightQueue[0].isAlive()) {
+      fightQueue.shift();
     }
-    this.timer = window.setInterval(function() {
-      self.displayElem.empty();// clear the message
+    
+    // If fight queue is empty, then round is done
+    if (fightQueue.length == 0) {
+      this.clearMsg();
+      this.showStartRoundMenu();
+      return;
+    }
+    var fighter = fightQueue.shift();
+    var action = fighter.getLockedInCmd();
+    var target = action.target;
 
-      if (fighterIndex == fighters.length) {
-        self.showMsg("Round complete! Next round starts.");
-        window.clearInterval(self.timer);
-        self.timer = null;
-        self.showStartRoundMenu();
-        return;
-      }
-      var fighter = fighters[fighterIndex];
-      if (!fighter.isAlive()) {
-        // If fighter died earlier in the turn before taking their
-        // action, then skip them.
-        self.showMsg(fighter.name + " is dead!");
-        // TODO skip faster!
-      } else {
-        var action = fighter.getLockedInCmd();
-        var target = action.target;
-
-        // choose random targets now, right before executing:
-        if (target == "random_monster") {
-          target = self.chooseRandomEnemy("monster");
-        } else if (target == "random_pc") {
-          target = self.chooseRandomEnemy("pc");
-        }
+    // choose random targets now, right before executing:
+    if (target == "random_monster") {
+      target = this.chooseRandomEnemy("monster");
+    } else if (target == "random_pc") {
+      target = this.chooseRandomEnemy("pc");
+    }
         
-        if (action) {
-          action.cmd.effect(self, fighter, target);
-        } else {
-          self.showMsg(fighter.name + " has no idea what to do!");
-        }
-      }
-      // update stats display so we can see effects of action
-      self.showPartyStats();
+    if (action) {
+      action.cmd.effect(this, fighter, target);
+    } else {
+      this.showMsg(fighter.name + " has no idea what to do!");
+    }
+    // update stats display so we can see effects of action
+    this.showPartyStats();
 
-      fighterIndex++;
-    }, this._msgDelay);
+    // run animation for this action, then go on to execute next action.
+    if (fighter.hitAnimation) {
+      this._attackSFX = fighter.hitAnimation(action, target);
+    } else {
+      this._attackSFX = new Animation(10);
+    }
+    var self = this;
+    this._attackSFX.onFinish(function() {
+      self._attackSFX = null; // clear the attack sfx
+      self.executeNextFighterAction(fightQueue);
+    });
+    this._animator.runAnimation(this._attackSFX);
+    // TODO: If a fight ending condition is triggered, finish
+    // the currently pending animation before exiting,
+    // but don't start any more.
   },
 
   endBattle: function(winLoseRun) {
@@ -394,10 +405,8 @@ BattleSystem.prototype = {
       $("#debug").html("You bravely ran away, away!");
       break;
     }
-    if (this.timer != null) {
-      window.clearInterval(this.timer);
-    }
     this._animator.stop();
+    this._attackSFX = null;
 
     // tell player to re-jigger party in case people died during
     // battle

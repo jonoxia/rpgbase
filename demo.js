@@ -145,6 +145,13 @@ function setUpParty(loader) {
   player.addCharacter(sidekick2);
   player.addCharacter(sidekick3);
 
+  // TODO less horrible klugy way of doing this:
+  PlayerCharacter.prototype.hitSpriteSheet = loader.add("wounds.png");
+  hero.weaponCode = 1;
+  sidekick.weaponCode = 0;
+  sidekick2.weaponCode = 3;
+  sidekick3.weaponCode = 2;
+
   return player;
 }
 
