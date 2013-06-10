@@ -555,28 +555,6 @@ PlayerCharacter.prototype = {
       var slot = instance.getEquipSlot();
       this._equippedItems[slot] = null;
     }
-  },
-
-  hitAnimation: function(action, target) {
-    // TODO right now assuming all actions are fight and all
-    // targets are monsters. Not true!!
-    var spriteSheet = this.hitSpriteSheet;
-    var spriteOffsetY = 64 * this.weaponCode;
-    var x = target.x;
-    var y = target.y;
-
-    var animation = new Animation(8);
-    animation.onDraw(function(ctx, frame) {
-      if (spriteSheet) {
-        var spriteOffsetX = (Math.floor(frame/2)) * 64;
-        ctx.drawImage(spriteSheet,
-                      spriteOffsetX, spriteOffsetY,
-                      64, 64,
-                      x, y,
-                      64, 64);
-      }
-    });
-    return animation;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

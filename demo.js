@@ -146,7 +146,6 @@ function setUpParty(loader) {
   player.addCharacter(sidekick3);
 
   // TODO less horrible klugy way of doing this:
-  PlayerCharacter.prototype.hitSpriteSheet = loader.add("wounds.png");
   hero.weaponCode = 1;
   sidekick.weaponCode = 0;
   sidekick2.weaponCode = 3;
@@ -224,11 +223,34 @@ function setUpBattleSystem(canvas, loader) {
   }));
 
   var defaultCmdSet = new BattleCommandSet();
+
+  var hitSpriteSheet = loader.add("wounds.png");
   defaultCmdSet.add("FIGHT", new BatCmd({
     target: "random_enemy",
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " attacks " + target.name + "!");
       battle.sendEffect(target, "damage", {amount: rollDice(1, 6)});
+    },
+    animate: function(battle, user, target) {
+      var spriteOffsetY = 0;
+      if (user.weaponCode) {
+        spriteOffsetY = 64 * user.weaponCode;
+      }
+      var x = target.x;
+      var y = target.y;
+
+      var animation = new Animation(8);
+      animation.onDraw(function(ctx, frame) {
+        if (hitSpriteSheet) {
+          var spriteOffsetX = (Math.floor(frame/2)) * 64;
+          ctx.drawImage(hitSpriteSheet,
+                        spriteOffsetX, spriteOffsetY,
+                        64, 64,
+                        x, y,
+                        64, 64);
+        }
+      });
+      return animation;
     }
   }));
   // Here is how you nest a sub-menu inside the main menu:

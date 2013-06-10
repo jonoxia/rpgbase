@@ -374,8 +374,8 @@ BattleSystem.prototype = {
     this.showPartyStats();
 
     // run animation for this action, then go on to execute next action.
-    if (fighter.hitAnimation) {
-      this._attackSFX = fighter.hitAnimation(action, target);
+    if (action.cmd.animate) {
+      this._attackSFX = action.cmd.animate(this, fighter, target);
     } else {
       this._attackSFX = new Animation(10);
     }
@@ -477,7 +477,6 @@ BattleSystem.prototype = {
 };
 MenuSystemMixin(BattleSystem.prototype);
 
-
 function BatCmd(options) {
   if (options.canUse) {
     this.canUse = canUse;
@@ -485,6 +484,10 @@ function BatCmd(options) {
     this.canUse = function(user) {
       return true;
     };
+  }
+  if (options.animate) {
+    console.log("SETTING ANIMATION FOR THIS BATCMD");
+    this.animate = options.animate;
   }
   this.target = options.target;
   this.effect = options.effect;
