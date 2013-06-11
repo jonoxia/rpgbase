@@ -597,6 +597,13 @@ PlayerCharacter.prototype = {
       var slot = instance.getEquipSlot();
       this._equippedItems[slot] = null;
     }
+  },
+
+  getEquippedType: function(slot) {
+    if (this._equippedItems[slot]) {
+      return this._equippedItems[slot].getEquipType();
+    }
+    return null;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

@@ -252,8 +252,19 @@ function setUpBattleSystem(canvas, loader) {
     },
     animate: function(battle, user, target) {
       var spriteOffsetY = 0;
-      if (user.weaponCode) {
-        spriteOffsetY = 64 * user.weaponCode;
+      if (user.getEquippedType) {
+        var weaponType = user.getEquippedType("weapon");
+        switch(weaponType) {
+          case "smallblade":
+          spriteOffsetY = 64 * 1;
+          break;
+          case "medblade":
+          spriteOffsetY = 64 * 2;
+          break;
+          case "heavyblade":
+          spriteOffsetY = 64 * 3;
+          break;
+        }
       }
       // TODO should be like target.getBattlescreenXY()
       // then when used against player character it can show atop
