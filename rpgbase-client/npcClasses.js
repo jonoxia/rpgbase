@@ -163,7 +163,7 @@ MapSpriteMixin(MoneyChest.prototype);
 
 function makeShop(spriteSheet, mapScreen, width, height,
                   offsetX, offsetY, spriteX, spriteY, inventory,
-                  denomination) {
+                  denomination, shopMessage) {
 
   // expects inventory argument to be like this:
   /*  var inventory = [{item: coolsword, price: 500},
@@ -212,9 +212,9 @@ function makeShop(spriteSheet, mapScreen, width, height,
   shopkeeper.onTalk(function(dialog, player) {
     dialog.open(player);
     dialog.showPartyResources(player, denomination);
-    dialog.showMsg("Hey welcome to my shop!");
+    dialog.showMsg(shopMessage);
     var menu = dialog.makeMenu();
-    menu.setTitle("Stuff For Sale");
+    menu.setTitle("Buy");
 
     for (var i = 0; i < inventory.length; i++) {
       var menuText = textRows[i];
