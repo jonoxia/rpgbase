@@ -739,8 +739,8 @@ function MenuSystemMixin(subClassPrototype) {
     var textLines = [];
     var resources = this._player.listResources();
     for (var i = 0; i < resources.length; i++) {
-      textLines.push(resources[i] + ": " +
-                     this._player.getResource(resources[i]));
+      textLines.push(this._player.getResource(resources[i])
+		     + resources[i]);
     }
     CanvasTextUtils.drawTextBox(ctx, x, y, width, height,
                                 textLines);
