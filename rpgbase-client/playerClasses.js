@@ -3,7 +3,7 @@ function Player() {
   this.party = [];
   this.aliveParty = this.party;
   this.moveListeners = [];
-
+  this._resources = {}; // money and stuff
   this.inVehicle = null;
 }
 Player.prototype = {
@@ -252,6 +252,26 @@ Player.prototype = {
         dialoglog.scrollText("Leaving the " + itemName + " here for now.");
       }
     });
+  },
+
+  gainResource: function(resourceName, amount) {
+    if (!this._resources[resourceName]) {
+      this._resources[resourceName] = 0;
+    }
+    this._resources[resourceName] += amount;
+  },
+
+  hasResource: function(resourceName, amount) {
+    if (!this._resources[resourceName]) {
+      return false;
+    }
+    return (this._resources[resourceName] >= amount);
+  },
+
+  spendResource: function(resourceName, amount) {
+    if (this._resources[resourceName]) {
+      this._resources[resourceName] -= amount;
+    }
   }
 }
 

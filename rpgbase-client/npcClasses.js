@@ -129,8 +129,40 @@ TreasureChest.prototype = {
 };
 MapSpriteMixin(TreasureChest.prototype);
 
+function MoneyChest(resource, amount, spriteSheet, width, height, offsetX, offsetY) {
+  this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+  this.setSprite(0, 0);
+
+  this._resource = resource;
+  this._amount = amount;
+  this._taken = false;
+}
+MoneyChest.prototype = {
+  wake: function() {
+    // will be treated as NPCs so must satisfy NPC interface
+  },
+  sleep: function() {
+  },
+  
+  talk: function(dialoglog, player) {
+    if (!this._taken) {
+      player.gainResource(this._resource, this._amount);
+      this._taken = true;
+      this.setSprite(1, 0);
+      dialoglog.scrollText("You found " + this._amount + " "
+                           + this._resource + "!");
+    } else {
+      dialoglog.scrollText("It's empty. :-(");
+    }
+  },
+};
+MapSpriteMixin(MoneyChest.prototype);
+
+
+
 function makeShop(spriteSheet, mapScreen, width, height,
-                  offsetX, offsetY, spriteX, spriteY, inventory) {
+                  offsetX, offsetY, spriteX, spriteY, inventory,
+                  denomination) {
 
   // expects inventory argument to be like this:
   /*  var inventory = [{item: coolsword, price: 500},
@@ -163,18 +195,18 @@ function makeShop(spriteSheet, mapScreen, width, height,
     textRows.push(textRow);
   }
 
-  function doPurchase(dialog, player, character, itemType) {
-    // TODO check that you have
-    // sufficient money. (For this, money needs to be a thing.)
+  function doPurchase(dialog, player, character, entry) {
+    var itemType = entry.item;
+    var price = entry.price;
     if (character.inventoryIsFull()) {
       dialog.scrollText(character.name + "'s hands are full. Come back later.");
     } else {
+      player.spendResource(denomination, price);
       character.gainItem(itemType);
-      dialog.showMsg("Thank you, come again");
       dialog.popMenu();
+      dialog.scrollText("Thank you, come again");
     }
   }
-
 
   shopkeeper.onTalk(function(dialog, player) {
     dialog.open(player.party);
@@ -183,19 +215,22 @@ function makeShop(spriteSheet, mapScreen, width, height,
     menu.setTitle("Stuff For Sale");
 
     for (var i = 0; i < inventory.length; i++) {
-      var itemType = inventory[i].item;
-      var price = inventory[i].price;
       var menuText = textRows[i];
-      (function(itemType) {
+      (function(entry) {
         menu.addCommand(menuText,
                         function() {
+                          if (player.hasResource(denomination, 
+                                                 entry.price)) {
                           dialog.chooseCharacter("Who will hold it?",
                             function(character) {
                               doPurchase(dialog, player,
-                                         character, itemType);
+                                         character, entry);
                             });
+                          } else {
+                            dialog.scrollText("You can't afford that, sorry.");
+                          }
                         });
-      })(itemType);
+      })(inventory[i]);
     }
     dialog.pushMenu(menu);
   });

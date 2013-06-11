@@ -198,15 +198,18 @@ function setUpTownMap(loader, mapScreen) {
                    {item: potion, price: 90},
                    {item: coolarmor, price: 850}];
   var shop = makeShop(spriteSheet, mapScreen, 16, 24, 0, -8,
-                      0, 2, inventory);
+                      0, 2, inventory, "gold");
   town.addNPC(shop, 10, 4);
 
   var treasureSheet = loader.add("treasure.png");
   var shield = new ItemType("Crummy Shield");
   shield.equippable("hand", "shield", {def: 5});
   var box = new TreasureChest(shield, treasureSheet, 16, 16, 0, 0);
-
   town.addNPC(box, 6, 4);
+
+  var moneyChest = new MoneyChest("gold", 250, treasureSheet, 16, 16,
+                                  0, 0);
+  town.addNPC(moneyChest, 6, 5);
 
   return town;
 }
