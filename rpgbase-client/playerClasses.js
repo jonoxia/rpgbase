@@ -213,7 +213,7 @@ Player.prototype = {
     // TODO should this stuff be moved to the Dialoglog class or what?
 
     // Nobody has room - prompt if you want to drop something
-    dialoglog.open(this.party);
+    dialoglog.open(this);
     dialoglog.showMsg("There's a " + itemName + " here, but everybody's hands are full. Drop something to pick it up?");
     dialoglog.yesOrNo(function(choice) {
       if (choice) {
@@ -272,6 +272,22 @@ Player.prototype = {
     if (this._resources[resourceName]) {
       this._resources[resourceName] -= amount;
     }
+  },
+  
+  getResource: function(resourceName) {
+    if (this._resources[resourceName]) {
+      return this._resources[resourceName];
+    } else {
+      return 0;
+    }
+  },
+
+  listResources: function() {
+    var names = [];
+    for (var name in this._resources) {
+      names.push(name);
+    }
+    return names;
   }
 }
 

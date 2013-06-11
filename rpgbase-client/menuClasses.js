@@ -406,6 +406,7 @@ function MenuSystemMixin(subClassPrototype) {
     this._rootMenu = null;
     this._party = null;
     this._closeCallbacks = [];
+    this._resourceVisible = false;
 
     this._savedStackDepth = 0;
 
@@ -427,7 +428,12 @@ function MenuSystemMixin(subClassPrototype) {
       menuWidth: "auto", // not yet used
       menuHeight: "auto", // not yet used
       menuXOffset: 0,
-      menuYOffset: 0
+      menuYOffset: 0,
+
+      resourceLeft: 160,
+      resourceTop: 10,
+      resourceWidth: 90,
+      resourceHeight: 20
     };
   };
 
@@ -456,8 +462,9 @@ function MenuSystemMixin(subClassPrototype) {
     return subMenu;
   };
 
-  subClassPrototype.open = function(party) {
-    this._party = party;
+  subClassPrototype.open = function(player) {
+    this._player = player;
+    this._party = player.getParty();
     if (this.menuImpl != "canvas") {
       this._htmlElem.show();
     }
@@ -466,6 +473,7 @@ function MenuSystemMixin(subClassPrototype) {
     }
     this.clearMsg();
     this.hidePartyStats();
+    this.hidePartyResources();
   };
 
   subClassPrototype.close = function() {
@@ -474,6 +482,8 @@ function MenuSystemMixin(subClassPrototype) {
       this._rootMenu.reset();
     }
     this.canvasStyleMsgText = null;
+    this.hidePartyStats();
+    this.hidePartyResources();
     this.hide();
     for (var i = 0; i < this._closeCallbacks.length; i++) {
       this._closeCallbacks[i]();
@@ -570,7 +580,7 @@ function MenuSystemMixin(subClassPrototype) {
   };
   
   subClassPrototype.showPartyStats = function() {
-    // TODO if impl is canvas, draw these in canvas instead!!
+    // If impl is canvas, draw these in canvas instead!!
     // use this._positioning.statsLeft, statsTop, statsXOffset etc.
     this._htmlElem.find(".stats").remove();
     if (this.menuImpl == "canvas") {
@@ -621,6 +631,10 @@ function MenuSystemMixin(subClassPrototype) {
       if (this.canvasPartyStats) {
         this.drawCanvasPartyStats(ctx, this.canvasPartyStats);
       }
+      if (this._resourceVisible) {
+        this.drawCanvasPartyResources(ctx);
+      }
+
     }
   };
 
@@ -700,6 +714,38 @@ function MenuSystemMixin(subClassPrototype) {
     }
     console.log("Popped stack down to: " + this.menuStack.length);
   };
+
+  subClassPrototype.showPartyResources = function() {
+    if (this.menuImpl == "canvas") {
+      this._resourceVisible = true;
+    }
+    // TODO implement me for canvas menus too
+  };
+
+  subClassPrototype.hidePartyResources = function() {
+    if (this.menuImpl == "canvas") {
+      this._resourceVisible = null;
+    }
+    // TODO implement me for canvas menus too
+  },
+
+  subClassPrototype.drawCanvasPartyResources = function(ctx) {
+    // This duplicates a lot from stats windows... should basically
+    // be considered part of the stats windows??
+    var x = this._positioning.resourceLeft;
+    var y = this._positioning.resourceTop;
+    var width = this._positioning.resourceWidth;
+    var height = this._positioning.resourceHeight;
+    var textLines = [];
+    var resources = this._player.listResources();
+    for (var i = 0; i < resources.length; i++) {
+      textLines.push(resources[i] + ": " +
+                     this._player.getResource(resources[i]));
+    }
+    CanvasTextUtils.drawTextBox(ctx, x, y, width, height,
+                                textLines);
+  };
+
 }
 
 function FieldMenu(htmlElem, commandSet) {

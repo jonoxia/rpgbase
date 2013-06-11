@@ -151,6 +151,9 @@ function setUpParty(loader) {
   sidekick2.weaponCode = 3;
   sidekick3.weaponCode = 2;
 
+  // starting money:
+  player.gainResource("gold", 100);
+
   return player;
 }
 
@@ -450,6 +453,7 @@ function setUpFieldMenu() {
   fieldCommands.add("STATS",{
     effect: function(menus, party) {
       menus.showPartyStats();
+      menus.showPartyResources();
     }});
   fieldCommands.add("ORDER",{
     effect: function(menus, party) {
@@ -491,7 +495,7 @@ function setUpInputDispatch(player, mapScreen) {
       break;
     case CANCEL_BUTTON:
       // Pop open the field menu system
-      dispatcher.menuMode("menu").open(player.getParty());
+      dispatcher.menuMode("menu").open(player);
       break;
     }
 

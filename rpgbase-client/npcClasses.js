@@ -149,6 +149,7 @@ MoneyChest.prototype = {
       player.gainResource(this._resource, this._amount);
       this._taken = true;
       this.setSprite(1, 0);
+      dialoglog.showPartyResources(player, this._resource);
       dialoglog.scrollText("You found " + this._amount + " "
                            + this._resource + "!");
     } else {
@@ -209,7 +210,8 @@ function makeShop(spriteSheet, mapScreen, width, height,
   }
 
   shopkeeper.onTalk(function(dialog, player) {
-    dialog.open(player.party);
+    dialog.open(player);
+    dialog.showPartyResources(player, denomination);
     dialog.showMsg("Hey welcome to my shop!");
     var menu = dialog.makeMenu();
     menu.setTitle("Stuff For Sale");
