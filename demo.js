@@ -90,9 +90,9 @@ function setUpParty(loader) {
   });
 
   var hero = makeOnePC("ALIS", spriteSheet, 1);
+  var sidekick = makeOnePC("MYAU", spriteSheet, 0);
   // for debugging main character death
   hero.setStat("hp", 1);
-  var sidekick = makeOnePC("MYAU", spriteSheet, 0);
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);
 
@@ -180,13 +180,26 @@ function setUpOverworldMap(loader) {
 function setUpTownMap(loader, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
   var spriteSheet = loader.add("mapsprites.png");
-  var shopkeeper = new NPC(spriteSheet, mapScreen, 16, 24, 0, -8);
-  shopkeeper.wander();
-  shopkeeper.setSprite(0, 2);
-  shopkeeper.onTalk(function(dialog) {
+  var hintguy = new NPC(spriteSheet, mapScreen, 16, 24, 0, -8);
+  hintguy.wander();
+  hintguy.setSprite(0, 2);
+  hintguy.onTalk(function(dialog) {
     dialog.scrollText("Good morrow, travellers! Let me regale you with an endless, boring story in which I infodump the entire history of the game world! So it all started a thousand years ago when a great evil (who is obviously the last boss) was sealed away by a group of heroes, who you are obviously supposed to emulate...");
   });
-  town.addNPC(shopkeeper, 5, 5);
+  town.addNPC(hintguy, 5, 5);
+
+  var coolsword = new ItemType("Sword +1");
+  var ether = new ItemType("Ether");
+  var potion = new ItemType("Potion");
+  var coolarmor = new ItemType("Chain mail +1");
+  
+  var inventory = [{item: coolsword, price: 500},
+                   {item: ether, price: 120},
+                   {item: potion, price: 90},
+                   {item: coolarmor, price: 850}];
+  var shop = makeShop(spriteSheet, mapScreen, 16, 24, 0, -8,
+                      0, 2, inventory);
+  town.addNPC(shop, 10, 4);
 
   var treasureSheet = loader.add("treasure.png");
   var shield = new ItemType("Crummy Shield");
@@ -236,6 +249,9 @@ function setUpBattleSystem(canvas, loader) {
       if (user.weaponCode) {
         spriteOffsetY = 64 * user.weaponCode;
       }
+      // TODO should be like target.getBattlescreenXY()
+      // then when used against player character it can show atop
+      // your stats box / portrait.
       var x = target.x;
       var y = target.y;
 
@@ -624,13 +640,13 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     // and start listening for (map screen) input:
-    //inputDispatcher.mapMode();
+    inputDispatcher.mapMode();
     // and begin map animation:
-    //mapScreen.start();
+    mapScreen.start();
 
-    inputDispatcher.menuMode("battle");
+    /*inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                    number: 3}, 1);
+                                    number: 3}, 1);*/
 
   });
 });

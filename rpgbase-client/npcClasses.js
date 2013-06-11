@@ -79,7 +79,7 @@ NPC.prototype = {
         // don't wander away while i'm talking to you!!
         dialoglog.occupyNPC(this);
       }
-      this._talkCallback(dialoglog);
+      this._talkCallback(dialoglog, player);
     }
   },
 
@@ -128,3 +128,77 @@ TreasureChest.prototype = {
   },
 };
 MapSpriteMixin(TreasureChest.prototype);
+
+function makeShop(spriteSheet, mapScreen, width, height,
+                  offsetX, offsetY, spriteX, spriteY, inventory) {
+
+  // expects inventory argument to be like this:
+  /*  var inventory = [{item: coolsword, price: 500},
+                       {item: ether, price: 120},
+                       {item: potion, price: 90},
+                       {item: coolarmor, price: 850}]; */
+
+  var shopkeeper = new NPC(spriteSheet, mapScreen, width, height,
+                           offsetX, offsetY);
+  
+  // String padding to make item names and prices line up nicely:
+  var longestString = 0;
+  var strLens = [];
+  for (var i = 0; i < inventory.length; i++) {
+    var strLen = inventory[i].item.getName().length;
+    strLen += (" " + inventory[i].price).length;
+    if (strLen > longestString) {
+      longestString = strLen;
+    }
+    strLens.push(strLen);
+  }
+
+  var textRows = [];
+  for (var i = 0; i < inventory.length; i++) {
+    var textRow = inventory[i].item.getName() + " ";
+    for (var j = 0; j < (longestString - strLens[i]); j++) {
+      textRow += " ";
+    }
+    textRow += inventory[i].price;
+    textRows.push(textRow);
+  }
+
+  function doPurchase(dialog, player, character, itemType) {
+    // TODO check that you have
+    // sufficient money. (For this, money needs to be a thing.)
+    if (character.inventoryIsFull()) {
+      dialog.scrollText(character.name + "'s hands are full. Come back later.");
+    } else {
+      character.gainItem(itemType);
+      dialog.showMsg("Thank you, come again");
+      dialog.popMenu();
+    }
+  }
+
+
+  shopkeeper.onTalk(function(dialog, player) {
+    dialog.open(player.party);
+    dialog.showMsg("Hey welcome to my shop!");
+    var menu = dialog.makeMenu();
+    menu.setTitle("Stuff For Sale");
+
+    for (var i = 0; i < inventory.length; i++) {
+      var itemType = inventory[i].item;
+      var price = inventory[i].price;
+      var menuText = textRows[i];
+      (function(itemType) {
+        menu.addCommand(menuText,
+                        function() {
+                          dialog.chooseCharacter("Who will hold it?",
+                            function(character) {
+                              doPurchase(dialog, player,
+                                         character, itemType);
+                            });
+                        });
+      })(itemType);
+    }
+    dialog.pushMenu(menu);
+  });
+  shopkeeper.setSprite(spriteX, spriteY);
+  return shopkeeper;
+}

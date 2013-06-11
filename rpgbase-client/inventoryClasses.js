@@ -141,6 +141,10 @@ ItemType.prototype = {
     this._equipType = equipType;
     this._equipStats = equipStats;
     // equip stats must be a stat block. Other two are strings.
+  },
+
+  getName: function() {
+    return this._name;
   }
 };
 
