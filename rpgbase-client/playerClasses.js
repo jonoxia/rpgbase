@@ -21,12 +21,6 @@ Player.prototype = {
     // call after any change in party order or any party member
     // killed/revived in order to wrangle sprites so they'll appear
     // in correct order.
-    var x = this.party[0]._x;
-    var y = this.party[0]._y;
-    for (var i = 0; i < this.party.length; i++) {
-      this.party[i].setPos(x, y);
-      this.party[i].clearLastMoved();
-    }
     this.aliveParty = [];
     for (var i =0 ; i< this.party.length; i++) {
       if (this.party[i].isAlive()) {
@@ -40,6 +34,18 @@ Player.prototype = {
         this.party[i].hide();
       }
     }
+
+    // eliminate gaps in alive party
+    for (i = 1; i < this.aliveParty.length; i++) {
+      var leaderPos = this.aliveParty[i - 1].getPos();
+      var lastMoved = this.aliveParty[i - 1].getLastMoved();
+      // put each alive person after the first in the space previously
+      // occupied by the alive person in front of them
+      var x= leaderPos.x - lastMoved.x;
+      var y = leaderPos.y - lastMoved.y;
+      this.aliveParty[i].setPos(x, y);
+    }
+
   },
 
   move: function(dx, dy, numAnimFrames) {
