@@ -198,22 +198,22 @@ function init() {
   scene = new t.Scene(); // Holds all objects in the canvas
   scene.fog = new t.FogExp2(0x000000, 0.001); // color, density
   
-  
   var player = new FirstPersonPlayer(2, 2, 0);
   
   scene.add(player.cam);
-  scene.add(player.torch);
-  scene.add(new t.AmbientLight(0x555555));
+  //scene.add(player.torch);
+  //scene.add(new t.AmbientLight(0x555555));
 
   // World objects
   setupScene();
   
   // Handle drawing as WebGL (faster than Canvas but less supported)
-  renderer = new t.WebGLRenderer();
+  //renderer = new t.WebGLRenderer();
+  renderer = new t.CanvasRenderer();
   renderer.setSize(WIDTH, HEIGHT);
   
   // Add the canvas to the document
-  renderer.domElement.style.backgroundColor = '#D6F1FF'; // easier to see
+  //renderer.domElement.style.backgroundColor = '#D6F1FF'; // easier to see
   document.body.appendChild(renderer.domElement);
   
   $(document).bind("keydown", function(evt) {
@@ -250,23 +250,29 @@ function setupScene() {
   var UNITSIZE = 250;
 
   // Geometry: floor
-  var floorTexture = new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/grey-floor.png')});
+  var floorTexture = new t.MeshNormalMaterial({overdraw: true});
+    //new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/grey-floor.png')});
 
-  var ceilingTexture = new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/grey-ceiling.png')});
+  var ceilingTexture = new t.MeshNormalMaterial({overdraw: true});
+  //t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/grey-ceiling.png')});
 
   // Geometry: walls
   var cube = new t.CubeGeometry(UNITSIZE, WALLHEIGHT, UNITSIZE);
-  var materials = [
-    new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/purple-wall-2.png')}),
+  /*var materials = [new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/purple-wall-2.png')}),
     new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/green-wall.png')}),
     new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/purple-stairs-2.png')})
-  ];
+  ];*/
+  var materials = [new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/purple-wall-2.png')}),
+    new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/green-wall.png')}),
+    new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/purple-stairs-2.png')})
+    ];
+
 
 
   for (var i = 0; i < mapW; i++) {
     for (var j = 0, m = map[i].length; j < m; j++) {
 
-      var floor = new t.Mesh(cube, floorTexture);
+      /*var floor = new t.Mesh(cube, floorTexture);
       floor.position.x = j * UNITSIZE;
       floor.position.y = 0 - WALLHEIGHT/2;
       floor.position.z = i * UNITSIZE;
@@ -276,7 +282,7 @@ function setupScene() {
       ceiling.position.x = j * UNITSIZE;
       ceiling.position.y = 3 *WALLHEIGHT/2;
       ceiling.position.z = i * UNITSIZE;
-      scene.add(ceiling);
+      scene.add(ceiling);*/
 
       if (map[i][j]) {
 	var wall = new t.Mesh(cube, materials[map[i][j]-1]);
