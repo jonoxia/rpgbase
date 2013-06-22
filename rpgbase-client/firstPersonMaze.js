@@ -183,33 +183,28 @@ FirstPersonPlayer.prototype = {
 
 
 $(document).ready(function() {
-	$('body').append('<div id="intro">Click to start</div>');
-	$('#intro').css({width: WIDTH, height: HEIGHT}).one('click', function(e) {
-		e.preventDefault();
-		$(this).fadeOut();
-		init();
-	  //animate();
-	});
+  init();
+  animate();
 });
 
 // Setup
 function init() {
   clock = new t.Clock(); // Used in render() for controls.update()
   scene = new t.Scene(); // Holds all objects in the canvas
-  scene.fog = new t.FogExp2(0x000000, 0.001); // color, density
+  //scene.fog = new t.FogExp2(0x000000, 0.001); // color, density
   
   var player = new FirstPersonPlayer(2, 2, 0);
   
   scene.add(player.cam);
-  //scene.add(player.torch);
+  scene.add(player.torch);
   //scene.add(new t.AmbientLight(0x555555));
 
   // World objects
   setupScene();
   
   // Handle drawing as WebGL (faster than Canvas but less supported)
-  //renderer = new t.WebGLRenderer();
-  renderer = new t.CanvasRenderer();
+  renderer = new t.WebGLRenderer();
+  //renderer = new t.CanvasRenderer();
   renderer.setSize(WIDTH, HEIGHT);
   
   // Add the canvas to the document
@@ -248,50 +243,137 @@ function render(cam) {
 // Set up the objects in the world
 function setupScene() {
   var UNITSIZE = 250;
+  var BRICKTHICK = 4;
+  var BRICKLONG = UNITSIZE / 2;
+  var BRICKTALL = WALLHEIGHT / 3;
+  var BRICKMARGIN = 4;
 
   // Geometry: floor
-  var floorTexture = new t.MeshNormalMaterial({overdraw: true});
+  var floorTexture = new t.MeshLambertMaterial({color: 0x555555});
+    //new t.MeshNormalMaterial({overdraw: true});
     //new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/grey-floor.png')});
 
-  var ceilingTexture = new t.MeshNormalMaterial({overdraw: true});
+  var ceilingTexture = new t.MeshNormalMaterial({color: 0x555555, overdraw: true});
   //t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/grey-ceiling.png')});
 
   // Geometry: walls
   var cube = new t.CubeGeometry(UNITSIZE, WALLHEIGHT, UNITSIZE);
+  var smallcube = new t.CubeGeometry(UNITSIZE - BRICKTHICK, WALLHEIGHT, UNITSIZE- BRICKTHICK);
   /*var materials = [new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/purple-wall-2.png')}),
     new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/green-wall.png')}),
     new t.MeshLambertMaterial({map: t.ImageUtils.loadTexture('textures/purple-stairs-2.png')})
   ];*/
-  var materials = [new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/purple-wall-2.png')}),
+  /*var materials = [new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/purple-wall-2.png')}),
     new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/green-wall.png')}),
     new t.MeshBasicMaterial({map: t.ImageUtils.loadTexture('textures/purple-stairs-2.png')})
-    ];
+    ];*/
+var materials = [new t.MeshLambertMaterial({color: 0xcc00cc}),
+    new t.MeshLambertMaterial({color: 0x00cc00}),
+    new t.MeshLambertMaterial({color: 0x000000})
+  ];
 
+  var zBrick = new t.CubeGeometry(BRICKTHICK, BRICKTALL - BRICKMARGIN, BRICKLONG - BRICKMARGIN);
+  var xBrick = new t.CubeGeometry(BRICKLONG - BRICKMARGIN, BRICKTALL - BRICKMARGIN, BRICKTHICK);
 
+  var zHalfBrick = new t.CubeGeometry(BRICKTHICK, BRICKTALL - BRICKMARGIN, BRICKLONG/2 - BRICKMARGIN);
+  var xHalfBrick = new t.CubeGeometry(BRICKLONG/2 - BRICKMARGIN, BRICKTALL - BRICKMARGIN, BRICKTHICK);
 
+  var yValues = [WALLHEIGHT * 1/6,
+                 WALLHEIGHT * 3/6,
+                 WALLHEIGHT * 5/6];
+  var xValues = [[ UNITSIZE * (-1)/4,
+                   UNITSIZE * 1/4],
+                 [UNITSIZE * (-3)/8,
+                  0, UNITSIZE * 3/8],
+                 [UNITSIZE * (-1)/4,
+                  UNITSIZE * 1/4]]
+
+  var plane = new t.PlaneGeometry(UNITSIZE, UNITSIZE);
+  /*var floor = new t.Mesh( plane, floorTexture);
+  floor.position.x = (map[0].length/2) * UNITSIZE;
+  floor.position.y = 0 - WALLHEIGHT/2;
+  floor.position.z = (mapW/2) * UNITSIZE;
+  floor.overdraw = true;
+  scene.add(floor);*/
+
+  function tileNSWall(i, j, wallMaterial) {
+
+    for (var y = 0; y < 3; y++) {
+      for (var x = 0; x < xValues[y].length; x++) {
+        var geom;
+        if (y == 1 && ( x == 0 || x == 2)) {
+          geom = xHalfBrick;
+        } else {
+          geom = xBrick;
+        }
+        var bump = new t.Mesh(geom, wallMaterial);
+        bump.position.x = j * UNITSIZE + xValues[y][x];
+        bump.position.y = yValues[y];
+        bump.position.z = i * UNITSIZE;
+        scene.add(bump);
+      }
+    }
+  }
+  function tileEWWall(i, j, wallMaterial) {
+    for (var y = 0; y < 3; y++) {
+      for (var x = 0; x < xValues[y].length; x++) {
+        var geom;
+        if (y == 1 && ( x == 0 || x == 2)) {
+          geom = zHalfBrick;
+        } else {
+          geom = zBrick;
+        }
+        var bump = new t.Mesh(geom, wallMaterial);
+        bump.position.x = j * UNITSIZE;
+        bump.position.y = yValues[y];
+        bump.position.z = i * UNITSIZE + xValues[y][x];
+        scene.add(bump);
+      }
+    }
+  }
+
+  var mapH = map[0].length;
   for (var i = 0; i < mapW; i++) {
-    for (var j = 0, m = map[i].length; j < m; j++) {
+    for (var j = 0; j < mapH; j++) {
 
-      /*var floor = new t.Mesh(cube, floorTexture);
+      var floor = new t.Mesh(plane, floorTexture);
       floor.position.x = j * UNITSIZE;
-      floor.position.y = 0 - WALLHEIGHT/2;
+      floor.position.y = 0;
       floor.position.z = i * UNITSIZE;
       scene.add(floor);
 
-      var ceiling = new t.Mesh(cube, ceilingTexture);
+      var ceiling = new t.Mesh(plane, floorTexture);
       ceiling.position.x = j * UNITSIZE;
-      ceiling.position.y = 3 *WALLHEIGHT/2;
+      ceiling.position.y = WALLHEIGHT * 3/2;
       ceiling.position.z = i * UNITSIZE;
-      scene.add(ceiling);*/
+      scene.add(ceiling);// does not appear... why?
 
       if (map[i][j]) {
-	var wall = new t.Mesh(cube, materials[map[i][j]-1]);
+        var wallMaterial = materials[map[i][j]-1]
+	var wall = new t.Mesh(smallcube, floorTexture);
 	wall.position.x = j * UNITSIZE;
 	wall.position.y = WALLHEIGHT/2;
 	wall.position.z = i * UNITSIZE;
 	scene.add(wall);
+
+        // add a bump to each exposed side of wall
+        if (i > 0 && !map[i-1][j]) {
+          tileNSWall(i - 0.5, j, wallMaterial);
+        }
+        if (i < (mapW - 1) && !map[i+1][j]) {
+          tileNSWall(i + 0.5, j, wallMaterial);
+        }
+        if (j > 0 && !map[i][j-1]) {
+          tileEWWall(i, j - 0.5, wallMaterial);
+        }
+        if (j < (mapH - 1) && !map[i][j+1]) {
+          tileEWWall(i, j + 0.5, wallMaterial);
+        }
+
       }
     }
   }  
 }
+
+/* What if we try texturing the walls by creating some bricks as actual objects (planes or boxes sticking slightly out of the wall) of a different color, instead of texture map? */
 
