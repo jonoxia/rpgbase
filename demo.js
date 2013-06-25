@@ -158,10 +158,11 @@ function setUpParty(loader) {
 }
 
 
-function setUpMapScreen(canvas) {
+function setUpMapScreen(canvas, audioPlayer) {
   var mapScreen = new MapScreen(canvas, 17, 13, 16, 16, 50);
   mapScreen.setScrollMargins({left: 8, top: 6, right: 8, bottom: 6});
   mapScreen.setTileOffset({x: -0.5, y: -0.5});
+  mapScreen.useAudioPlayer(audioPlayer);
   return mapScreen;
 }
 
@@ -176,12 +177,14 @@ function setUpOverworldMap(loader) {
   map.onStep({landType: 39}, function(pc, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
+  map.musicTrack = "music/overworld";
 
   return map;
 }
 
 function setUpTownMap(loader, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
+  town.musicTrack = "music/town";
   var spriteSheet = loader.add("mapsprites.png");
   var hintguy = new NPC(spriteSheet, mapScreen, 16, 24, 0, -8);
   hintguy.wander();
@@ -575,17 +578,19 @@ $(document).ready( function() {
 
   // Create the main game components (see the various setUp functions)
   var player = setUpParty(loader);
-  var mapScreen = setUpMapScreen(canvas);
+  var audioPlayer = new AudioPlayer();
+  var mapScreen = setUpMapScreen(canvas, audioPlayer);
   var battleSystem = setUpBattleSystem(canvas, loader);
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
   var overworld = setUpOverworldMap(loader);
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
-  var audioPlayer = new AudioPlayer();
 
-  var musicUrl = "file:///home/jono/recordings/badromance";
+  var musicUrl = "music/overworld";
   audioPlayer.preload(musicUrl);
+  audioPlayer.preload("music/boss");
+  audioPlayer.preload("music/town");
   CanvasTextUtils.setFontImg(loader.add("font.png"));
   CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12,
                             fontSize: 8, maxLineLength: 26});
@@ -621,6 +626,9 @@ $(document).ready( function() {
     inputDispatcher.menuMode("battle");
     //stop map screen animator:
     mapScreen.stop();
+    // switch bgm to battle
+    audioPlayer.changeTrack("music/boss", true);
+
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                       number: 3}, landType);
   });
@@ -650,6 +658,8 @@ $(document).ready( function() {
    * redraw the map screen: */
   battleSystem.onClose(function() {
     mapScreen.start();
+    // switch back to map music
+    audioPlayer.changeTrack(musicUrl, true);
   });
 
 
@@ -664,10 +674,20 @@ $(document).ready( function() {
     inputDispatcher.mapMode();
     // and begin map animation:
     mapScreen.start();
-    audioPlayer.play(musicUrl);
+    audioPlayer.play(musicUrl, true);
     /*inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                     number: 3}, 1);*/
 
   });
+
+  var checkAudioState = function() {
+    if ($("#bgm-toggle").is(":checked")) {
+      audioPlayer.enable();
+    } else {
+      audioPlayer.disable();
+    }
+  }
+  checkAudioState();
+  $("#bgm-toggle").click(checkAudioState);
 });

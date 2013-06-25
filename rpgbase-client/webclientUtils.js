@@ -69,10 +69,12 @@ function AudioPlayer() {
       this._fileType = "ogg";
     }
   }
+
+  this._currentPlayingFile = null;
+  this._enabled = true;
 }
 AudioPlayer.prototype = {
   correctFileExt: function(filename) {
-    
     return filename.split(".")[0] + "." + this._fileType;
   },
 
@@ -85,17 +87,63 @@ AudioPlayer.prototype = {
     return filename;
   },
 
-  play: function(filename) {
+  play: function(filename, loop) {
     filename = this.correctFileExt(filename);
+    this._currentPlayingFile = filename;
+    if (!this._enabled) {
+      return;
+    }
     if (!this._preloads[filename]) {
       this.preload(filename);
     }
+    if (loop) {
+      this._loopAudio(this._preloads[filename]);
+    }
     this._preloads[filename].play();
-    console.log("Playing: " + filename);
+  },
+
+  stop: function() {
+    if (this._currentPlayingFile) {
+      if (this._preloads[this._currentPlayingFile]) {
+        this._preloads[this._currentPlayingFile].pause();
+      }
+    }
+  },
+
+  _loopAudio: function(audioObj) {
+    if (typeof audioObj.loop == 'boolean') {
+      audioObj.loop = true;
+    } else {
+      audioObj.addEventListener('ended', function() {
+        this.currentTime = 0;
+        this.play();
+      }, false);
+    }
+    // TODO: Support an intro segment that plays once followed by
+    // the looping segment that plays indefinitely.
+  },
+
+  changeTrack: function(filename, loop) {
+    this.stop();
+    if (this._preloads[filename]) {
+      this.preloads[filename].currentTime = 0;
+    }
+    this.play(filename, loop);
+  },
+
+  enable: function() {
+    this._enabled = true;
+    if (this._currentPlayingFile) {
+      this.play(this._currentPlayingFile, true); // TODO WRONG
+    }
+  },
+  
+  disable: function() {
+    this._enabled = false;
+    this.stop();
   }
 };
 
 // TODO if we can figure out how to get notified that an audio file
 // finished loading, we could combine this with asset loader.
 
-// TODO looping the audio

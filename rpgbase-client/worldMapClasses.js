@@ -159,6 +159,7 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   // each frame.
   this._animator = new Animator(frameRate,
                                 function() { self.render(); });
+  this._audioPlayer = null;
 }
 MapScreen.prototype = {
   setScrollMargins: function( newMargins ) {
@@ -174,6 +175,10 @@ MapScreen.prototype = {
     this.player = player;
   },
 
+  useAudioPlayer: function(audio) {
+    this._audioPlayer = audio;
+  },
+
   setNewDomain: function( domain ) {
 
     if (this._currentDomain) {
@@ -183,6 +188,9 @@ MapScreen.prototype = {
     this._scrollX = 0;
     this._scrollY = 0;
     this._currentDomain.load();
+    if (this._audioPlayer && domain.musicTrack) {
+      this._audioPlayer.changeTrack(domain.musicTrack);
+    }
   },
 
   getLandType: function( x, y ) {
