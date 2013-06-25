@@ -582,7 +582,10 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
+  var audioPlayer = new AudioPlayer();
 
+  var musicUrl = "file:///home/jono/recordings/badromance";
+  audioPlayer.preload(musicUrl);
   CanvasTextUtils.setFontImg(loader.add("font.png"));
   CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12,
                             fontSize: 8, maxLineLength: 26});
@@ -661,7 +664,7 @@ $(document).ready( function() {
     inputDispatcher.mapMode();
     // and begin map animation:
     mapScreen.start();
-
+    audioPlayer.play(musicUrl);
     /*inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                     number: 3}, 1);*/
