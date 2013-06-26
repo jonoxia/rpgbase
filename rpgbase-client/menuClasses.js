@@ -184,7 +184,7 @@ var CanvasTextUtils = {
   },
 
   styles: {
-    leftMargin: 10,
+    leftMargin: 5,
     rightMargin: 5,
     topMargin: 5,
     bottomMargin: 5,
@@ -229,7 +229,7 @@ CanvasCmdMenu.prototype = {
       }
     }
     // TODO use that method that calcs text size:
-    this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * longestCommand;
+    this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * (longestCommand + 1);
     this.height = this.cmdList.length * styles.lineHeight + styles.topMargin + styles.bottomMargin;
     
     var x = this.x;
@@ -244,7 +244,8 @@ CanvasCmdMenu.prototype = {
     }
     var textLines = [];
     for (var i =0; i < this.cmdList.length; i++) {
-      textLines.push(this.cmdList[i].name);
+      // prepend space to give room for cursor
+      textLines.push(" " + this.cmdList[i].name);
     }
     
     CanvasTextUtils.drawTextBox(ctx, x, y,

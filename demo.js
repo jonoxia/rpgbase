@@ -592,8 +592,8 @@ $(document).ready( function() {
   audioPlayer.preload("music/boss");
   audioPlayer.preload("music/town");
   CanvasTextUtils.setFontImg(loader.add("font.png"));
-  CanvasTextUtils.setStyles({cornerRadius: 5, leftMargin: 12,
-                            fontSize: 8, maxLineLength: 26});
+  CanvasTextUtils.setStyles({cornerRadius: 5, fontSize: 8,
+                             maxLineLength: 26});
   fieldMenu.setMenuPositions({msgLeft: 10,
                               msgTop: 125,
                               menuLeft: 5,
