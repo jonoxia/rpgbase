@@ -50,7 +50,8 @@ function makeOnePC(name, spriteSheet, spriteSheetRow) {
   /* Returns a new PlayerCharacter that uses the given row of the
    * given spriteSheet for its walk animation. */
 
-  var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8, {hp: 20});
+  var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8,
+                               {hp: 20, exp: 0});
   pc.name = name;
   pc.setSprite(0, spriteSheetRow);
   return pc;
@@ -426,6 +427,22 @@ function setUpBattleSystem(canvas, loader) {
     resetPerPC: true
   });
 
+  battleSystem.onVictory(function(player, deadMonsters) {
+    var gold = 0;
+    var exp = 0;
+    for (var i = 0; i < deadMonsters.length; i++) {
+      gold += deadMonsters[i].getStat("gp");
+      exp += deadMonsters[i].getStat("exp");
+    }
+    player.gainResource("gold", gold);
+    var aliveCharacters = player.getAliveParty();
+    for (i = 0; i < aliveCharacters.length; i++) {
+      aliveCharacters[i].modifyStat("exp", exp);
+    }
+    var victoryText = "You defeated the monsters! Your party gains " + gold + " gold pieces and " + exp + " experience points.";
+    return victoryText;
+  });
+
   return battleSystem;
 }
 
@@ -433,10 +450,10 @@ function setUpMonstrousManuel(loader) {
   var manuel = {
     biteWorm: new MonsterType(loader.add("monsters/biteworm.png"),
                               "Biteworm",
-                              {hp: 10}),
+                              {hp: 10, gp: 2, exp: 3}),
     groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                                  "Groundsnake",
-                                 {hp: 15})
+                                 {hp: 15, gp: 4, exp: 7})
     // TODO - Add more monster definitions here. Comma-separated.
   };
   return manuel;

@@ -163,7 +163,7 @@ function Animator(frameLength, afterFrame) {
 
     // remove finished animations:
     self._currentAnimations = stillGoingAnims;
-  }
+  };
 }
 Animator.prototype = {
   start: function() {
@@ -186,6 +186,13 @@ Animator.prototype = {
   runAnimation: function(animation) {
     animation.currFrame = 0;
     this._currentAnimations.push(animation);
+  },
+
+  cancelAllCallbacks: function() {
+    for (var i = 0; i < this._currentAnimations.length; i++) {
+      var anim = this._currentAnimations[i];
+      anim.cancelFinishCallback();
+    }
   }
 };
 
@@ -245,6 +252,10 @@ Animation.prototype = {
     if (this.drawCallback) {
       this.drawCallback(ctx, this.currFrame);
     }
+  },
+
+  cancelFinishCallback: function() {
+    this.finishCallbacks = [];
   }
 };
 

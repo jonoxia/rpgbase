@@ -9,7 +9,8 @@ function BattleSystem(htmlElem, canvas, options) {
   this._init(htmlElem);
   this._ctx = canvas.getContext("2d");
   this.hide();
-  this.endBattleCallbacks = [];
+  // this.endBattleCallbacks = []; // deprecated
+  // use onClose instead
   this._attackSFX = null;
 
   if (options.defaultMsg) {
@@ -33,6 +34,10 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onStartBattle) {
     this._startBattleCallback = options.onStartBattle;
   }
+  this._victoryCallback = null;
+  if (options.onVictory) {
+    this._victoryCallback = options.onVictory;
+  }
   if (options.msgDelay) {
     this._msgDelay = options.msgDelay;
   } else {
@@ -51,6 +56,16 @@ function BattleSystem(htmlElem, canvas, options) {
   // TODO NOT hard code frame rate
   this._animator = new Animator(50,
                                 function() {self.draw();});
+
+  // Stuff to always do when battle ends:
+  this.onClose(function() {
+    self._animator.stop();
+    if (self.player) {
+      // tell player to re-jigger party in case people died during
+      // battle TODO maybe put this in client code??
+      self.player.marchInOrder();
+    }
+  });
 }
 BattleSystem.prototype = {
   getAliveParty: function() {
@@ -169,14 +184,18 @@ BattleSystem.prototype = {
   onStartBattle: function(callback) {
     this._startBattleCallback = callback;
   },
-
+/*
   onEndBattle: function(callback) {
+  // deprecated
     this.endBattleCallbacks.push(callback);
-  },
+  },*/ 
   
   startBattle: function(player, encounter, landType) {
     // TODO this is similar to MenuSystemMixin.open() but not quite
     // the same:
+    this._freelyExit = false;
+    this._theEndHasCome = false;
+    this.deadMonsters = [];
     this.player = player;
     this._party = player.getParty();
     this._htmlElem.show();
@@ -247,6 +266,10 @@ BattleSystem.prototype = {
 
   onRollInitiative: function(callback) {
     this._initiativeCallback = callback;
+  },
+
+  onVictory: function(callback) {
+    this._victoryCallback = callback;
   },
 
   onEffect: function(effectName, callback) {
@@ -342,8 +365,12 @@ BattleSystem.prototype = {
   },
 
   executeNextFighterAction: function(fightQueue) {
+    if (this._theEndHasCome) {
+      console.log("ExecuteNextfighterAction called After The End.");
+      return;
+    }
     this.displayElem.empty();// clear the message
-    // Skip any dead people (they may have died during the round
+    // Skip any dead people (they may have died during the round)
     while (fightQueue.length > 0 && !fightQueue[0].isAlive()) {
       fightQueue.shift();
     }
@@ -391,31 +418,41 @@ BattleSystem.prototype = {
   },
 
   endBattle: function(winLoseRun) {
-    var i;
+    // Trigger a ScrollingTextBox to come up
+    // with end of battle messages; closing the ScrollingTextBox
+    // closes the battle menu system.
+    this._theEndHasCome = true;
+    this._animator.cancelAllCallbacks();
     this.emptyMenuStack();
     this.pcMenus = [];
+    this._attackSFX = null;
+    this.clearMsg();
+
+    // TODO another error:  topMenu.getPos is not a function
+    // that appears to be the result of pushing a menu onto the
+    // menu stack just as the menu stack is emptied.
+  
+    var endBattleMessage;
     switch (winLoseRun) {
     case "win":
-      $("#debug").html("You won!");
+      this._freelyExit = true;
+      if (this._victoryCallback) {
+        endBattleMessage = this._victoryCallback(this.player,
+                                                 this.deadMonsters);
+      } else {
+        endBattleMessage = "You won! Let's assume there is a whole lot of end battle text, including how many experience points you got, how much gold you got, whether anybody went up a level, and all that jazz.";
+      }
       break;
     case "lose":
-      $("#debug").html("You lost!");
+      endBattleMessage = "You lost! It is very sad. There should probably be a button here to reload a save or whatever.";
       break;
     case "run":
-      $("#debug").html("You bravely ran away, away!");
+      this._freelyExit = true;
+      endBattleMessage = "You bravely ran away, away!";
       break;
     }
-    this._animator.stop();
-    this._attackSFX = null;
-
-    // tell player to re-jigger party in case people died during
-    // battle
-    this.player.marchInOrder();
-
-    for (i = 0; i < this.endBattleCallbacks.length; i++) {
-      this.endBattleCallbacks[i](winLoseRun);
-    }
-    this.close();
+    var endBattleText = new ScrollingTextBox(endBattleMessage, this);
+    this.pushMenu(endBattleText);
   },
 
   sendEffect: function(target, effectName, data) {
@@ -458,6 +495,9 @@ BattleSystem.prototype = {
       // if it's a monster...
       this.monsters.splice(index, 1);
       // just remove it from the list.
+
+      this.deadMonsters.push(target);
+      // put it in the dead monsters list.
 
       if (this.monsters.length == 0) {
         // if all monsters die, you win!
@@ -640,9 +680,9 @@ Part II: Game Mechanics
 (done) 9. 'remove this guy from combat' function
 (done) 10. write handler for "take damage" that removes guy from combat if hp drops to 0
 (done) 11. have the fight command send the "take damage" message.
-12. display PCs stats (at least HP) somewhere
+(done) 12. display PCs stats (at least HP) somewhere
 (done) 13. trigger end battle (win or lose) when everybody on one side are wiped out
-14. allow individual PC /individual monster types to override default command list with their own custom commands.
+(done) 14. allow individual PC /individual monster types to override default command list with their own custom commands.
 */
 
 
