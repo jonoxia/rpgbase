@@ -34,18 +34,18 @@ Player.prototype = {
         this.party[i].hide();
       }
     }
-
-    // eliminate gaps in alive party
-    for (i = 1; i < this.aliveParty.length; i++) {
-      var leaderPos = this.aliveParty[i - 1].getPos();
-      var lastMoved = this.aliveParty[i - 1].getLastMoved();
-      // put each alive person after the first in the space previously
-      // occupied by the alive person in front of them
-      var x= leaderPos.x - lastMoved.x;
-      var y = leaderPos.y - lastMoved.y;
-      this.aliveParty[i].setPos(x, y);
+    if (!this.inVehicle) {
+      // eliminate gaps in alive party
+      for (i = 1; i < this.aliveParty.length; i++) {
+        var leaderPos = this.aliveParty[i - 1].getPos();
+        var lastMoved = this.aliveParty[i - 1].getLastMoved();
+        // put each alive person after the first in the space 
+        // previously occupied by the alive person in front of them
+        var x= leaderPos.x - lastMoved.x;
+        var y = leaderPos.y - lastMoved.y;
+        this.aliveParty[i].setPos(x, y);
+      }
     }
-
   },
 
   move: function(dx, dy, numAnimFrames) {
@@ -627,7 +627,6 @@ Vehicle.prototype = {
     }
   },
   disembark: function() {
-    console.log("You are disembarking");
     this._playerOnboard.exitVehicle();
     this._playerOnboard = null;
   },
