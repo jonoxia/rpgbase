@@ -42,6 +42,30 @@ var townData = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
+var experienceForLevel = [0, 15, 30, 45];
+var statsByLevel = [{str: 4},
+                    {str: 8},
+                    {str: 12},
+                    {str: 16}];
+
+function pcCheckLevelUp(pc) {
+  var currLevel = pc.getStat("level");
+  var curExp = pc.getStat("exp");
+  var msg = "";
+  if (curExp >= experienceForLevel[currLevel]) {
+    currLevel ++; // todo edge case where you gain multiple levels
+    // at once?
+    msg = pc.name + " went up to Level " + currLevel + "!";
+    pc.setStat("level", currLevel);
+    var newStats = statsByLevel[ currLevel - 1 ];
+    for (var statName in newStats) {
+      pc.setStat(statName, newStats[statName]);
+      msg += " " + statName + " increased to " + newStats[statName] + ".";
+    }
+  }
+  return msg;
+}
+
 /* TODO: any global variables that will need to be accessed by
  * multiple functions (e.g. day/night, phase of moon, etc)
  * should be declared here, before all functions. */
@@ -51,7 +75,12 @@ function makeOnePC(name, spriteSheet, spriteSheetRow) {
    * given spriteSheet for its walk animation. */
 
   var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8,
-                               {hp: 20, exp: 0});
+                               {hp: 20, exp: 0, level: 1});
+  var startingStats = statsByLevel[0];
+  for (var statName in startingStats) {
+    pc.setStat(statName, startingStats[statName]);
+  }
+
   pc.name = name;
   pc.setSprite(0, spriteSheetRow);
   return pc;
@@ -434,12 +463,15 @@ function setUpBattleSystem(canvas, loader) {
       gold += deadMonsters[i].getStat("gp");
       exp += deadMonsters[i].getStat("exp");
     }
+    var victoryText = "You defeated the monsters! Your party gains " + gold + " gold pieces and " + exp + " experience points.";
+
     player.gainResource("gold", gold);
     var aliveCharacters = player.getAliveParty();
     for (i = 0; i < aliveCharacters.length; i++) {
       aliveCharacters[i].modifyStat("exp", exp);
+      // see if anybody levels up from the exp:
+      victoryText += pcCheckLevelUp(aliveCharacters[i]);
     }
-    var victoryText = "You defeated the monsters! Your party gains " + gold + " gold pieces and " + exp + " experience points.";
     return victoryText;
   });
 
