@@ -251,6 +251,25 @@ BattleSystem.prototype = {
       }
     }
 
+    if (this.menuImpl == "canvas" && this.monsters.length > 0) {
+      // draw monster stats 
+      // TODO make this FixedTextBox once, and give it a way to
+      // update the text inside when needed. Then make it a special
+      // case of menu system info window.
+      // TODO position of this info window (and its existince)
+      // should be set in userland.
+      var monsterStatLines = [];
+      monsterStatLines.push(this.monsters[0].name);
+      for (var i = 0; i < this.monsters.length; i++) {
+        var monsterName = this.monsters[i].name;
+        var monsterLetter = monsterName[monsterName.length -1 ];
+        monsterStatLines.push(monsterLetter + " " + this.monsters[i].getStat("hp"));
+      }
+      var box = new FixedTextBox(monsterStatLines, this);
+      box.setPos(180, 0);
+      box.display(this._ctx);
+    }
+
     if (this.menuImpl == "canvas") {
       this.drawCanvasMenus(this._ctx);
     }
@@ -367,7 +386,7 @@ BattleSystem.prototype = {
 
   executeNextFighterAction: function(fightQueue) {
     if (this._theEndHasCome) {
-      console.log("ExecuteNextfighterAction called After The End.");
+      // If battle has already ended, don't continue executing.
       return;
     }
     this.displayElem.empty();// clear the message
@@ -413,9 +432,6 @@ BattleSystem.prototype = {
       self.executeNextFighterAction(fightQueue);
     });
     this._animator.runAnimation(this._attackSFX);
-    // TODO: If a fight ending condition is triggered, finish
-    // the currently pending animation before exiting,
-    // but don't start any more.
   },
 
   endBattle: function(winLoseRun) {
@@ -635,7 +651,6 @@ var BattlerMixin = function() {
     return data;
   }
 }
-
 
 function Monster(img, statBlock, effectHandlers) {
   this.img = img;

@@ -882,8 +882,6 @@ function FixedTextBox(textLines, menuSystem) {
   // at once.
   this.menuSystem = menuSystem;
   var styles = CanvasTextUtils.getStyles();
-  // TODO get longest line out of textLines?
-  
   // TODO this duplicates code from CanvasCmdMenu
   var longestLine = 0;
   for (var i =0; i < textLines.length; i++) {

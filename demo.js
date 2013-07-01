@@ -121,8 +121,6 @@ function setUpParty(loader) {
 
   var hero = makeOnePC("ALIS", spriteSheet, 1);
   var sidekick = makeOnePC("MYAU", spriteSheet, 0);
-  // for debugging main character death
-  hero.setStat("hp", 1);
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);
 
@@ -726,13 +724,13 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     // and start listening for (map screen) input:
-    inputDispatcher.mapMode();
+    //inputDispatcher.mapMode();
     // and begin map animation:
-    mapScreen.start();
-    audioPlayer.play(musicUrl, true);
-    /*inputDispatcher.menuMode("battle");
+    //mapScreen.start();
+    //audioPlayer.play(musicUrl, true);
+    inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                    number: 3}, 1);*/
+                                    number: 3}, 1);
 
   });
 
