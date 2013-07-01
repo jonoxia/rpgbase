@@ -402,7 +402,7 @@ function setUpBattleSystem(canvas, loader) {
   battleSystem.onEffect("damage", function(target, data) {
     target.modifyStat("hp", (-1) * data.amount);
 
-    battleSystem.showMsg(target.name + "'s HP drops to " + target.getStat("hp"));
+    battleSystem.showMsg(target.name + " takes " + data.amount + " damage!");
     // check for death:
     if (target.getStat("hp") <= 0) {
       battleSystem.removeFromBattle(target);
