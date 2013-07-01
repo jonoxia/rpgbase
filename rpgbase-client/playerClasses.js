@@ -542,19 +542,30 @@ PlayerCharacter.prototype = {
     // TODO what happens if you REPEAT a round of battle in which
     // somebody used a one-use item?
   },
-  getStatDisplay: function() {
+  getStatDisplay: function(mode) {
     var html = this.name;
     html += "<br>";
-    for (var propName in this._statBlock) {
-      html+= propName + ": " + this._statBlock[propName] + "<br>";
-    }
-    for (var slot in this._equippedItems) {
-      if (this._equippedItems[slot]) {
-        html += slot + ": " 
-          + this._equippedItems[slot].getName() + "<br>";
+    if (mode != "longform") {
+      var importantStats = ["level", "hp", "mp"];
+      for (var i = 0; i < importantStats.length; i++) {
+        if (this.hasStat(importantStats[i])) {
+          html += importantStats[i] + ":" + this.getStat(importantStats[i]) + "<br>";
+        }
       }
     }
-    if (this._lockedAction) {
+    
+    if (mode == "longform") {
+      for (var propName in this._statBlock) {
+        html+= propName + ": " + this._statBlock[propName] + "<br>";
+      }
+      for (var slot in this._equippedItems) {
+        if (this._equippedItems[slot]) {
+          html += slot + ": " 
+            + this._equippedItems[slot].getName() + "<br>";
+        }
+      }
+    }
+    if (mode == "battle" && this._lockedAction) {
       html += this._lockedAction.cmd.name;
     }
     return html;

@@ -408,6 +408,7 @@ function MenuSystemMixin(subClassPrototype) {
     this._party = null;
     this._closeCallbacks = [];
     this._resourceVisible = false;
+    this._statDisplayType = "short";
 
     this._savedStackDepth = 0;
 
@@ -587,11 +588,12 @@ function MenuSystemMixin(subClassPrototype) {
     if (this.menuImpl == "canvas") {
       this.canvasPartyStats = [];
       for (var i = 0; i < this._party.length; i++) {
-        this.canvasPartyStats.push( this._party[i].getStatDisplay() );
+        this.canvasPartyStats.push(
+          this._party[i].getStatDisplay(this._statDisplayType));
       }
     } else {
       for (var i = 0; i < this._party.length; i++) {
-        var statHtml = this._party[i].getStatDisplay();
+        var statHtml = this._party[i].getStatDisplay(this._statDisplayType);
         var statBox = $("<div></div>").html(statHtml);
         statBox.addClass("stats");
         this._htmlElem.append(statBox);
@@ -874,6 +876,49 @@ ScrollingTextBox.prototype = {
     // not used
   }
 };
+
+function FixedTextBox(textLines, menuSystem) {
+  // tries to open window big enough to show all lines of text
+  // at once.
+  this.menuSystem = menuSystem;
+  var styles = CanvasTextUtils.getStyles();
+  // TODO get longest line out of textLines?
+  
+  // TODO this duplicates code from CanvasCmdMenu
+  var longestLine = 0;
+  for (var i =0; i < textLines.length; i++) {
+      if (textLines[i].length > longestLine) {
+        longestLine = textLines[i].length;
+      }
+    }
+  this.width = styles.leftMargin + styles.rightMargin 
+    + longestLine * styles.fontSize;
+  this.height = styles.topMargin + styles.bottomMargin
+    + textLines.length * styles.lineHeight;
+  this.textLines = textLines;
+}
+FixedTextBox.prototype = {
+  // Satisfies same interface as a CmdMenu, so it can go on
+  // the menu stack.
+  onKey: function(key) {
+    // do nothing
+  },
+  setPos: function(x, y) {
+    this.x = x;
+    this.y = y;
+  },
+  display: function(ctx) {
+    if (!ctx) { return; }
+    // TODO only works in Canvas world - make it work in CSS world
+    CanvasTextUtils.drawTextBox(ctx, this.x, this.y, 
+                                this.width, this.height,
+                                this.textLines);
+  },
+  close: function() {
+    // not used
+  }
+};
+
 
 function Dialoglog(htmlElem) {
   this._init(htmlElem);

@@ -12,6 +12,7 @@ function BattleSystem(htmlElem, canvas, options) {
   // this.endBattleCallbacks = []; // deprecated
   // use onClose instead
   this._attackSFX = null;
+  this._statDisplayType = "battle";
 
   if (options.defaultMsg) {
     this.defaultMsg = options.defaultMsg;
@@ -607,6 +608,9 @@ var BattlerMixin = function() {
   };
   this.getStat = function(statName) {
     return this._statBlock[statName];
+  };
+  this.hasStat = function(statName) {
+    return (this._statBlock[statName] != undefined);
   };
   this.modifyStat = function(statName, delta) {
     this._statBlock[statName] += delta;

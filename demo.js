@@ -517,6 +517,12 @@ function setUpFieldMenu() {
     effect: function(menus, party) {
       menus.showPartyStats();
       menus.showPartyResources();
+      menus.chooseCharacter("Whose?", function(character) {
+        var stats = character.getStatDisplay("longform");
+        var textLines = stats.split("<br>");
+        var statsBox = new FixedTextBox(textLines, menus);
+        menus.pushMenu(statsBox);
+      });
     }});
   fieldCommands.add("ORDER",{
     effect: function(menus, party) {
