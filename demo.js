@@ -370,6 +370,7 @@ function setUpBattleSystem(canvas, loader) {
   var battleSystem = new BattleSystem($("#battle-system"),
                                       canvas,
                                       {
+                                        frameDelay: 100,
                                         metaCmdSet: metaCmdSet,
                                         defaultCmdSet: defaultCmdSet
                                       });

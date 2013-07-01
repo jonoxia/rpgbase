@@ -39,10 +39,9 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onVictory) {
     this._victoryCallback = options.onVictory;
   }
-  if (options.msgDelay) {
-    this._msgDelay = options.msgDelay;
-  } else {
-    this._msgDelay = 750;
+  var frameDelay = 50; // default (very fast)
+  if (options.frameDelay) {
+    frameDelay = options.frameDelay;
   }
   if (options.metaCmdSet) {
     this._rootMenu = this.menuFromCmdSet("Party", options.metaCmdSet);
@@ -54,8 +53,7 @@ function BattleSystem(htmlElem, canvas, options) {
 
   this._freelyExit = false;
 
-  // TODO NOT hard code frame rate
-  this._animator = new Animator(50,
+  this._animator = new Animator(frameDelay,
                                 function() {self.draw();});
 
   // Stuff to always do when battle ends:
