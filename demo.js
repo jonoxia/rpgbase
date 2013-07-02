@@ -194,7 +194,7 @@ function setUpMapScreen(canvas, audioPlayer) {
   return mapScreen;
 }
 
-function setUpOverworldMap(loader) {
+function setUpOverworldMap(loader, encounterTable) {
   var map = new Map(mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
     return {x:mapCode, y:0};
@@ -205,14 +205,15 @@ function setUpOverworldMap(loader) {
   map.onStep({landType: 39}, function(pc, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
-  map.musicTrack = "music/overworld";
+  map.setMusicTrack("music/overworld");
+  map.setEncounterTable(encounterTable);
 
   return map;
 }
 
 function setUpTownMap(loader, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
-  town.musicTrack = "music/town";
+  town.setMusicTrack("music/town");
   var spriteSheet = loader.add("mapsprites.png");
   var hintguy = new NPC(spriteSheet, mapScreen, 16, 24, 0, -8);
   hintguy.wander();
@@ -679,16 +680,16 @@ $(document).ready( function() {
   var mapScreen = setUpMapScreen(canvas, audioPlayer);
   var battleSystem = setUpBattleSystem(canvas, loader);
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
-  var encounterTable = setUpEncounterTable(manuel);
-  var overworld = setUpOverworldMap(loader);
+  var overworldEncounters = setUpEncounterTable(manuel);
+  var overworld = setUpOverworldMap(loader, overworldEncounters);
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
 
-  var musicUrl = "music/overworld";
-  audioPlayer.preload(musicUrl);
+  audioPlayer.preload("music/overworld");
   audioPlayer.preload("music/boss");
   audioPlayer.preload("music/town");
+
   CanvasTextUtils.setFontImg(loader.add("font.png"));
   CanvasTextUtils.setStyles({cornerRadius: 5, fontSize: 8,
                              maxLineLength: 26});
@@ -725,7 +726,11 @@ $(document).ready( function() {
     //stop map screen animator:
     mapScreen.stop();
     // choose a random encounter:
-    var encounter = encounterTable.rollEncounter(x, y, landType);
+    var table = mapScreen.getEncounterTable();
+    if (!table) {
+      console.log("Error - no encounter table defined for this domain!");
+    }
+    var encounter = table.rollEncounter(x, y, landType);
     // switch bgm to battle
     audioPlayer.changeTrack("music/boss", true);
     battleSystem.startBattle(player, encounter, landType);
@@ -751,15 +756,12 @@ $(document).ready( function() {
 
   situateTown(townMap, overworld, 8, 17, 4, 4);
 
-
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onClose(function() {
     mapScreen.start();
     // switch back to map music
-    audioPlayer.changeTrack(musicUrl, true);
   });
-
 
   /* Prepare for the game to start!
    * Put the player at position 4, 4 in the overworld: */
@@ -772,7 +774,6 @@ $(document).ready( function() {
     inputDispatcher.mapMode();
     // and begin map animation:
     mapScreen.start();
-    //audioPlayer.play(musicUrl, true);
     /*inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                     number: 3}, 1);*/
