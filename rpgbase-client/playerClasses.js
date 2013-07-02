@@ -615,17 +615,6 @@ PlayerCharacter.prototype = {
       return this._equippedItems[slot].getEquipType();
     }
     return null;
-  },
-
-  getEquipmentStat: function(statName) {
-    var statValue = 0;
-    for (var slot in this._equippedItems) {
-      if (this._equippedItems[slot]) {
-        var mod = this._equippedItems[slot].getEquipStat(statName);
-        statValue += mod;
-      }
-    }
-    return statValue;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);
@@ -634,7 +623,16 @@ MapSpriteMixin(PlayerCharacter.prototype);
 // TODO: This is
 // a bit hacky and I should think about how to implement proper
 // subclassing that lets me override but still call the base method:
-PlayerCharacter.prototype.getBaseStat = PlayerCharacter.prototype.getStat;
+PlayerCharacter.prototype.getEquipmentStat = function(statName) {
+  var statValue = 0;
+  for (var slot in this._equippedItems) {
+    if (this._equippedItems[slot]) {
+      var mod = this._equippedItems[slot].getEquipStat(statName);
+      statValue += mod;
+    }
+  }
+  return statValue;
+};
 PlayerCharacter.prototype.getStat = function(statName) {
   var statValue;
   if (this.hasStat(statName)) {

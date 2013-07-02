@@ -708,7 +708,13 @@ var BattlerMixin = function() {
     this._statBlock[statName] = value;
   };
   this.getStat = function(statName) {
+    return this.getBaseStat(statName);
+  };
+  this.getBaseStat = function(statName) {
     return this._statBlock[statName];
+  };
+  this.getEquipmentStat = function(statName) {
+    return 0;
   };
   this.hasStat = function(statName) {
     return (this._statBlock[statName] != undefined);
