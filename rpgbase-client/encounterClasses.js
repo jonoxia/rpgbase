@@ -4,6 +4,62 @@ function Encounter(monsterList) {
 Encounter.prototype = {
 };
 
+function EncounterTable(data) {
+  this._data = data;
+}
+EncounterTable.prototype = {
+  rollEncounter: function() {
+    var dieRoll = rollDice(1, 100);
+
+    var matchIndex = 0;
+    console.log("Random encounter table rolls: " + dieRoll);
+    while (dieRoll > this._data[matchIndex].highRoll) {
+      matchIndex ++;
+      if (matchIndex >= this._data.length) {
+        return null;
+      }
+    }
+    var encounter = this._data[matchIndex];
+    return {number: encounter.number, type: encounter.type};
+  }
+};
+
+
+function EncounterTableSet() {
+  // Each map domain should get its own instance of this class??
+  // either that or have one instance but implement domain-id filters
+  this._tableFilters = [];
+}
+EncounterTableSet.prototype = {
+  addTable: function(table, filter) {
+    // filter can have .landType, .georegion, and/or .callback
+    // this table will be used only if all specified filters match
+    this._tableFilters.push({filter: filter,
+                             table: table});
+  },
+
+  getMatchingTable: function(landType, geoRegion) {
+    
+  },
+  
+  defineGeoregion: function(left, top, right, bottom, code) {
+    
+  },
+  
+  rollEncounter: function(x, y, landType) {
+    // TODO: use the first table whose filters match
+    // this.getMatchingTable(landType, geoRegion);
+    var table = this._tableFilters[0].table;
+    if (table == null) {
+      return null;
+    } else {
+      return table.rollEncounter();
+    }
+  }
+};
+
+
+
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
   this._init(htmlElem);

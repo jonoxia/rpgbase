@@ -490,6 +490,16 @@ function setUpMonstrousManuel(loader) {
   return manuel;
 }
 
+function setUpEncounterTable(manuel) {
+  var table = new EncounterTable([
+    {highRoll: 35, number: 1, type: manuel.biteWorm},
+    {highRoll: 65, number: 3, type: manuel.biteWorm},
+    {highRoll: 85, number: 1, type: manuel.groundSnake},
+    {highRoll: 100, number: 2, type: manuel.groundSnake}
+  ]);
+  return table;
+}
+
 function setUpFieldMenu() {
   // set up menu system
   var fieldCommands = new BattleCommandSet();
@@ -636,6 +646,7 @@ $(document).ready( function() {
   var mapScreen = setUpMapScreen(canvas, audioPlayer);
   var battleSystem = setUpBattleSystem(canvas, loader);
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
+  var encounterTable = setUpEncounterTable(manuel);
   var overworld = setUpOverworldMap(loader);
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
@@ -680,11 +691,11 @@ $(document).ready( function() {
     inputDispatcher.menuMode("battle");
     //stop map screen animator:
     mapScreen.stop();
+    // choose a random encounter:
+    var encounter = encounterTable.rollEncounter();
     // switch bgm to battle
     audioPlayer.changeTrack("music/boss", true);
-
-    battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                      number: 3}, landType);
+    battleSystem.startBattle(player, encounter, landType);
   });
 
   var townMap = setUpTownMap(loader, mapScreen);
@@ -725,13 +736,13 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     // and start listening for (map screen) input:
-    //inputDispatcher.mapMode();
+    inputDispatcher.mapMode();
     // and begin map animation:
-    //mapScreen.start();
+    mapScreen.start();
     //audioPlayer.play(musicUrl, true);
-    inputDispatcher.menuMode("battle");
+    /*inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                    number: 3}, 1);
+                                    number: 3}, 1);*/
 
   });
 
