@@ -484,20 +484,36 @@ function setUpMonstrousManuel(loader) {
                               {hp: 10, gp: 2, exp: 3}),
     groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                                  "Groundsnake",
-                                 {hp: 15, gp: 4, exp: 7})
+                                 {hp: 15, gp: 4, exp: 7}),
+    seaWorm: new MonsterType(loader.add("monsters/biteworm.png"),
+                              "Seaworm",
+                              {hp: 20, gp: 8, exp: 12}),
+    seaSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
+                              "Seasnake",
+                              {hp: 30, gp: 12, exp: 17}),
     // TODO - Add more monster definitions here. Comma-separated.
   };
   return manuel;
 }
 
 function setUpEncounterTable(manuel) {
-  var table = new EncounterTable([
+  var landEncounters = new EncounterTable([
     {highRoll: 35, number: 1, type: manuel.biteWorm},
     {highRoll: 65, number: 3, type: manuel.biteWorm},
     {highRoll: 85, number: 1, type: manuel.groundSnake},
     {highRoll: 100, number: 2, type: manuel.groundSnake}
   ]);
-  return table;
+
+  var waterEncounters = new EncounterTable([
+    {highRoll: 50, number: 2, type: manuel.seaWorm},
+    {highRoll: 100, number: 1, type: manuel.seaSnake}
+  ]);
+
+  var masterTable = new EncounterTableSet();
+  masterTable.addTable(waterEncounters, {landType: 36});
+  masterTable.addTable(landEncounters, {});
+
+  return masterTable;
 }
 
 function setUpFieldMenu() {
@@ -692,7 +708,7 @@ $(document).ready( function() {
     //stop map screen animator:
     mapScreen.stop();
     // choose a random encounter:
-    var encounter = encounterTable.rollEncounter();
+    var encounter = encounterTable.rollEncounter(x, y, landType);
     // switch bgm to battle
     audioPlayer.changeTrack("music/boss", true);
     battleSystem.startBattle(player, encounter, landType);

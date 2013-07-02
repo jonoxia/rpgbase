@@ -38,18 +38,41 @@ EncounterTableSet.prototype = {
                              table: table});
   },
 
-  getMatchingTable: function(landType, geoRegion) {
-    
+  getMatchingTable: function(landType, regionCode) {
+    for (var i = 0; i < this._tableFilters.length; i++) {
+      var filter = this._tableFilters[i].filter;
+      var table = this._tableFilters[i].table;
+      
+      if (filter.landType != undefined) {
+        if (landType != filter.landType) {
+          continue;
+        }
+      }
+      if (filter.regionCode != undefined) {
+        if (regionCode != filter.regionCode) {
+          continue;
+        }
+      }
+      // TODO implement additional filter types here!
+
+      // still here? must be a match
+      return table;
+    }
+    return null;
   },
   
-  defineGeoregion: function(left, top, right, bottom, code) {
-    
+  defineRegion: function(left, top, right, bottom, code) {
+    // TODO
+  },
+
+  getRegion: function(x, y) {
+    // TODO
+    return 0;
   },
   
   rollEncounter: function(x, y, landType) {
-    // TODO: use the first table whose filters match
-    // this.getMatchingTable(landType, geoRegion);
-    var table = this._tableFilters[0].table;
+    var regionCode = this.getRegion(x, y);
+    var table = this.getMatchingTable(landType, regionCode);
     if (table == null) {
       return null;
     } else {
