@@ -491,17 +491,31 @@ function setUpMonstrousManuel(loader) {
     seaSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                               "Seasnake",
                               {hp: 30, gp: 12, exp: 17}),
+    eastWorm: new MonsterType(loader.add("monsters/biteworm.png"),
+                              "Eastworm",
+                              {hp: 20, gp: 8, exp: 12}),
+    eastSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
+                              "Eastsnake",
+                              {hp: 30, gp: 12, exp: 17})
+
     // TODO - Add more monster definitions here. Comma-separated.
   };
   return manuel;
 }
 
 function setUpEncounterTable(manuel) {
-  var landEncounters = new EncounterTable([
+  var westLandEncounters = new EncounterTable([
     {highRoll: 35, number: 1, type: manuel.biteWorm},
     {highRoll: 65, number: 3, type: manuel.biteWorm},
     {highRoll: 85, number: 1, type: manuel.groundSnake},
     {highRoll: 100, number: 2, type: manuel.groundSnake}
+  ]);
+
+  var eastLandEncounters = new EncounterTable([
+    {highRoll: 35, number: 1, type: manuel.eastWorm},
+    {highRoll: 65, number: 3, type: manuel.eastWorm},
+    {highRoll: 85, number: 1, type: manuel.eastSnake},
+    {highRoll: 100, number: 2, type: manuel.eastSnake}
   ]);
 
   var waterEncounters = new EncounterTable([
@@ -510,8 +524,11 @@ function setUpEncounterTable(manuel) {
   ]);
 
   var masterTable = new EncounterTableSet();
+  
+  masterTable.defineRegion(10, 6, 19, 19, "eastlands");
   masterTable.addTable(waterEncounters, {landType: 36});
-  masterTable.addTable(landEncounters, {});
+  masterTable.addTable(eastLandEncounters, {regionCode: "eastlands"});
+  masterTable.addTable(westLandEncounters, {}); // everything else
 
   return masterTable;
 }

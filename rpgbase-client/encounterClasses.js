@@ -29,6 +29,7 @@ function EncounterTableSet() {
   // Each map domain should get its own instance of this class??
   // either that or have one instance but implement domain-id filters
   this._tableFilters = [];
+  this._geoRegions = [];
 }
 EncounterTableSet.prototype = {
   addTable: function(table, filter) {
@@ -62,12 +63,19 @@ EncounterTableSet.prototype = {
   },
   
   defineRegion: function(left, top, right, bottom, code) {
-    // TODO
+    this._geoRegions.push({left: left, top: top, right: right,
+                           bottom: bottom, code: code});
   },
 
   getRegion: function(x, y) {
-    // TODO
-    return 0;
+    for (var i = 0; i < this._geoRegions.length; i++) {
+      var region = this._geoRegions[i];
+      if (x >= region.left && x <= region.right &&
+          y >= region.top && y <= region.bottom) {
+        return region.code;
+      }
+    }
+    return null;
   },
   
   rollEncounter: function(x, y, landType) {
