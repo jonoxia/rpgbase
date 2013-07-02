@@ -542,19 +542,30 @@ PlayerCharacter.prototype = {
     // TODO what happens if you REPEAT a round of battle in which
     // somebody used a one-use item?
   },
-  getStatDisplay: function() {
+  getStatDisplay: function(mode) {
     var html = this.name;
     html += "<br>";
-    for (var propName in this._statBlock) {
-      html+= propName + ": " + this._statBlock[propName] + "<br>";
-    }
-    for (var slot in this._equippedItems) {
-      if (this._equippedItems[slot]) {
-        html += slot + ": " 
-          + this._equippedItems[slot].getName() + "<br>";
+    if (mode != "longform") {
+      var importantStats = ["level", "hp", "mp"];
+      for (var i = 0; i < importantStats.length; i++) {
+        if (this.hasStat(importantStats[i])) {
+          html += importantStats[i] + ":" + this.getStat(importantStats[i]) + "<br>";
+        }
       }
     }
-    if (this._lockedAction) {
+    
+    if (mode == "longform") {
+      for (var propName in this._statBlock) {
+        html+= propName + ": " + this.getStat(propName) + "<br>";
+      }
+      for (var slot in this._equippedItems) {
+        if (this._equippedItems[slot]) {
+          html += slot + ": " 
+            + this._equippedItems[slot].getName() + "<br>";
+        }
+      }
+    }
+    if (mode == "battle" && this._lockedAction) {
       html += this._lockedAction.cmd.name;
     }
     return html;
@@ -604,10 +615,36 @@ PlayerCharacter.prototype = {
       return this._equippedItems[slot].getEquipType();
     }
     return null;
+  },
+
+  getEquipmentStat: function(statName) {
+    var statValue = 0;
+    for (var slot in this._equippedItems) {
+      if (this._equippedItems[slot]) {
+        var mod = this._equippedItems[slot].getEquipStat(statName);
+        statValue += mod;
+      }
+    }
+    return statValue;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);
 MapSpriteMixin(PlayerCharacter.prototype);
+// Overriding the getStat that is defined in MapSpriteMixin.
+// TODO: This is
+// a bit hacky and I should think about how to implement proper
+// subclassing that lets me override but still call the base method:
+PlayerCharacter.prototype.getBaseStat = PlayerCharacter.prototype.getStat;
+PlayerCharacter.prototype.getStat = function(statName) {
+  var statValue;
+  if (this.hasStat(statName)) {
+    statValue = this.getBaseStat(statName);
+  } else {
+    statValue = 0;
+  }
+  statValue += this.getEquipmentStat(statName);
+  return statValue;
+};
 
 
 function Vehicle(spriteSheet, width, height, offsetX, offsetY) {

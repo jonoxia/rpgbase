@@ -4,6 +4,93 @@ function Encounter(monsterList) {
 Encounter.prototype = {
 };
 
+function EncounterTable(data) {
+  this._data = data;
+}
+EncounterTable.prototype = {
+  rollEncounter: function() {
+    var dieRoll = rollDice(1, 100);
+
+    var matchIndex = 0;
+    console.log("Random encounter table rolls: " + dieRoll);
+    while (dieRoll > this._data[matchIndex].highRoll) {
+      matchIndex ++;
+      if (matchIndex >= this._data.length) {
+        return null;
+      }
+    }
+    var encounter = this._data[matchIndex];
+    return {number: encounter.number, type: encounter.type};
+  }
+};
+
+
+function EncounterTableSet() {
+  // Each map domain should get its own instance of this class??
+  // either that or have one instance but implement domain-id filters
+  this._tableFilters = [];
+  this._geoRegions = [];
+}
+EncounterTableSet.prototype = {
+  addTable: function(table, filter) {
+    // filter can have .landType, .georegion, and/or .callback
+    // this table will be used only if all specified filters match
+    this._tableFilters.push({filter: filter,
+                             table: table});
+  },
+
+  getMatchingTable: function(landType, regionCode) {
+    for (var i = 0; i < this._tableFilters.length; i++) {
+      var filter = this._tableFilters[i].filter;
+      var table = this._tableFilters[i].table;
+      
+      if (filter.landType != undefined) {
+        if (landType != filter.landType) {
+          continue;
+        }
+      }
+      if (filter.regionCode != undefined) {
+        if (regionCode != filter.regionCode) {
+          continue;
+        }
+      }
+      // TODO implement additional filter types here!
+
+      // still here? must be a match
+      return table;
+    }
+    return null;
+  },
+  
+  defineRegion: function(left, top, right, bottom, code) {
+    this._geoRegions.push({left: left, top: top, right: right,
+                           bottom: bottom, code: code});
+  },
+
+  getRegion: function(x, y) {
+    for (var i = 0; i < this._geoRegions.length; i++) {
+      var region = this._geoRegions[i];
+      if (x >= region.left && x <= region.right &&
+          y >= region.top && y <= region.bottom) {
+        return region.code;
+      }
+    }
+    return null;
+  },
+  
+  rollEncounter: function(x, y, landType) {
+    var regionCode = this.getRegion(x, y);
+    var table = this.getMatchingTable(landType, regionCode);
+    if (table == null) {
+      return null;
+    } else {
+      return table.rollEncounter();
+    }
+  }
+};
+
+
+
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
   this._init(htmlElem);
@@ -12,6 +99,7 @@ function BattleSystem(htmlElem, canvas, options) {
   // this.endBattleCallbacks = []; // deprecated
   // use onClose instead
   this._attackSFX = null;
+  this._statDisplayType = "battle";
 
   if (options.defaultMsg) {
     this.defaultMsg = options.defaultMsg;
@@ -38,10 +126,9 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onVictory) {
     this._victoryCallback = options.onVictory;
   }
-  if (options.msgDelay) {
-    this._msgDelay = options.msgDelay;
-  } else {
-    this._msgDelay = 750;
+  var frameDelay = 50; // default (very fast)
+  if (options.frameDelay) {
+    frameDelay = options.frameDelay;
   }
   if (options.metaCmdSet) {
     this._rootMenu = this.menuFromCmdSet("Party", options.metaCmdSet);
@@ -53,8 +140,7 @@ function BattleSystem(htmlElem, canvas, options) {
 
   this._freelyExit = false;
 
-  // TODO NOT hard code frame rate
-  this._animator = new Animator(50,
+  this._animator = new Animator(frameDelay,
                                 function() {self.draw();});
 
   // Stuff to always do when battle ends:
@@ -250,6 +336,25 @@ BattleSystem.prototype = {
       }
     }
 
+    if (this.menuImpl == "canvas" && this.monsters.length > 0) {
+      // draw monster stats 
+      // TODO make this FixedTextBox once, and give it a way to
+      // update the text inside when needed. Then make it a special
+      // case of menu system info window.
+      // TODO position of this info window (and its existince)
+      // should be set in userland.
+      var monsterStatLines = [];
+      monsterStatLines.push(this.monsters[0].name);
+      for (var i = 0; i < this.monsters.length; i++) {
+        var monsterName = this.monsters[i].name;
+        var monsterLetter = monsterName[monsterName.length -1 ];
+        monsterStatLines.push(monsterLetter + " " + this.monsters[i].getStat("hp"));
+      }
+      var box = new FixedTextBox(monsterStatLines, this);
+      box.setPos(180, 0);
+      box.display(this._ctx);
+    }
+
     if (this.menuImpl == "canvas") {
       this.drawCanvasMenus(this._ctx);
     }
@@ -366,7 +471,7 @@ BattleSystem.prototype = {
 
   executeNextFighterAction: function(fightQueue) {
     if (this._theEndHasCome) {
-      console.log("ExecuteNextfighterAction called After The End.");
+      // If battle has already ended, don't continue executing.
       return;
     }
     this.displayElem.empty();// clear the message
@@ -412,9 +517,6 @@ BattleSystem.prototype = {
       self.executeNextFighterAction(fightQueue);
     });
     this._animator.runAnimation(this._attackSFX);
-    // TODO: If a fight ending condition is triggered, finish
-    // the currently pending animation before exiting,
-    // but don't start any more.
   },
 
   endBattle: function(winLoseRun) {
@@ -608,6 +710,9 @@ var BattlerMixin = function() {
   this.getStat = function(statName) {
     return this._statBlock[statName];
   };
+  this.hasStat = function(statName) {
+    return (this._statBlock[statName] != undefined);
+  };
   this.modifyStat = function(statName, delta) {
     this._statBlock[statName] += delta;
   };
@@ -631,7 +736,6 @@ var BattlerMixin = function() {
     return data;
   }
 }
-
 
 function Monster(img, statBlock, effectHandlers) {
   this.img = img;

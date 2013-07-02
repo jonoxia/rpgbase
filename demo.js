@@ -42,11 +42,11 @@ var townData = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-var experienceForLevel = [0, 15, 30, 45];
-var statsByLevel = [{str: 4},
-                    {str: 8},
-                    {str: 12},
-                    {str: 16}];
+var experienceForLevel = [0, 30, 75, 100];
+var statsByLevel = [{atk: 4, def: 2},
+                    {atk: 8, def: 4},
+                    {atk: 12, def: 6},
+                    {atk: 16, def: 8}];
 
 function pcCheckLevelUp(pc) {
   var currLevel = pc.getStat("level");
@@ -121,8 +121,6 @@ function setUpParty(loader) {
 
   var hero = makeOnePC("ALIS", spriteSheet, 1);
   var sidekick = makeOnePC("MYAU", spriteSheet, 0);
-  // for debugging main character death
-  hero.setStat("hp", 1);
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);
 
@@ -196,7 +194,7 @@ function setUpMapScreen(canvas, audioPlayer) {
   return mapScreen;
 }
 
-function setUpOverworldMap(loader) {
+function setUpOverworldMap(loader, encounterTable) {
   var map = new Map(mapData, loader.add("terrain.png"));
   map.getTileForCode = function(mapCode) {
     return {x:mapCode, y:0};
@@ -207,14 +205,15 @@ function setUpOverworldMap(loader) {
   map.onStep({landType: 39}, function(pc, x, y) {
     $("#debug").html("You stepped on a hill.");
   });
-  map.musicTrack = "music/overworld";
+  map.setMusicTrack("music/overworld");
+  map.setEncounterTable(encounterTable);
 
   return map;
 }
 
 function setUpTownMap(loader, mapScreen) {
   var town = new Map(townData, loader.add("terrain.png"));
-  town.musicTrack = "music/town";
+  town.setMusicTrack("music/town");
   var spriteSheet = loader.add("mapsprites.png");
   var hintguy = new NPC(spriteSheet, mapScreen, 16, 24, 0, -8);
   hintguy.wander();
@@ -372,6 +371,7 @@ function setUpBattleSystem(canvas, loader) {
   var battleSystem = new BattleSystem($("#battle-system"),
                                       canvas,
                                       {
+                                        frameDelay: 100,
                                         metaCmdSet: metaCmdSet,
                                         defaultCmdSet: defaultCmdSet
                                       });
@@ -404,7 +404,7 @@ function setUpBattleSystem(canvas, loader) {
   battleSystem.onEffect("damage", function(target, data) {
     target.modifyStat("hp", (-1) * data.amount);
 
-    battleSystem.showMsg(target.name + "'s HP drops to " + target.getStat("hp"));
+    battleSystem.showMsg(target.name + " takes " + data.amount + " damage!");
     // check for death:
     if (target.getStat("hp") <= 0) {
       battleSystem.removeFromBattle(target);
@@ -485,10 +485,53 @@ function setUpMonstrousManuel(loader) {
                               {hp: 10, gp: 2, exp: 3}),
     groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                                  "Groundsnake",
-                                 {hp: 15, gp: 4, exp: 7})
+                                 {hp: 15, gp: 4, exp: 7}),
+    seaWorm: new MonsterType(loader.add("monsters/biteworm.png"),
+                              "Seaworm",
+                              {hp: 20, gp: 8, exp: 12}),
+    seaSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
+                              "Seasnake",
+                              {hp: 30, gp: 12, exp: 17}),
+    eastWorm: new MonsterType(loader.add("monsters/biteworm.png"),
+                              "Eastworm",
+                              {hp: 20, gp: 8, exp: 12}),
+    eastSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
+                              "Eastsnake",
+                              {hp: 30, gp: 12, exp: 17})
+
     // TODO - Add more monster definitions here. Comma-separated.
   };
   return manuel;
+}
+
+function setUpEncounterTable(manuel) {
+  var westLandEncounters = new EncounterTable([
+    {highRoll: 35, number: 1, type: manuel.biteWorm},
+    {highRoll: 65, number: 3, type: manuel.biteWorm},
+    {highRoll: 85, number: 1, type: manuel.groundSnake},
+    {highRoll: 100, number: 2, type: manuel.groundSnake}
+  ]);
+
+  var eastLandEncounters = new EncounterTable([
+    {highRoll: 35, number: 1, type: manuel.eastWorm},
+    {highRoll: 65, number: 3, type: manuel.eastWorm},
+    {highRoll: 85, number: 1, type: manuel.eastSnake},
+    {highRoll: 100, number: 2, type: manuel.eastSnake}
+  ]);
+
+  var waterEncounters = new EncounterTable([
+    {highRoll: 50, number: 2, type: manuel.seaWorm},
+    {highRoll: 100, number: 1, type: manuel.seaSnake}
+  ]);
+
+  var masterTable = new EncounterTableSet();
+  
+  masterTable.defineRegion(10, 6, 19, 19, "eastlands");
+  masterTable.addTable(waterEncounters, {landType: 36});
+  masterTable.addTable(eastLandEncounters, {regionCode: "eastlands"});
+  masterTable.addTable(westLandEncounters, {}); // everything else
+
+  return masterTable;
 }
 
 function setUpFieldMenu() {
@@ -517,6 +560,12 @@ function setUpFieldMenu() {
     effect: function(menus, party) {
       menus.showPartyStats();
       menus.showPartyResources();
+      menus.chooseCharacter("Whose?", function(character) {
+        var stats = character.getStatDisplay("longform");
+        var textLines = stats.split("<br>");
+        var statsBox = new FixedTextBox(textLines, menus);
+        menus.pushMenu(statsBox);
+      });
     }});
   fieldCommands.add("ORDER",{
     effect: function(menus, party) {
@@ -631,15 +680,16 @@ $(document).ready( function() {
   var mapScreen = setUpMapScreen(canvas, audioPlayer);
   var battleSystem = setUpBattleSystem(canvas, loader);
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
-  var overworld = setUpOverworldMap(loader);
+  var overworldEncounters = setUpEncounterTable(manuel);
+  var overworld = setUpOverworldMap(loader, overworldEncounters);
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
 
-  var musicUrl = "music/overworld";
-  audioPlayer.preload(musicUrl);
+  audioPlayer.preload("music/overworld");
   audioPlayer.preload("music/boss");
   audioPlayer.preload("music/town");
+
   CanvasTextUtils.setFontImg(loader.add("font.png"));
   CanvasTextUtils.setStyles({cornerRadius: 5, fontSize: 8,
                              maxLineLength: 26});
@@ -672,14 +722,21 @@ $(document).ready( function() {
    * When an encounter happens, switch to the battlescreen-style
    * input, and start the battle */
   overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
+    // choose a random encounter:
+    var table = mapScreen.getEncounterTable();
+    if (!table) {
+      console.log("Error - no encounter table defined for this domain!");
+      return;
+    }
+    var encounter = table.rollEncounter(x, y, landType);
+    // switch input mode:
     inputDispatcher.menuMode("battle");
-    //stop map screen animator:
+    // stop map screen animator:
     mapScreen.stop();
     // switch bgm to battle
     audioPlayer.changeTrack("music/boss", true);
-
-    battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                      number: 3}, landType);
+    // start battleSystem!
+    battleSystem.startBattle(player, encounter, landType);
   });
 
   var townMap = setUpTownMap(loader, mapScreen);
@@ -702,15 +759,12 @@ $(document).ready( function() {
 
   situateTown(townMap, overworld, 8, 17, 4, 4);
 
-
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onClose(function() {
     mapScreen.start();
     // switch back to map music
-    audioPlayer.changeTrack(musicUrl, true);
   });
-
 
   /* Prepare for the game to start!
    * Put the player at position 4, 4 in the overworld: */
@@ -723,7 +777,6 @@ $(document).ready( function() {
     inputDispatcher.mapMode();
     // and begin map animation:
     mapScreen.start();
-    audioPlayer.play(musicUrl, true);
     /*inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
                                     number: 3}, 1);*/

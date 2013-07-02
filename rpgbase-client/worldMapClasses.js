@@ -132,6 +132,14 @@ Map.prototype = {
     for (var i = 0; i < this._npcs.length; i++) {
       this._npcs[i].sleep();
     }
+  },
+
+  setMusicTrack: function(trackName) {
+    this.musicTrack = trackName;
+  },
+
+  setEncounterTable: function(table) {
+    this.encounterTable = table;
   }
 }
 
@@ -410,6 +418,12 @@ MapScreen.prototype = {
 
   start: function() {
     this._animator.start();
+    if (this._audioPlayer) {
+      if (this._currentDomain.musicTrack) {
+        this._audioPlayer.changeTrack(this._currentDomain.musicTrack,
+                                      true);
+      }
+    }
     this.render();
   },
 
@@ -419,5 +433,12 @@ MapScreen.prototype = {
 
   afterRender: function(callback) {
     this._afterRenderCallback = callback;
+  },
+
+  getEncounterTable: function() {
+    if (this._currentDomain && this._currentDomain.encounterTable) {
+      return this._currentDomain.encounterTable;
+    }
+    return null;
   }
 };

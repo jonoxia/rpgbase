@@ -237,6 +237,14 @@ ItemInstance.prototype = {
 
   getEquipStats: function() {
     return this._equipStats;
+  },
+
+  getEquipStat: function(statName) {
+    if (this._equipStats[statName] != undefined) {
+      return this._equipStats[statName];
+    } else {
+      return 0;
+    }
   }
 };
 /*
