@@ -189,7 +189,7 @@ MapScreen.prototype = {
     this._scrollY = 0;
     this._currentDomain.load();
     if (this._audioPlayer && domain.musicTrack) {
-      this._audioPlayer.changeTrack(domain.musicTrack);
+      this._audioPlayer.changeTrack(domain.musicTrack, true);
     }
   },
 
