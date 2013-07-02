@@ -42,11 +42,11 @@ var townData = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ];
 
-var experienceForLevel = [0, 15, 30, 45];
-var statsByLevel = [{str: 4},
-                    {str: 8},
-                    {str: 12},
-                    {str: 16}];
+var experienceForLevel = [0, 30, 75, 100];
+var statsByLevel = [{atk: 4, def: 2},
+                    {atk: 8, def: 4},
+                    {atk: 12, def: 6},
+                    {atk: 16, def: 8}];
 
 function pcCheckLevelUp(pc) {
   var currLevel = pc.getStat("level");
@@ -722,17 +722,20 @@ $(document).ready( function() {
    * When an encounter happens, switch to the battlescreen-style
    * input, and start the battle */
   overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
-    inputDispatcher.menuMode("battle");
-    //stop map screen animator:
-    mapScreen.stop();
     // choose a random encounter:
     var table = mapScreen.getEncounterTable();
     if (!table) {
       console.log("Error - no encounter table defined for this domain!");
+      return;
     }
     var encounter = table.rollEncounter(x, y, landType);
+    // switch input mode:
+    inputDispatcher.menuMode("battle");
+    // stop map screen animator:
+    mapScreen.stop();
     // switch bgm to battle
     audioPlayer.changeTrack("music/boss", true);
+    // start battleSystem!
     battleSystem.startBattle(player, encounter, landType);
   });
 

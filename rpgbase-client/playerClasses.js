@@ -556,7 +556,7 @@ PlayerCharacter.prototype = {
     
     if (mode == "longform") {
       for (var propName in this._statBlock) {
-        html+= propName + ": " + this._statBlock[propName] + "<br>";
+        html+= propName + ": " + this.getStat(propName) + "<br>";
       }
       for (var slot in this._equippedItems) {
         if (this._equippedItems[slot]) {
@@ -615,10 +615,36 @@ PlayerCharacter.prototype = {
       return this._equippedItems[slot].getEquipType();
     }
     return null;
+  },
+
+  getEquipmentStat: function(statName) {
+    var statValue = 0;
+    for (var slot in this._equippedItems) {
+      if (this._equippedItems[slot]) {
+        var mod = this._equippedItems[slot].getEquipStat(statName);
+        statValue += mod;
+      }
+    }
+    return statValue;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);
 MapSpriteMixin(PlayerCharacter.prototype);
+// Overriding the getStat that is defined in MapSpriteMixin.
+// TODO: This is
+// a bit hacky and I should think about how to implement proper
+// subclassing that lets me override but still call the base method:
+PlayerCharacter.prototype.getBaseStat = PlayerCharacter.prototype.getStat;
+PlayerCharacter.prototype.getStat = function(statName) {
+  var statValue;
+  if (this.hasStat(statName)) {
+    statValue = this.getBaseStat(statName);
+  } else {
+    statValue = 0;
+  }
+  statValue += this.getEquipmentStat(statName);
+  return statValue;
+};
 
 
 function Vehicle(spriteSheet, width, height, offsetX, offsetY) {
