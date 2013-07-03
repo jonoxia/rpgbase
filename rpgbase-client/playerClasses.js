@@ -288,6 +288,12 @@ Player.prototype = {
       names.push(name);
     }
     return names;
+  },
+
+  forEachAliveMember: function(callback) {
+    for (var i = 0; i < this.aliveParty.length; i++) {
+	callback(this.aliveParty[i]);
+    }
   }
 }
 
