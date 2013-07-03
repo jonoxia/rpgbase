@@ -407,6 +407,7 @@ function MenuSystemMixin(subClassPrototype) {
     this._rootMenu = null;
     this._party = null;
     this._closeCallbacks = [];
+    this._openCallbacks = [];
     this._resourceVisible = false;
     this._statDisplayType = "short";
 
@@ -476,6 +477,9 @@ function MenuSystemMixin(subClassPrototype) {
     this.clearMsg();
     this.hidePartyStats();
     this.hidePartyResources();
+    for (var i = 0; i < this._openCallbacks.length; i++) {
+      this._openCallbacks[i]();
+    }
   };
 
   subClassPrototype.close = function() {
@@ -542,6 +546,10 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.hide = function() {
     this._htmlElem.hide();
+  };
+
+  subClassPrototype.onOpen = function(callback) {
+    this._openCallbacks.push(callback);
   };
 
   subClassPrototype.onClose = function(callback) {
