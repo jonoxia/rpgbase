@@ -701,6 +701,9 @@ var BattlerMixin = function() {
   this.die = function() {
     this._dead = true;
   };
+  this.revive = function() {
+    this._dead = false;
+  };
   this.isAlive = function() {
     return !this._dead;
   };
