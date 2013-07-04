@@ -580,8 +580,26 @@ function setUpFieldMenu() {
   return fieldMenu;
 }
 
-function setUpInputDispatch(player, mapScreen) {
-  var dispatcher = makeInputDispatcher(50, function(key) {
+function setUpInputDispatch(player, mapScreen, mazeScreen) {
+
+  var mazeKeyCallback = function(key) {
+    switch (key) {
+    case DOWN_ARROW:
+      mazeScreen.goBackward();
+      break;
+    case LEFT_ARROW:
+      mazeScreen.turnLeft();
+      break;
+    case UP_ARROW:
+      mazeScreen.goForward();
+      break;
+    case RIGHT_ARROW:
+      mazeScreen.turnRight();
+      break;
+    }
+  };
+
+  var mapScreenKeyCallback = function(key) {
     // Frame-rate = one frame per 50 ms
     var delX = 0, delY =0;
     switch (key) {
@@ -617,7 +635,11 @@ function setUpInputDispatch(player, mapScreen) {
       dispatcher.waitForAnimation(anim);
       mapScreen.animate(anim);
     }
-  });
+  };
+
+  var dispatcher = makeInputDispatcher(50);
+  dispatcher.addMapMode("overworld",  mapScreenKeyCallback);
+  dispatcher.addMapMode("maze", mazeKeyCallback);
 
   return dispatcher;
 }
@@ -685,6 +707,7 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
+  var mazeScreen = new FirstPersonMaze(sampleMazeData);
 
   audioPlayer.preload("music/overworld");
   audioPlayer.preload("music/boss");
@@ -707,7 +730,8 @@ $(document).ready( function() {
                              });
 
   // Set up the relationships between the main game components
-  var inputDispatcher = setUpInputDispatch(player, mapScreen);
+  var inputDispatcher = setUpInputDispatch(player, mapScreen,
+                                          mazeScreen);
   inputDispatcher.addMenuMode("menu", fieldMenu);
   inputDispatcher.addMenuMode("battle", battleSystem);
   inputDispatcher.addMenuMode("dialog", dialoglog);
@@ -737,6 +761,21 @@ $(document).ready( function() {
     audioPlayer.changeTrack("music/boss", true);
     // start battleSystem!
     battleSystem.startBattle(player, encounter, landType);
+  });
+
+
+  // Cave entrance -- when you step on this square, switch to maze
+  // mode!
+  overworld.onStep({x: 5, y: 7}, function(pc, x, y, landType) {
+    inputDispatcher.mapMode("maze");
+    mapScreen.stop();
+  });
+
+  // TODO make it so I can exit the maze by stepping back to the door
+  mazeScreen.onStep({x: 1, y: 1}, function(pc, x, y) {
+    console.log("You oughtta be exitin' the maze now");
+    inputDispatcher.mapMode("overworld");
+    mapScreen.start();
   });
 
   var townMap = setUpTownMap(loader, mapScreen);
@@ -774,7 +813,7 @@ $(document).ready( function() {
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
     // and start listening for (map screen) input:
-    inputDispatcher.mapMode();
+    inputDispatcher.mapMode("overworld");
     // and begin map animation:
     mapScreen.start();
     /*inputDispatcher.menuMode("battle");

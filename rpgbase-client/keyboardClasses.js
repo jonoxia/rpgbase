@@ -259,14 +259,17 @@ Animation.prototype = {
   }
 };
 
-
-
 function makeInputDispatcher(repeatRate, mapScreenKeyCallback) {
+  /* TODO expand this to handle multiple map screen modes in addition
+   * to multiple menu modes. Exiting a menu mode takes you back to the
+   * most recently used map screen mode. */
   /* Handles switching between map screen input mode and any
    * number of menu input modes */
   var openMenu = null;
+  var lastMapMode = null;
 
   var menuModes = {};
+  var mapModes = {};
 
   var menuInputHandler = new NoRepeatKeyHandler(
     function(key) {
@@ -276,14 +279,19 @@ function makeInputDispatcher(repeatRate, mapScreenKeyCallback) {
     });
 
   var mapInputHandler = new DPadStyleKeyHandler(repeatRate,
-                                                mapScreenKeyCallback);
+     function(key) {
+       if (lastMapMode) {
+         lastMapMode.handleKey(key);
+       }
+     });
+
   var dispatcher = {
     addMenuMode: function(name, menuMode) {
       // assumes menuMode implements standard menu mode interface
       // including onClose(callback) and handleKey(key).
       menuModes[name] = menuMode;
       menuMode.onClose(function() {
-        dispatcher.mapMode();
+        dispatcher.returnToMapMode();
       });
     },
 
@@ -293,11 +301,25 @@ function makeInputDispatcher(repeatRate, mapScreenKeyCallback) {
       menuInputHandler.startListening();
       return openMenu;
     },
+
+    addMapMode: function(name, callback) {
+      var mapMode = {handleKey: callback};
+      mapModes[name] = mapMode;
+    },
     
-    mapMode: function() {
+    mapMode: function(name) {
+      openMenu = null;
+      lastMapMode = mapModes[name];
+      menuInputHandler.stopListening();
+      mapInputHandler.startListening();
+      return lastMapMode;
+    },
+
+    returnToMapMode: function() {
       openMenu = null;
       menuInputHandler.stopListening();
       mapInputHandler.startListening();
+      return lastMapMode;
     },
 
     waitForAnimation: function(animation) {
