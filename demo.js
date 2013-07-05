@@ -583,20 +583,23 @@ function setUpFieldMenu() {
 function setUpInputDispatch(player, mapScreen, mazeScreen) {
 
   var mazeKeyCallback = function(key) {
+    var anim;
     switch (key) {
     case DOWN_ARROW:
-      mazeScreen.goBackward();
+      anim = mazeScreen.goBackward();
       break;
     case LEFT_ARROW:
-      mazeScreen.turnLeft();
+      anim = mazeScreen.turnLeft();
       break;
     case UP_ARROW:
-      mazeScreen.goForward();
+      anim = mazeScreen.goForward();
       break;
     case RIGHT_ARROW:
-      mazeScreen.turnRight();
+      anim = mazeScreen.turnRight();
       break;
     }
+    dispatcher.waitForAnimation(anim);
+    mazeScreen.animator.runAnimation(anim);
   };
 
   var mapScreenKeyCallback = function(key) {
@@ -683,6 +686,7 @@ function makeBoat(loader, overworld) {
 
 /* Main function - Everything starts here */
 $(document).ready( function() {
+  
   // Get the canvas from the HTML document:
   var canvas = document.getElementById("mapscreen-canvas");
   var ctx = canvas.getContext("2d");
@@ -695,8 +699,9 @@ $(document).ready( function() {
 
   // Create the loader (to load all images)
   var loader = new AssetLoader();
-
   // Create the main game components (see the various setUp functions)
+  var mazeScreen = new FirstPersonMaze(sampleMazeData, ctx,
+                                       512/2, 384/2);
   var player = setUpParty(loader);
   var audioPlayer = new AudioPlayer();
   var mapScreen = setUpMapScreen(canvas, audioPlayer);
@@ -707,7 +712,7 @@ $(document).ready( function() {
   var fieldMenu = setUpFieldMenu();
   var dialoglog = new Dialoglog($("#battle-system"));
   var boat = makeBoat(loader, overworld);
-  var mazeScreen = new FirstPersonMaze(sampleMazeData);
+
 
   audioPlayer.preload("music/overworld");
   audioPlayer.preload("music/boss");
@@ -769,12 +774,14 @@ $(document).ready( function() {
   overworld.onStep({x: 5, y: 7}, function(pc, x, y, landType) {
     inputDispatcher.mapMode("maze");
     mapScreen.stop();
+    mazeScreen.start();
   });
 
   // TODO make it so I can exit the maze by stepping back to the door
   mazeScreen.onStep({x: 1, y: 1}, function(pc, x, y) {
     console.log("You oughtta be exitin' the maze now");
     inputDispatcher.mapMode("overworld");
+    mazeScreen.stop();
     mapScreen.start();
   });
 

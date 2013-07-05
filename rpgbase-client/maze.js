@@ -51,15 +51,16 @@ Face.prototype = {
     var c = this._screenC;
     var d = this._screenD;
 
+
     // don't draw me if I'm behind the screen:
     if (a.z < 0 || b.z < 0 || c.z < 0 || d.z < 0) {
       return;
     }
+    // also don't render beyond max viewing distnace!!
 
     ctx.beginPath();
-    ctx.save();
-    var scale = 50;
-    ctx.translate(512/2, 384/2);
+
+    var scale = 40;
     ctx.moveTo(scale * a.x, scale * a.y);
     ctx.lineTo(scale * b.x, scale * b.y);
     ctx.lineTo(scale * c.x, scale * c.y);
@@ -69,14 +70,13 @@ Face.prototype = {
     ctx.strokeStyle = "black";
     ctx.fill();
     ctx.stroke();
-    ctx.restore();
   }
 };
 
 
-function FirstPersonMaze(mapData, ctx) {
-  this.width = 512;
-  this.height = 384;
+function FirstPersonMaze(mapData, ctx, width, height) {
+  this.width = width;
+  this.height = height;
   this.mapData = mapData;
   this._stepHandlers = [];
   this.init(mapData, ctx);
@@ -89,12 +89,19 @@ FirstPersonMaze.prototype = {
     this.setupScene(mapData);
     this.cameraOrientation = new Vector(0, 0, 0);
     this.viewerPos = new Vector(0, 0, -5); // determined by experiment
+    var self = this;
+    this.animator = new Animator(100,
+                                 function() { self.render(); });
+
   },
 
   start: function() {
+    this.animator.start();
+    this.render();
   },
 
   stop: function() {
+    this.animator.stop();
   },
 
   canPass: function(dir) {
@@ -117,6 +124,8 @@ FirstPersonMaze.prototype = {
       return new Animation(5, function() {
         self.cameraPoint.z += 0.2 * Math.cos(theta);
         self.cameraPoint.x += 0.2 * Math.sin(theta);
+      }, function() {
+        self.processStep();
       });
     } else {
       return new Animation(5); // and play bump noise!
@@ -130,6 +139,8 @@ FirstPersonMaze.prototype = {
       return new Animation(5, function() {
         self.cameraPoint.z -= 0.2 * Math.cos(theta);
         self.cameraPoint.x -= 0.2 * Math.sin(theta);
+      }, function() {
+        self.processStep();
       });
     } else {
       return new Animation(5);
@@ -158,7 +169,9 @@ FirstPersonMaze.prototype = {
 
   render: function() {
     // sort z-distance highest to lowest -- draw closest last
-    this.ctx.clearRect(0, 0, 512, 384);
+    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.ctx.save();
+    this.ctx.translate(this.width/2, this.height/2);
 
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].calc(this);
@@ -172,6 +185,10 @@ FirstPersonMaze.prototype = {
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].render(this.ctx);
     }
+
+    // TODO Special case the nearby walls (and floors) that were
+    // clipped out of the scene
+    this.ctx.restore();
   },
 
   onStep: function(filter, callback) {
@@ -181,8 +198,13 @@ FirstPersonMaze.prototype = {
   perspectiveProject: function(a) {
     // from en.wikipedia.org/wiki/3D_projection
     // a is world point
-    var c = this.cameraPoint;
     var theta = this.cameraOrientation;
+    var c = {x: this.cameraPoint.x - 0.4 * Math.sin(theta.y),
+             z: this.cameraPoint.z - 0.4 * Math.cos(theta.y),
+             y: this.cameraPoint.y};
+    // camera pretending to be a little bit back. Factor this out
+    // so it's not in the inner loop
+
     var e = this.viewerPos;
     // c is camera point
     // theta is camera orientation
@@ -202,7 +224,10 @@ FirstPersonMaze.prototype = {
     return b;
   },
 
-  processStep: function(x, y, player) {
+  processStep: function() {
+    var player = null;
+    var x = Math.floor(this.cameraPoint.x + 0.5);
+    var y = Math.floor(this.cameraPoint.z + 0.5);
     // COPIED FROM MAPSCREEN no es bueno
     // check all the step handlers:
     console.log("Maze processStep called");
@@ -260,10 +285,10 @@ FirstPersonMaze.prototype = {
     var corner7 = new Vector(x + 0.5, 0.25, z + 0.5);
     var corner8 = new Vector(x + 0.5, 0.25, z - 0.5);
 
-    // top
-    this.faces.push(new Face(corner1, corner2, corner3, corner4));
+    // top (not needed)
+    //this.faces.push(new Face(corner1, corner2, corner3, corner4));
     // bottom
-    this.faces.push(new Face(corner5, corner6, corner7, corner8));
+    //this.faces.push(new Face(corner5, corner6, corner7, corner8));
     // left side
     this.faces.push(new Face(corner1, corner2, corner6, corner5));
     // right side
@@ -285,16 +310,12 @@ FirstPersonMaze.prototype = {
   }
 };
 
-
+/*
 $(document).ready(function() {
   var canvas = $("#the-canvas")[0];
   var ctx = canvas.getContext("2d");
   var maze = new FirstPersonMaze(sampleMazeData, ctx);
-
-  var animator = new Animator(100,
-                              function() { maze.render(); });
-
-  var keyHandler = new DPadStyleKeyHandler(100, function(key) {
+  var keyHandler = new DPadStyleKeyHandler(50, function(key) {
     var anim;
     switch (key) {
       case 38: 
@@ -310,11 +331,10 @@ $(document).ready(function() {
       anim = maze.goBackward();
     }
     keyHandler.waitForAnimation(anim);
-    animator.runAnimation(anim);
+    maze.animator.runAnimation(anim);
 
   });
   keyHandler.startListening();
-  animator.start();
 
-  maze.render();
-});
+  maze.start();
+});*/
