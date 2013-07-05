@@ -245,7 +245,7 @@ function setUpTownMap(loader, mapScreen) {
 }
 
 
-function setUpBattleSystem(canvas, loader) {
+function setUpBattleSystem(canvas, loader, mazeScreen) {
 
   /* Create the default command list. (Later, individual PCs will
    * be able to override this command list with their own spells/
@@ -377,15 +377,21 @@ function setUpBattleSystem(canvas, loader) {
    */
 
   battleSystem.onDrawBattle(function(context, monsters, landType) {
-    context.fillStyle = "black";
-    context.fillRect(0, 0, 512, 384); // TODO no hardcode
+    
+    if (battleSystem.originalMode == "maze") {
+      // use maze as background
+      mazeScreen.render();
+    } else {
+      context.fillStyle = "black";
+      context.fillRect(0, 0, 512, 384); // TODO no hardcode
+    }
 
     /* TODO then you could plot slices of that image here
      * like this:
      context.drawImage(battleScreenTiles, x, y);
     */
 
-    for (var i = 0; i < monsters.length; i++) {
+     for (var i = 0; i < monsters.length; i++) {
       monsters[i].setPos(50 + 50 * i, 50);
       monsters[i].plot(context);
     }
@@ -707,7 +713,7 @@ $(document).ready( function() {
   var player = setUpParty(loader);
   var audioPlayer = new AudioPlayer();
   var mapScreen = setUpMapScreen(canvas, audioPlayer);
-  var battleSystem = setUpBattleSystem(canvas, loader);
+  var battleSystem = setUpBattleSystem(canvas, loader, mazeScreen);
   var manuel = setUpMonstrousManuel(loader); // monster dictionary
   var overworldEncounters = setUpEncounterTable(manuel);
   var overworld = setUpOverworldMap(loader, overworldEncounters);
@@ -753,12 +759,8 @@ $(document).ready( function() {
     fieldMenu.drawCanvasMenus(ctx);
     dialoglog.drawCanvasMenus(ctx);
   });
-  
 
-  /* 5% chance of random encounter on each step through overworld
-   * When an encounter happens, switch to the battlescreen-style
-   * input, and start the battle */
-  overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
+  function startEncounter(x, y, landType) {
     // choose a random encounter:
     var table = mapScreen.getEncounterTable();
     if (!table) {
@@ -768,14 +770,22 @@ $(document).ready( function() {
     var encounter = table.rollEncounter(x, y, landType);
     // switch input mode:
     inputDispatcher.menuMode("battle");
-    // stop map screen animator:
-    mapScreen.stop();
     // switch bgm to battle
     audioPlayer.changeTrack("music/boss", true);
     // start battleSystem!
     battleSystem.startBattle(player, encounter, landType);
-  });
+  }
 
+  /* 5% chance of random encounter on each step through overworld
+   * When an encounter happens, switch to the battlescreen-style
+   * input, and start the battle */
+  overworld.onStep({chance: 0.05}, function(pc, x, y, landType) {
+    // stop map screen animator:
+    mapScreen.stop();
+    battleSystem.originalMode = "overworld"; // klugy way to remember
+    // where to go back to after battle ends
+    startEncounter(x, y, landType);
+  });
 
   // Cave entrance -- when you step on this square, switch to maze
   // mode!
@@ -785,12 +795,20 @@ $(document).ready( function() {
     mazeScreen.start();
   });
 
-  // TODO make it so I can exit the maze by stepping back to the door
+  // make it so I can exit the maze by stepping back to the door
   mazeScreen.onStep({x: 1, y: 1}, function(pc, x, y) {
-    console.log("You oughtta be exitin' the maze now");
     inputDispatcher.mapMode("overworld");
     mazeScreen.stop();
     mapScreen.start();
+  });
+
+  // maze encounters:
+  mazeScreen.onStep({chance: 0.05}, function(pc, x, y, landType) {
+    // stop map screen animator:
+    mazeScreen.stop();
+    battleSystem.originalMode = "maze"; // klugy way to remember
+    // where to go back to after battle ends
+    startEncounter(x, y, landType);
   });
 
   var townMap = setUpTownMap(loader, mapScreen);
@@ -816,8 +834,13 @@ $(document).ready( function() {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   battleSystem.onClose(function() {
-    mapScreen.start();
     // switch back to map music
+    if (battleSystem.originalMode == "overworld") {
+      mapScreen.start();
+    } 
+    if (battleSystem.originalMode == "maze") {
+      mazeScreen.start();
+    }
   });
 
   /* Prepare for the game to start!

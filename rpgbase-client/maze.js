@@ -236,12 +236,10 @@ FirstPersonMaze.prototype = {
     var y = Math.floor(this.cameraPoint.z + 0.5);
     // COPIED FROM MAPSCREEN no es bueno
     // check all the step handlers:
-    console.log("Maze processStep called");
     for (var i = 0; i < this._stepHandlers.length; i++) {
 
       var trigger = this._stepHandlers[i].trigger;
       var result = this._stepHandlers[i].result;
-      console.log("Trying to get map data for y = " + y + " and x = " + x);
       var landType = this.mapData[y][x];
 
       var triggered = true;
@@ -275,7 +273,6 @@ FirstPersonMaze.prototype = {
       }
       
       if (triggered) {
-        console.log("Maze step handler triggered");
         result(player, x, y, landType);
       }
     }
