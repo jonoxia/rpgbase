@@ -75,24 +75,20 @@ Face.prototype = {
 
 
 function FirstPersonMaze(mapData, ctx) {
-  this.scene = null;
-  this.renderer = null;
   this.width = 512;
   this.height = 384;
-  this.aspect = this.width/this.height;
   this.mapData = mapData;
-  this.player = null;
   this._stepHandlers = [];
   this.init(mapData, ctx);
+  this.cameraPoint = new Vector(2, 0, 2);
 }
 FirstPersonMaze.prototype = {
   init: function(mapData,ctx) {
     this.ctx = ctx;
     this.faces = [];
     this.setupScene(mapData);
-    this.cameraPoint = new Vector(0, 0, -1);
     this.cameraOrientation = new Vector(0, 0, 0);
-    this.viewerPos = new Vector(0, 0, -2);
+    this.viewerPos = new Vector(0, 0, -5); // determined by experiment
   },
 
   start: function() {
@@ -101,40 +97,63 @@ FirstPersonMaze.prototype = {
   stop: function() {
   },
 
+  canPass: function(dir) {
+    // dir is +1 for forward, -1 for backward
+    var theta = this.cameraOrientation.y;
+    var newZ = this.cameraPoint.z + dir * Math.cos(theta);
+    var newX = this.cameraPoint.x + dir * Math.sin(theta);
+    
+    newX = Math.floor(newX + 0.5);
+    newZ = Math.floor(newZ + 0.5);
+
+    var terrainType = this.mapData[newZ][newX];
+    return (terrainType == 0);
+  },
+
   goForward: function() {
     var theta = this.cameraOrientation.y;
-    this.cameraPoint.z += 0.1 * Math.cos(theta);
-    this.cameraPoint.x += 0.1 * Math.sin(theta);
-    $("#debug").html("x = " + this.cameraPoint.x + " z = " + this.cameraPoint.z + " theta = " + theta);
-
-    this.render();
+    var self = this;
+    if (this.canPass(1)) {
+      return new Animation(5, function() {
+        self.cameraPoint.z += 0.2 * Math.cos(theta);
+        self.cameraPoint.x += 0.2 * Math.sin(theta);
+      });
+    } else {
+      return new Animation(5); // and play bump noise!
+    }
   },
 
   goBackward: function() {
     var theta = this.cameraOrientation.y;
-    this.cameraPoint.z -= 0.1 * Math.cos(theta);
-    this.cameraPoint.x -= 0.1 * Math.sin(theta);
-    $("#debug").html("x = " + this.cameraPoint.x + " z = " + this.cameraPoint.z + " theta = " + theta);
-    this.render();
+    var self = this;
+    if (this.canPass(-1)) {
+      return new Animation(5, function() {
+        self.cameraPoint.z -= 0.2 * Math.cos(theta);
+        self.cameraPoint.x -= 0.2 * Math.sin(theta);
+      });
+    } else {
+      return new Animation(5);
+    }
   },
 
   turnLeft: function() {
-    this.cameraOrientation.y += Math.PI / 60;
-    if (this.cameraOrientation.y > 2*Math.PI) {
-      this.cameraOrientation.y -= Math.PI * 2;
-    }
-    $("#debug").html("x = " + this.cameraPoint.x + " z = " + this.cameraPoint.z + " theta = " + this.cameraOrientation.y);
-
-    this.render();
+    var self = this;
+    return new Animation(5, function() {
+      self.cameraOrientation.y += Math.PI / 10;
+      if (self.cameraOrientation.y > 2*Math.PI) {
+        self.cameraOrientation.y -= Math.PI * 2;
+      }
+    });
   },
 
   turnRight: function() {
-    this.cameraOrientation.y -= Math.PI / 60;
-    if (this.cameraOrientation.y < 0) {
-      this.cameraOrientation.y += Math.PI * 2;
-    }
-    $("#debug").html("x = " + this.cameraPoint.x + " z = " + this.cameraPoint.z + " theta = " + this.cameraOrientation.y);
-    this.render();
+    var self = this;
+    return new Animation(5, function() {
+      self.cameraOrientation.y -= Math.PI / 10;
+      if (self.cameraOrientation.y < 0) {
+        self.cameraOrientation.y += Math.PI * 2;
+      }
+    });
   },
 
   render: function() {
@@ -232,14 +251,14 @@ FirstPersonMaze.prototype = {
   },
 
   makeACube: function(x, z) {
-    var corner1 = new Vector(x - 0.5, -0.5, z -0.5);
-    var corner2 = new Vector(x - 0.5, -0.5, z + 0.5);
-    var corner3 = new Vector(x + 0.5, -0.5, z + 0.5);
-    var corner4 = new Vector(x + 0.5, -0.5, z - 0.5);
-    var corner5 = new Vector(x - 0.5, 0.5, z - 0.5);
-    var corner6 = new Vector(x - 0.5, 0.5, z + 0.5);
-    var corner7 = new Vector(x + 0.5, 0.5, z + 0.5);
-    var corner8 = new Vector(x + 0.5, 0.5, z - 0.5);
+    var corner1 = new Vector(x - 0.5, -0.25, z -0.5);
+    var corner2 = new Vector(x - 0.5, -0.25, z + 0.5);
+    var corner3 = new Vector(x + 0.5, -0.25, z + 0.5);
+    var corner4 = new Vector(x + 0.5, -0.25, z - 0.5);
+    var corner5 = new Vector(x - 0.5, 0.25, z - 0.5);
+    var corner6 = new Vector(x - 0.5, 0.25, z + 0.5);
+    var corner7 = new Vector(x + 0.5, 0.25, z + 0.5);
+    var corner8 = new Vector(x + 0.5, 0.25, z - 0.5);
 
     // top
     this.faces.push(new Face(corner1, corner2, corner3, corner4));
@@ -259,7 +278,7 @@ FirstPersonMaze.prototype = {
     for (var z = 0; z < map.length; z++) {
       for (var x = 0; x < map[0].length; x++) {
         if (map[z][x] > 0) {
-          this.makeACube(x - 5, z - 5);
+          this.makeACube(x, z);
         }
       }
     }
@@ -272,26 +291,30 @@ $(document).ready(function() {
   var ctx = canvas.getContext("2d");
   var maze = new FirstPersonMaze(sampleMazeData, ctx);
 
-  $(document).keydown(function(e) {
-    switch (e.which) {
-      case 38: maze.goForward();
+  var animator = new Animator(100,
+                              function() { maze.render(); });
+
+  var keyHandler = new DPadStyleKeyHandler(100, function(key) {
+    var anim;
+    switch (key) {
+      case 38: 
+      anim = maze.goForward();
       break;
-      case 37: maze.turnLeft();
+      case 37: 
+      anim = maze.turnLeft();
       break;
-      case 39: maze.turnRight();
+      case 39:
+      anim = maze.turnRight();
       break;
-      case 40: maze.goBackward();
-      case 190: maze.viewerPos.z += 0.1;
-      maze.render();
-      $("#debug").html(maze.viewerPos.z);
-      break;
-      case 188: maze.viewerPos.z -= 0.1;
-      maze.render();
-      $("#debug").html(maze.viewerPos.z);
-      break;
+      case 40: 
+      anim = maze.goBackward();
     }
-    //    $("#debug").html(e.which);
+    keyHandler.waitForAnimation(anim);
+    animator.runAnimation(anim);
+
   });
+  keyHandler.startListening();
+  animator.start();
 
   maze.render();
 });
