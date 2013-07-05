@@ -715,15 +715,12 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.saveStackDepth = function() {
     this._savedStackDepth = this.menuStack.length;
-    console.log("Saved stack depth: " + this._savedStackDepth);
   };
 
   subClassPrototype.restoreStackDepth = function() {
-    console.log("Stack is at: " + this.menuStack.length);
     while (this.menuStack.length > this._savedStackDepth) {
       this.popMenu();
     }
-    console.log("Popped stack down to: " + this.menuStack.length);
   };
 
   subClassPrototype.showPartyResources = function() {

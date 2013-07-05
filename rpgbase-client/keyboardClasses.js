@@ -116,20 +116,31 @@ DPadStyleKeyHandler.prototype = {
   },
 
   startListening: function() {
-    this.timer = window.setInterval(this.loop, this.repeatRate);
-    $(document).bind("keydown", this.onKeydown);
-    $(document).bind("keyup", this.onKeyup);
+    // OK problem is that we start listening twice and so we get double
+    // timers, then when we stop only one of them stops.
+    // Solution 1: make this idempotent
+    // Solution 2: figure out why we call startListening twice, don't
+    // do that oh dear.
+    if (this.timer == null) {
+      // idempotent -- does nothing if called when we're already
+      // listening.
+      this.timer = window.setInterval(this.loop, this.repeatRate);
+      $(document).bind("keydown", this.onKeydown);
+      $(document).bind("keyup", this.onKeyup);
 
-    this.queued = null;
-    this.processing = null;
-    this.keysThatAreDown = [];
+      this.queued = null;
+      this.processing = null;
+      this.keysThatAreDown = [];
+    }
   },
 
   stopListening: function() {
-    window.clearInterval(this.timer);
-    this.timer = null;
-    $(document).unbind("keydown", this.onKeydown);
-    $(document).unbind("keyup", this.onKeyup);
+    if (this.timer) {
+      window.clearInterval(this.timer);
+      this.timer = null;
+      $(document).unbind("keydown", this.onKeydown);
+      $(document).unbind("keyup", this.onKeyup);
+    }
   }
 };
 
@@ -311,6 +322,8 @@ function makeInputDispatcher(repeatRate, mapScreenKeyCallback) {
       openMenu = null;
       lastMapMode = mapModes[name];
       menuInputHandler.stopListening();
+      // oh dear if we switch from one map mode to the other this will
+      // do a double-start listening
       mapInputHandler.startListening();
       return lastMapMode;
     },

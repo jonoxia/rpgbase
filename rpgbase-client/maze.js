@@ -81,6 +81,7 @@ function FirstPersonMaze(mapData, ctx, width, height) {
   this._stepHandlers = [];
   this.init(mapData, ctx);
   this.cameraPoint = new Vector(2, 0, 2);
+  this._afterRenderCallback = null;
 }
 FirstPersonMaze.prototype = {
   init: function(mapData,ctx) {
@@ -189,6 +190,11 @@ FirstPersonMaze.prototype = {
     // TODO Special case the nearby walls (and floors) that were
     // clipped out of the scene
     this.ctx.restore();
+
+    // TODO this is another bit of code copied with map screen:
+    if (this._afterRenderCallback) {
+      this._afterRenderCallback(this.ctx);
+    }
   },
 
   onStep: function(filter, callback) {
@@ -273,6 +279,11 @@ FirstPersonMaze.prototype = {
         result(player, x, y, landType);
       }
     }
+  },
+
+  afterRender: function(callback) {
+    // Copied from map screen:
+    this._afterRenderCallback = callback;
   },
 
   makeACube: function(x, z) {

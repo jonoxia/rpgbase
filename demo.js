@@ -173,11 +173,6 @@ function setUpParty(loader) {
   player.addCharacter(sidekick2);
   player.addCharacter(sidekick3);
 
-  // TODO less horrible klugy way of doing this:
-  hero.weaponCode = 1;
-  sidekick.weaponCode = 0;
-  sidekick2.weaponCode = 3;
-  sidekick3.weaponCode = 2;
 
   // starting money:
   player.gainResource("gold", 100);
@@ -597,9 +592,16 @@ function setUpInputDispatch(player, mapScreen, mazeScreen) {
     case RIGHT_ARROW:
       anim = mazeScreen.turnRight();
       break;
+    case CANCEL_BUTTON:
+      // Pop open the field menu system
+      console.log("Opening field menu from maze");
+      dispatcher.menuMode("menu").open(player);
+      break;
     }
-    dispatcher.waitForAnimation(anim);
-    mazeScreen.animator.runAnimation(anim);
+    if (anim) {
+      dispatcher.waitForAnimation(anim);
+      mazeScreen.animator.runAnimation(anim);
+    }
   };
 
   var mapScreenKeyCallback = function(key) {
@@ -742,10 +744,16 @@ $(document).ready( function() {
   inputDispatcher.addMenuMode("dialog", dialoglog);
 
   // TODO this only needs to happen if menus are canvas mode:
+  // Is there a less klugey way of this?
   mapScreen.afterRender(function(ctx) {
     fieldMenu.drawCanvasMenus(ctx);
     dialoglog.drawCanvasMenus(ctx);
   });
+  mazeScreen.afterRender(function(ctx) {
+    fieldMenu.drawCanvasMenus(ctx);
+    dialoglog.drawCanvasMenus(ctx);
+  });
+  
 
   /* 5% chance of random encounter on each step through overworld
    * When an encounter happens, switch to the battlescreen-style
