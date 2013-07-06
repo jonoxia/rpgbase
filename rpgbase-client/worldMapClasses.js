@@ -81,6 +81,13 @@ Map.prototype = {
     npc.setPos(x, y);
   },
 
+  removeNPC: function(npc) {
+    var index = this._npcs.indexOf(npc);
+    if (index > -1) {
+      this._npcs.splice(index, 1);
+    }
+  },
+
   addVehicle: function(vehicle, x, y) {
     this._vehicles.push(vehicle);
     vehicle.setPos(x, y);
@@ -384,6 +391,8 @@ MapScreen.prototype = {
   },
 
   scrollToShow: function( x, y ) {
+    this._scrollX = 0;
+    this._scrollY = 0;
     this.scroll( x - this.margins.left, y - this.margins.top );
   },
 
