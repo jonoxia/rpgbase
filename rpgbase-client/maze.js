@@ -61,13 +61,83 @@ Face.prototype = {
   }
 };
 
+function MazeMap(data) {
+    // duplicates stuff from mapomain
+    this._mapData = data;
+    this._dimX = data[0].length;
+    this._dimY = data.length;
+
+    this._stepHandlers = [];
+}
+MazeMap.prototype = {
+  canPass: function(x, y) {
+    var terrainType = this._mapData[y][x];
+    return (terrainType == 0);
+  },
+
+  onStep: function(filter, callback) {
+    this._stepHandlers.push({trigger: filter, result: callback});
+  },
+
+  processStep: function(x, y) {
+    // COPIED FROM MAPSCREEN no es bueno
+    // check all the step handlers:
+    for (var i = 0; i < this._stepHandlers.length; i++) {
+
+      var trigger = this._stepHandlers[i].trigger;
+      var result = this._stepHandlers[i].result;
+      var landType = this._mapData[y][x];
+
+      var triggered = true;
+      if (trigger.x != undefined) {
+        if (trigger.x != x ||
+            trigger.y != y) {
+          triggered = false;
+        }
+      }
+
+      if (trigger.landType != undefined) {
+        if (trigger.landType != landType) {
+          triggered = false;
+        }
+      }
+
+      if (trigger.chance != undefined) {
+        if (Math.random() > trigger.chance) {
+          triggered = false;
+        }
+      }
+
+      if (trigger.edge != undefined) {
+        if (trigger.edge == "any") {
+          if (x != 0 && x != this._dimX-1 &&
+              y != 0 && y != this._dimY-1) {
+            triggered = false;
+          }
+              
+        }
+      }
+      
+      if (triggered) {
+        // TODO: This doesn't have a ref to the actua player
+        // so it's passing bogus data to the first argument
+        // of step handler
+        result(null, x, y, landType);
+      }
+    }
+  },
+
+  getMapData: function() {
+    return this._mapData;
+  }
+};
 
 function FirstPersonMaze(ctx, width, height) {
   this.width = width;
   this.height = height;
-  this._stepHandlers = [];
-  this.init(ctx);
+  this._currentMap = null;
   this._afterRenderCallback = null;
+  this.init(ctx);
 }
 FirstPersonMaze.prototype = {
   init: function(ctx) {
@@ -82,8 +152,8 @@ FirstPersonMaze.prototype = {
                                  function() { self.render(); });
   },
   
-  loadMaze: function(mapData, startX, startZ, startDirection) {
-    this.mapData = mapData;
+  loadMaze: function(mazeMap, startX, startZ, startDirection) {
+    this._currentMap = mazeMap;
     this.faces = [];
     var theta;
     switch(startDirection) {
@@ -94,7 +164,7 @@ FirstPersonMaze.prototype = {
     }
     this.cameraOrientation = new Vector(0, theta, 0);
     this.playerPos = new Vector(startX, 0, startZ);
-    this.setupScene(mapData);
+    this.setupScene(this._currentMap.getMapData());
   },
 
   start: function() {
@@ -116,8 +186,7 @@ FirstPersonMaze.prototype = {
     newX = Math.floor(newX + 0.5);
     newZ = Math.floor(newZ + 0.5);
 
-    var terrainType = this.mapData[newZ][newX];
-    return (terrainType == 0);
+    return this._currentMap.canPass(newX, newZ);
   },
 
   goForward: function() {
@@ -130,6 +199,8 @@ FirstPersonMaze.prototype = {
       }, function() {
         self.playerPos.z = Math.floor(self.playerPos.z + 0.5);
         self.playerPos.x = Math.floor(self.playerPos.x + 0.5);
+	console.log("maze pos: " + self.playerPos.x + ", " +
+		    self.playerPos.z);
         self.processStep();
       });
     } else {
@@ -211,10 +282,6 @@ FirstPersonMaze.prototype = {
     }
   },
 
-  onStep: function(filter, callback) {
-    this._stepHandlers.push({trigger: filter, result: callback});
-  },
-
   perspectiveProject: function(a) {
     // from en.wikipedia.org/wiki/3D_projection
     // a is world point
@@ -246,48 +313,7 @@ FirstPersonMaze.prototype = {
     var player = null;
     var x = Math.floor(this.playerPos.x + 0.5);
     var y = Math.floor(this.playerPos.z + 0.5);
-    // COPIED FROM MAPSCREEN no es bueno
-    // check all the step handlers:
-    for (var i = 0; i < this._stepHandlers.length; i++) {
-
-      var trigger = this._stepHandlers[i].trigger;
-      var result = this._stepHandlers[i].result;
-      var landType = this.mapData[y][x];
-
-      var triggered = true;
-      if (trigger.x != undefined) {
-        if (trigger.x != x ||
-            trigger.y != y) {
-          triggered = false;
-        }
-      }
-
-      if (trigger.landType != undefined) {
-        if (trigger.landType != landType) {
-          triggered = false;
-        }
-      }
-
-      if (trigger.chance != undefined) {
-        if (Math.random() > trigger.chance) {
-          triggered = false;
-        }
-      }
-
-      if (trigger.edge != undefined) {
-        if (trigger.edge == "any") {
-          if (x != 0 && x != this._dimX-1 &&
-              y != 0 && y != this._dimY-1) {
-            triggered = false;
-          }
-              
-        }
-      }
-      
-      if (triggered) {
-        result(player, x, y, landType);
-      }
-    }
+    this._currentMap.processStep(x, y);
   },
 
   afterRender: function(callback) {
