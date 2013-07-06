@@ -4,12 +4,17 @@ function Encounter(monsterList) {
 Encounter.prototype = {
 };
 
-function EncounterTable(data) {
+function EncounterTable(data, dieSize) {
+  if (dieSize) {
+    this._dieSize = dieSize;
+  } else {
+    this._dieSize = 100;
+  }
   this._data = data;
 }
 EncounterTable.prototype = {
   rollEncounter: function() {
-    var dieRoll = rollDice(1, 100);
+    var dieRoll = rollDice(1, this._dieSize);
 
     var matchIndex = 0;
     console.log("Random encounter table rolls: " + dieRoll);
