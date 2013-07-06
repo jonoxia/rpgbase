@@ -1,15 +1,3 @@
-var sampleMazeData = [ // 1  2  3  4  5  6  7  8  9
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 0
-  [3, 0, 0, 0, 0, 0, 0, 1, 1, 1,], // 1
-  [1, 1, 0, 0, 2, 0, 0, 0, 0, 1,], // 2
-  [1, 0, 0, 0, 0, 2, 0, 0, 0, 1,], // 3
-  [1, 0, 0, 2, 0, 0, 2, 0, 0, 1,], // 4
-  [1, 0, 0, 0, 2, 0, 0, 0, 1, 1,], // 5
-  [1, 1, 1, 0, 0, 0, 0, 1, 1, 1,], // 6
-  [1, 1, 1, 0, 0, 1, 0, 0, 1, 1,], // 7
-  [1, 1, 1, 1, 1, 1, 0, 0, 1, 1,], // 8
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 9
-];
 
 function Vector(x, y, z) {
   this.x = x;
@@ -74,26 +62,39 @@ Face.prototype = {
 };
 
 
-function FirstPersonMaze(mapData, ctx, width, height) {
+function FirstPersonMaze(ctx, width, height) {
   this.width = width;
   this.height = height;
-  this.mapData = mapData;
   this._stepHandlers = [];
-  this.init(mapData, ctx);
-  this.cameraPoint = new Vector(2, 0, 2);
+  this.init(ctx);
   this._afterRenderCallback = null;
 }
 FirstPersonMaze.prototype = {
-  init: function(mapData,ctx) {
+  init: function(ctx) {
     this.ctx = ctx;
     this.faces = [];
-    this.setupScene(mapData);
     this.cameraOrientation = new Vector(0, 0, 0);
+    this.playerPos = new Vector(0, 0, 0);
+    this.cameraPoint = new Vector(0, -0.1, 0);
     this.viewerPos = new Vector(0, 0, -5); // determined by experiment
     var self = this;
     this.animator = new Animator(100,
                                  function() { self.render(); });
-
+  },
+  
+  loadMaze: function(mapData, startX, startZ, startDirection) {
+    this.mapData = mapData;
+    this.faces = [];
+    var theta;
+    switch(startDirection) {
+      case "e": theta = Math.PI/2;break;
+      case "n": theta = Math.PI;break;
+      case "w": theta = 3*Math.PI/2;break;
+      case "s": theta = 0;break;
+    }
+    this.cameraOrientation = new Vector(0, theta, 0);
+    this.playerPos = new Vector(startX, 0, startZ);
+    this.setupScene(mapData);
   },
 
   start: function() {
@@ -107,9 +108,10 @@ FirstPersonMaze.prototype = {
 
   canPass: function(dir) {
     // dir is +1 for forward, -1 for backward
+    // This duplicates logic from mapscreen
     var theta = this.cameraOrientation.y;
-    var newZ = this.cameraPoint.z + dir * Math.cos(theta);
-    var newX = this.cameraPoint.x + dir * Math.sin(theta);
+    var newZ = this.playerPos.z + dir * Math.cos(theta);
+    var newX = this.playerPos.x + dir * Math.sin(theta);
     
     newX = Math.floor(newX + 0.5);
     newZ = Math.floor(newZ + 0.5);
@@ -123,9 +125,11 @@ FirstPersonMaze.prototype = {
     var self = this;
     if (this.canPass(1)) {
       return new Animation(5, function() {
-        self.cameraPoint.z += 0.2 * Math.cos(theta);
-        self.cameraPoint.x += 0.2 * Math.sin(theta);
+        self.playerPos.z += 0.2 * Math.cos(theta);
+        self.playerPos.x += 0.2 * Math.sin(theta);
       }, function() {
+        self.playerPos.z = Math.floor(self.playerPos.z + 0.5);
+        self.playerPos.x = Math.floor(self.playerPos.x + 0.5);
         self.processStep();
       });
     } else {
@@ -138,9 +142,11 @@ FirstPersonMaze.prototype = {
     var self = this;
     if (this.canPass(-1)) {
       return new Animation(5, function() {
-        self.cameraPoint.z -= 0.2 * Math.cos(theta);
-        self.cameraPoint.x -= 0.2 * Math.sin(theta);
+        self.playerPos.z -= 0.2 * Math.cos(theta);
+        self.playerPos.x -= 0.2 * Math.sin(theta);
       }, function() {
+        self.playerPos.z = Math.floor(self.playerPos.z + 0.5);
+        self.playerPos.x = Math.floor(self.playerPos.x + 0.5);
         self.processStep();
       });
     } else {
@@ -173,6 +179,14 @@ FirstPersonMaze.prototype = {
     this.ctx.clearRect(0, 0, this.width, this.height);
     this.ctx.save();
     this.ctx.translate(this.width/2, this.height/2);
+    var theta = this.cameraOrientation.y;
+
+    this.cameraPoint = new Vector(this.playerPos.x - 0.3*Math.sin(theta),
+                                  -0.05,
+                                  this.playerPos.z - 0.3*Math.cos(theta));
+      /*new Vector(this.playerPos.X - 0.4 * Math.sin(theta),
+        -0.05,
+        this.playerPos.z - 0.4 * Math.cos(theta));*/
 
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].calc(this);
@@ -205,9 +219,7 @@ FirstPersonMaze.prototype = {
     // from en.wikipedia.org/wiki/3D_projection
     // a is world point
     var theta = this.cameraOrientation;
-    var c = {x: this.cameraPoint.x - 0.4 * Math.sin(theta.y),
-             z: this.cameraPoint.z - 0.4 * Math.cos(theta.y),
-             y: this.cameraPoint.y};
+    var c = this.cameraPoint;
     // camera pretending to be a little bit back. Factor this out
     // so it's not in the inner loop
 
@@ -232,8 +244,8 @@ FirstPersonMaze.prototype = {
 
   processStep: function() {
     var player = null;
-    var x = Math.floor(this.cameraPoint.x + 0.5);
-    var y = Math.floor(this.cameraPoint.z + 0.5);
+    var x = Math.floor(this.playerPos.x + 0.5);
+    var y = Math.floor(this.playerPos.z + 0.5);
     // COPIED FROM MAPSCREEN no es bueno
     // check all the step handlers:
     for (var i = 0; i < this._stepHandlers.length; i++) {

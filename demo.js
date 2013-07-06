@@ -1,3 +1,17 @@
+var sampleMazeData = [ // 1  2  3  4  5  6  7  8  9
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 0
+  [3, 0, 0, 0, 0, 0, 0, 1, 1, 1,], // 1
+  [1, 1, 0, 0, 2, 0, 0, 0, 0, 1,], // 2
+  [1, 0, 0, 0, 0, 2, 0, 0, 0, 1,], // 3
+  [1, 0, 0, 2, 0, 0, 2, 0, 0, 1,], // 4
+  [1, 0, 0, 0, 2, 0, 0, 0, 1, 1,], // 5
+  [1, 1, 1, 0, 0, 0, 0, 1, 1, 1,], // 6
+  [1, 1, 1, 0, 0, 1, 0, 0, 1, 1,], // 7
+  [1, 1, 1, 1, 1, 1, 0, 0, 1, 1,], // 8
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 9
+];
+
+
 var mapData = [
 [36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36],
 [36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36,36],
@@ -708,8 +722,7 @@ $(document).ready( function() {
   // Create the loader (to load all images)
   var loader = new AssetLoader();
   // Create the main game components (see the various setUp functions)
-  var mazeScreen = new FirstPersonMaze(sampleMazeData, ctx,
-                                       512/2, 384/2);
+  var mazeScreen = new FirstPersonMaze(ctx, 512/2, 384/2);
   var player = setUpParty(loader);
   var audioPlayer = new AudioPlayer();
   var mapScreen = setUpMapScreen(canvas, audioPlayer);
@@ -792,6 +805,7 @@ $(document).ready( function() {
   overworld.onStep({x: 5, y: 7}, function(pc, x, y, landType) {
     inputDispatcher.mapMode("maze");
     mapScreen.stop();
+    mazeScreen.loadMaze(sampleMazeData, 1, 1, "w");
     mazeScreen.start();
   });
 
