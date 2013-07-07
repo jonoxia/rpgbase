@@ -5,11 +5,49 @@ function Vector(x, y, z) {
   this.z = z;
 }
 
+function Line(a, b) {
+  // make a bunch of these and put them in decorations to make
+  // pattern on a wall
+  this.a = a;
+  this.b = b;
+  this._lineColor = "#505050";
+}
+Line.prototype = {
+  calc: function(camera) {
+    this._screenA = camera.perspectiveProject(this.a);
+    this._screenB = camera.perspectiveProject(this.b);
+  },
+
+  render: function(ctx) {
+    var a = this._screenA;
+    var b = this._screenB;
+
+    // don't draw me if I'm behind the screen:
+    if (a.z < 0 || b.z < 0) {
+      return;
+    }
+
+    ctx.beginPath();
+    var scale = 40;
+    ctx.moveTo(scale * a.x, scale * a.y);
+    ctx.lineTo(scale * b.x, scale * b.y);
+    ctx.strokeStyle = this._lineColor;
+    ctx.stroke();
+  },
+
+  setLineColor: function(color) {
+    this._lineColor = color;
+  }
+};
+
 function Face(a, b, c, d) {
   this.a = a;
   this.b = b;
   this.c = c;
   this.d = d;
+  this._fillColor = "grey";
+  this._lineColor = "black";
+  this._decorations = [];
 }
 Face.prototype = {
   calc: function(camera) {
@@ -17,6 +55,9 @@ Face.prototype = {
     this._screenB = camera.perspectiveProject(this.b);
     this._screenC = camera.perspectiveProject(this.c);
     this._screenD = camera.perspectiveProject(this.d);
+    for (var i =0; i < this._decorations.length; i++) {
+      this._decorations[i].calc(camera);
+    }
   },
 
   getAvgZ: function() {
@@ -54,10 +95,31 @@ Face.prototype = {
     ctx.lineTo(scale * c.x, scale * c.y);
     ctx.lineTo(scale * d.x, scale * d.y);
     ctx.lineTo(scale * a.x, scale * a.y);
-    ctx.fillStyle = "grey";
-    ctx.strokeStyle = "black";
+    ctx.fillStyle = this._fillColor;
+    // TODO darken fill color when farther away
+    ctx.strokeStyle = this._lineColor;
     ctx.fill();
     ctx.stroke();
+
+    for (var i =0; i < this._decorations.length; i++) {
+      this._decorations[i].render(ctx);
+    }
+  },
+  
+  setColor: function(color) {
+    this._fillColor = color;
+  },
+
+  setLineColor: function(color) {
+    this._lineColor = color;
+  },
+
+  addDecoration: function(decoration) {
+    this._decorations.push(decoration);
+  },
+
+  addDecorations: function(decorations) {
+    this._decorations = this._decorations.concat(decorations);
   }
 };
 
@@ -70,8 +132,14 @@ function MazeMap(data) {
     this._stepHandlers = [];
 }
 MazeMap.prototype = {
-  canPass: function(x, y) {
-    var terrainType = this._mapData[y][x];
+  isOpenSpace: function(x, z) {
+    if (x < 0 || x >= this._dimX) {
+      return false;
+    }
+    if (z < 0 || z >= this._dimY) {
+      return false;
+    }
+    var terrainType = this._mapData[z][x];
     return (terrainType == 0);
   },
 
@@ -138,11 +206,15 @@ function FirstPersonMaze(ctx, width, height) {
   this._currentMap = null;
   this._afterRenderCallback = null;
   this.init(ctx);
+  this.bgColor = "#505080"; //"#505050";
+  this.lineColor = "#303050";//"#303030"
+  this.wallColor = "#8080b0";//"grey";
 }
 FirstPersonMaze.prototype = {
   init: function(ctx) {
     this.ctx = ctx;
     this.faces = [];
+    this.bgFaces = [];
     this.cameraOrientation = new Vector(0, 0, 0);
     this.playerPos = new Vector(0, 0, 0);
     this.cameraPoint = new Vector(0, -0.1, 0);
@@ -155,6 +227,7 @@ FirstPersonMaze.prototype = {
   loadMaze: function(mazeMap, startX, startZ, startDirection) {
     this._currentMap = mazeMap;
     this.faces = [];
+    this.bgFaces = [];
     var theta;
     switch(startDirection) {
       case "e": theta = Math.PI/2;break;
@@ -186,7 +259,7 @@ FirstPersonMaze.prototype = {
     newX = Math.floor(newX + 0.5);
     newZ = Math.floor(newZ + 0.5);
 
-    return this._currentMap.canPass(newX, newZ);
+    return this._currentMap.isOpenSpace(newX, newZ);
   },
 
   goForward: function() {
@@ -245,9 +318,32 @@ FirstPersonMaze.prototype = {
     });
   },
 
+  drawCeiling: function() {
+   /* var maxX = this._currentMap._dimX;
+    var maxZ = this._currentMap._dimY;
+    for (var x = 0; x < maxX; x+= 0.5) {
+      var startPt = this.perspectiveProject(new Vector(x, 0.25, 0));
+      var endPt = this.perspectiveProject(new Vector(x, 0.25, maxZ));
+      this.ctx.strokeStyle = "black";
+      this.ctx.beginPath();
+      this.ctx.moveTo(startPt.x, startPt.y);
+      this.ctx.lineTo(endPt.x, endPt.y);
+      this.ctx.stroke();
+    }
+
+    for (var z = 0; z < maxZ; z+= 0.5) {
+        
+    }*/
+
+  },
+  
+  drawFloor: function() {
+  },
+
   render: function() {
     // sort z-distance highest to lowest -- draw closest last
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    this.ctx.fillStyle = this.bgColor;
+    this.ctx.fillRect(0, 0, this.width, this.height);
     this.ctx.save();
     this.ctx.translate(this.width/2, this.height/2);
     var theta = this.cameraOrientation.y;
@@ -262,12 +358,21 @@ FirstPersonMaze.prototype = {
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].calc(this);
     }
+    for (var i = 0; i < this.bgFaces.length; i++) {
+      this.bgFaces[i].calc(this);
+    }
 
     // maybe do some raycasting instead of painter algorithm
     this.faces.sort(function(a, b) {
       return b.getAvgZ() - a.getAvgZ();
     });
 
+    // render all ceiling/floor faces
+    for (var i = 0; i < this.bgFaces.length; i++) {
+      this.bgFaces[i].render(this.ctx);
+    }
+
+    // then after that render all wall faces
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].render(this.ctx);
     }
@@ -321,7 +426,7 @@ FirstPersonMaze.prototype = {
     this._afterRenderCallback = callback;
   },
 
-  makeACube: function(x, z) {
+  makeACube: function(x, z, terrainType) {
     var corner1 = new Vector(x - 0.5, -0.25, z -0.5);
     var corner2 = new Vector(x - 0.5, -0.25, z + 0.5);
     var corner3 = new Vector(x + 0.5, -0.25, z + 0.5);
@@ -330,26 +435,224 @@ FirstPersonMaze.prototype = {
     var corner6 = new Vector(x - 0.5, 0.25, z + 0.5);
     var corner7 = new Vector(x + 0.5, 0.25, z + 0.5);
     var corner8 = new Vector(x + 0.5, 0.25, z - 0.5);
-
     // top (not needed)
     //this.faces.push(new Face(corner1, corner2, corner3, corner4));
     // bottom
     //this.faces.push(new Face(corner5, corner6, corner7, corner8));
-    // left side
-    this.faces.push(new Face(corner1, corner2, corner6, corner5));
-    // right side
-    this.faces.push(new Face(corner3, corner4, corner8, corner7));
-    // front
-    this.faces.push(new Face(corner1, corner4, corner8, corner5 ));
-    // back
-    this.faces.push(new Face(corner2, corner3, corner7, corner6 ));
+
+
+    // Add ONLY the faces of cube touching open space - otherwise
+    // it will never get drawn so no point!!
+    if (this._currentMap.isOpenSpace(x - 1, z)) {
+      // left side
+      var wFace = new Face(corner1, corner2, corner6, corner5);
+      wFace.setColor(this.wallColor);
+      wFace.addDecorations(this.makeBricks(x, z, "w"));
+      if (terrainType == 3) {
+        wFace.addDecorations(this.makeDoor(x, z, "w"));
+      }
+      this.faces.push(wFace);
+    }
+    if (this._currentMap.isOpenSpace(x + 1, z)) {
+      // right side
+      var eFace = new Face(corner3, corner4, corner8, corner7);
+      eFace.setColor(this.wallColor);
+      eFace.addDecorations(this.makeBricks(x, z, "e"));
+      if (terrainType == 3) {
+        eFace.addDecorations(this.makeDoor(x, z, "e"));
+      }
+      this.faces.push(eFace);
+    }
+    if (this._currentMap.isOpenSpace(x, z-1)) {
+      // front
+      var nFace = new Face(corner1, corner4, corner8, corner5 );
+      nFace.setColor(this.wallColor);
+      nFace.addDecorations(this.makeBricks(x, z, "n"));
+      if (terrainType == 3) {
+        nFace.addDecorations(this.makeDoor(x, z, "n"));
+      }
+      this.faces.push(nFace);
+    }
+    if (this._currentMap.isOpenSpace(x, z +1)) {
+      // back
+      var sFace = new Face(corner2, corner3, corner7, corner6 );
+      sFace.setColor(this.wallColor);
+      sFace.addDecorations(this.makeBricks(x, z, "s"));
+      if (terrainType == 3) {
+        sFace.addDecorations(this.makeDoor(x, z, "s"));
+      }
+      this.faces.push(sFace);
+    }
+  },
+
+  makeBricks: function(x, z, side) {
+    var brickLines= [];
+    // TODO set lines to this.lineColor
+    switch (side) {
+      case "e":
+      var corner1 = new Vector(x + 0.5, -0.08, z+0.5);
+      var corner2 = new Vector(x + 0.5, -0.08, z-0.5);
+      brickLines.push(new Line(corner1, corner2));
+
+      var corner3 = new Vector(x + 0.5, 0.08, z+0.5);
+      var corner4 = new Vector(x + 0.5, 0.08, z-0.5);
+      brickLines.push(new Line(corner3, corner4));
+
+      var corner5 = new Vector(x + 0.5, -0.25, z);
+      var corner6 = new Vector(x + 0.5, -0.08, z);
+      brickLines.push(new Line(corner5, corner6));
+
+      var corner7 = new Vector(x + 0.5, 0.08, z);
+      var corner8 = new Vector(x + 0.5, 0.25, z);
+      brickLines.push(new Line(corner7, corner8));
+
+      var corner9 = new Vector(x + 0.5, -0.08, z+0.25);
+      var corner10 = new Vector(x + 0.5, -0.08, z-0.25);
+      var corner11 = new Vector(x + 0.5, 0.08, z-0.25);
+      var corner12 = new Vector(x + 0.5, 0.08, z+0.25);
+      brickLines.push(new Line(corner10, corner11));
+      brickLines.push(new Line(corner9, corner12));
+
+      break;
+      case "w":
+      var corner1 = new Vector(x - 0.5, -0.08, z+0.5);
+      var corner2 = new Vector(x - 0.5, -0.08, z-0.5);
+      brickLines.push(new Line(corner1, corner2));
+
+      var corner3 = new Vector(x - 0.5, 0.08, z+0.5);
+      var corner4 = new Vector(x - 0.5, 0.08, z-0.5);
+      brickLines.push(new Line(corner3, corner4));
+
+      var corner5 = new Vector(x - 0.5, -0.25, z);
+      var corner6 = new Vector(x - 0.5, -0.08, z);
+      brickLines.push(new Line(corner5, corner6));
+
+      var corner7 = new Vector(x - 0.5, 0.08, z);
+      var corner8 = new Vector(x - 0.5, 0.25, z);
+      brickLines.push(new Line(corner7, corner8));
+
+      var corner9 = new Vector(x - 0.5, -0.08, z+0.25);
+      var corner10 = new Vector(x - 0.5, -0.08, z-0.25);
+      var corner11 = new Vector(x - 0.5, 0.08, z-0.25);
+      var corner12 = new Vector(x - 0.5, 0.08, z+0.25);
+      brickLines.push(new Line(corner10, corner11));
+      brickLines.push(new Line(corner9, corner12));
+      break;
+
+      case "n":
+      var corner1 = new Vector(x + 0.5, -0.08, z-0.5);
+      var corner2 = new Vector(x - 0.5, -0.08, z-0.5);
+      brickLines.push(new Line(corner1, corner2));
+
+      var corner3 = new Vector(x + 0.5, 0.08, z-0.5);
+      var corner4 = new Vector(x - 0.5, 0.08, z-0.5);
+      brickLines.push(new Line(corner3, corner4));
+
+      var corner5 = new Vector(x , -0.25, z-0.5);
+      var corner6 = new Vector(x, -0.08, z-0.5);
+      brickLines.push(new Line(corner5, corner6));
+
+      var corner7 = new Vector(x, 0.08, z-0.5);
+      var corner8 = new Vector(x, 0.25, z-0.5);
+      brickLines.push(new Line(corner7, corner8));
+
+      var corner9 = new Vector(x + 0.25, -0.08, z - 0.5);
+      var corner10 = new Vector(x - 0.25, -0.08, z - 0.5);
+      var corner11 = new Vector(x - 0.25, 0.08, z - 0.5);
+      var corner12 = new Vector(x + 0.25, 0.08, z - 0.5);
+      brickLines.push(new Line(corner10, corner11));
+      brickLines.push(new Line(corner9, corner12));
+
+      break;
+      case "s":
+      var corner1 = new Vector(x + 0.5, -0.08, z+0.5);
+      var corner2 = new Vector(x - 0.5, -0.08, z+0.5);
+      brickLines.push(new Line(corner1, corner2));
+
+      var corner3 = new Vector(x + 0.5, 0.08, z+0.5);
+      var corner4 = new Vector(x - 0.5, 0.08, z+0.5);
+      brickLines.push(new Line(corner3, corner4));
+
+      var corner5 = new Vector(x , -0.25, z+0.5);
+      var corner6 = new Vector(x, -0.08, z+0.5);
+      brickLines.push(new Line(corner5, corner6));
+
+      var corner7 = new Vector(x, 0.08, z+0.5);
+      var corner8 = new Vector(x, 0.25, z+0.5);
+      brickLines.push(new Line(corner7, corner8));
+
+      var corner9 = new Vector(x + 0.25, -0.08, z + 0.5);
+      var corner10 = new Vector(x - 0.25, -0.08, z + 0.5);
+      var corner11 = new Vector(x - 0.25, 0.08, z + 0.5);
+      var corner12 = new Vector(x + 0.25, 0.08, z + 0.5);
+      brickLines.push(new Line(corner10, corner11));
+      brickLines.push(new Line(corner9, corner12));
+      break;
+
+    }
+    return brickLines;
+  },
+
+  makeDoor: function(x, z, side) {
+    switch (side) {
+      case "e":
+      var corner9 = new Vector(x + 0.5, -0.25, z+0.2);
+      var corner10 = new Vector(x + 0.5, -0.25, z-0.2);
+      var corner11 = new Vector(x + 0.5, 0.15, z-0.2);
+      var corner12 = new Vector(x + 0.5, 0.15, z+0.2);
+      break;
+      case "w":
+      var corner9 = new Vector(x - 0.5, -0.25, z+0.2);
+      var corner10 = new Vector(x - 0.5, -0.25, z-0.2);
+      var corner11 = new Vector(x - 0.5, 0.15, z-0.2);
+      var corner12 = new Vector(x - 0.5, 0.15, z+0.2);
+      break;
+    }
+    var doorFace = new Face(corner9, corner10, corner11, corner12);
+    doorFace.setColor("black");
+    return [doorFace];
+  },
+  makeFloorAndCeiling: function(x, z) {
+    // floor
+    var floorTile = new Face(new Vector(x , -0.25, z),
+                             new Vector(x + 0.5, -0.25, z),
+                             new Vector(x + 0.5, -0.25, z +0.5),
+                             new Vector(x, -0.25, z +0.5)
+                            );
+    floorTile.setColor(this.bgColor);
+    floorTile.setLineColor(this.lineColor);
+    this.bgFaces.push(floorTile);
+    
+    // ceiling
+    var ceilTile = new Face(new Vector(x , 0.25, z),
+                            new Vector(x + 0.5, 0.25, z),
+                            new Vector(x + 0.5, 0.25, z +0.5),
+                            new Vector(x, 0.25, z +0.5)
+                           );
+    ceilTile.setColor(this.bgColor);
+    ceilTile.setLineColor(this.lineColor);
+    this.bgFaces.push(ceilTile);
   },
 
   setupScene: function(map) {
     for (var z = 0; z < map.length; z++) {
       for (var x = 0; x < map[0].length; x++) {
         if (map[z][x] > 0) {
-          this.makeACube(x, z);
+          this.makeACube(x, z, map[z][x]);
+        }
+      }
+    }
+
+    // floor/ceiling grid = 2 lines per space so count by 0.5s
+    for (var z = 0; z < map.length; z+= 0.5) {
+      for (var x = 0; x < map[0].length; x+= 0.5) {
+        // TODO only add these polygons if the space is 0
+        // otherwise they're under a wall and there's no point
+        if (map[Math.floor(z)][Math.floor(x)] == 0) {
+          this.makeFloorAndCeiling(x, z);
+        } else if (this._currentMap.isOpenSpace(Math.ceil(x),
+                                                Math.ceil(z))) {
+          this.makeFloorAndCeiling(x, z);
         }
       }
     }

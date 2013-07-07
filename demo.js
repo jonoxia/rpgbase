@@ -7,7 +7,7 @@ var sampleMazeData = [ // 1  2  3  4  5  6  7  8  9
   [1, 0, 0, 0, 2, 0, 0, 0, 1, 1,], // 5
   [1, 1, 1, 0, 0, 0, 0, 1, 1, 1,], // 6
   [1, 1, 1, 0, 0, 1, 0, 0, 1, 1,], // 7
-  [1, 1, 1, 1, 1, 1, 0, 0, 1, 1,], // 8
+  [1, 1, 1, 1, 1, 1, 0, 0, 0, 3,], // 8
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 9
 ];
 
@@ -800,24 +800,25 @@ $(document).ready( function() {
     startEncounter(x, y, landType);
   });
 
+  var mazeMap = new MazeMap(sampleMazeData);
   // Cave entrance -- when you step on this square, switch to maze
   // mode!
   overworld.onStep({x: 5, y: 7}, function(pc, x, y, landType) {
     inputDispatcher.mapMode("maze");
     mapScreen.stop();
-    mazeScreen.loadMaze(sampleMazeData, 1, 1, "w");
+    mazeScreen.loadMaze(mazeMap, 1, 1, "e");
     mazeScreen.start();
   });
 
   // make it so I can exit the maze by stepping back to the door
-  mazeScreen.onStep({x: 1, y: 1}, function(pc, x, y) {
+  mazeMap.onStep({x: 1, y: 1}, function(pc, x, y) {
     inputDispatcher.mapMode("overworld");
     mazeScreen.stop();
     mapScreen.start();
   });
 
   // maze encounters:
-  mazeScreen.onStep({chance: 0.05}, function(pc, x, y, landType) {
+  mazeMap.onStep({chance: 0.05}, function(pc, x, y, landType) {
     // stop map screen animator:
     mazeScreen.stop();
     battleSystem.originalMode = "maze"; // klugy way to remember
