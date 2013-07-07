@@ -347,10 +347,20 @@ FirstPersonMaze.prototype = {
 
   render: function() {
     // sort z-distance highest to lowest -- draw closest last
-    this.ctx.fillStyle = "black";
+    
+    // Very backest background -- goes behind all polygons, will show
+    // through where polygons are missing. Black in the middle
+    // (= darkness of distnace); floor-color around edges (so missing
+    // floor pieces will not be as obvious)
+    this.ctx.fillStyle = darkenColor(this.bgColor, 110);
     this.ctx.fillRect(0, 0, this.width, this.height);
     this.ctx.save();
     this.ctx.translate(this.width/2, this.height/2);
+
+    this.ctx.fillStyle = "black";
+    this.ctx.fillRect((-0.2) * this.width, (-0.2) * this.height,
+                      this.width * 0.4, this.height * 0.4);
+
     var theta = this.cameraOrientation.y;
 
     this.cameraPoint = new Vector(this.playerPos.x - 0.3*Math.sin(theta),
