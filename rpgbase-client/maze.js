@@ -1,4 +1,16 @@
 
+function darkenColor(color, brightness) {
+  return "rgb(" + 
+    Math.floor(color.r * brightness)
+    +","+ 
+    Math.floor(color.g * brightness)
+    +","+
+    Math.floor(color.b * brightness)
+    +")";
+}
+  
+
+
 function Vector(x, y, z) {
   this.x = x;
   this.y = y;
@@ -10,7 +22,7 @@ function Line(a, b) {
   // pattern on a wall
   this.a = a;
   this.b = b;
-  this._lineColor = "#505050";
+  this._lineColor = {r: 0.3, g: 0.3, b: 0.3};
 }
 Line.prototype = {
   calc: function(camera) {
@@ -31,7 +43,15 @@ Line.prototype = {
     var scale = 40;
     ctx.moveTo(scale * a.x, scale * a.y);
     ctx.lineTo(scale * b.x, scale * b.y);
-    ctx.strokeStyle = this._lineColor;
+    // Scale lineColor by distance
+    var brightness;
+    var dist = (a.z + b.z )/2;
+    if (dist <= 1) {
+      brightness = 60;
+    } else {
+      brightness = Math.floor(60/dist);
+    }
+    ctx.strokeStyle = darkenColor(this._lineColor, brightness);
     ctx.stroke();
   },
 
@@ -45,8 +65,8 @@ function Face(a, b, c, d) {
   this.b = b;
   this.c = c;
   this.d = d;
-  this._fillColor = "grey";
-  this._lineColor = "black";
+  this._fillColor = {r: 1, g: 1, b: 1};
+  this._lineColor = {r: 0.4, g: 0.4, b: 0.4};
   this._decorations = [];
 }
 Face.prototype = {
@@ -95,9 +115,17 @@ Face.prototype = {
     ctx.lineTo(scale * c.x, scale * c.y);
     ctx.lineTo(scale * d.x, scale * d.y);
     ctx.lineTo(scale * a.x, scale * a.y);
-    ctx.fillStyle = this._fillColor;
-    // TODO darken fill color when farther away
-    ctx.strokeStyle = this._lineColor;
+    // Darken fill color when farther away
+    var brightness;
+    var z= this.getAvgZ();
+    if (z < 1) {
+      brightness = 110;
+    } else {
+      brightness = 100/z;
+    }
+    ctx.fillStyle = darkenColor(this._fillColor, brightness);
+    var lineBrightness = Math.floor(0.5*brightness);
+    ctx.strokeStyle = darkenColor(this._lineColor, brightness);
     ctx.fill();
     ctx.stroke();
 
@@ -105,7 +133,7 @@ Face.prototype = {
       this._decorations[i].render(ctx);
     }
   },
-  
+
   setColor: function(color) {
     this._fillColor = color;
   },
@@ -206,9 +234,10 @@ function FirstPersonMaze(ctx, width, height) {
   this._currentMap = null;
   this._afterRenderCallback = null;
   this.init(ctx);
-  this.bgColor = "#505080"; //"#505050";
-  this.lineColor = "#303050";//"#303030"
-  this.wallColor = "#8080b0";//"grey";
+  this.bgColor = {r: 0.5, g: 0.5, b: 0.8}; // for ceiling and floor
+  this.softLineColor = {r: 0.3, g: 0.3, b: 0.5}; // for texture
+  this.hardLineColor = {r: 0, g: 0, b: 0}; // for edges
+  this.wallColor = {r: 1.2, g: 1.2, b: 1.5};
 }
 FirstPersonMaze.prototype = {
   init: function(ctx) {
@@ -272,8 +301,6 @@ FirstPersonMaze.prototype = {
       }, function() {
         self.playerPos.z = Math.floor(self.playerPos.z + 0.5);
         self.playerPos.x = Math.floor(self.playerPos.x + 0.5);
-	console.log("maze pos: " + self.playerPos.x + ", " +
-		    self.playerPos.z);
         self.processStep();
       });
     } else {
@@ -318,31 +345,9 @@ FirstPersonMaze.prototype = {
     });
   },
 
-  drawCeiling: function() {
-   /* var maxX = this._currentMap._dimX;
-    var maxZ = this._currentMap._dimY;
-    for (var x = 0; x < maxX; x+= 0.5) {
-      var startPt = this.perspectiveProject(new Vector(x, 0.25, 0));
-      var endPt = this.perspectiveProject(new Vector(x, 0.25, maxZ));
-      this.ctx.strokeStyle = "black";
-      this.ctx.beginPath();
-      this.ctx.moveTo(startPt.x, startPt.y);
-      this.ctx.lineTo(endPt.x, endPt.y);
-      this.ctx.stroke();
-    }
-
-    for (var z = 0; z < maxZ; z+= 0.5) {
-        
-    }*/
-
-  },
-  
-  drawFloor: function() {
-  },
-
   render: function() {
     // sort z-distance highest to lowest -- draw closest last
-    this.ctx.fillStyle = this.bgColor;
+    this.ctx.fillStyle = "black";
     this.ctx.fillRect(0, 0, this.width, this.height);
     this.ctx.save();
     this.ctx.translate(this.width/2, this.height/2);
@@ -355,26 +360,37 @@ FirstPersonMaze.prototype = {
         -0.05,
         this.playerPos.z - 0.4 * Math.cos(theta));*/
 
+    var visibleFaces = [];
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].calc(this);
+      var z = this.faces[i].getAvgZ();
+      // z < 0 is behind me; z > 5 is outside my light radius.
+      if (z > 0 && z <= 6) {
+        visibleFaces.push(this.faces[i]);
+      }
     }
+    var visibleBGFaces = [];
     for (var i = 0; i < this.bgFaces.length; i++) {
       this.bgFaces[i].calc(this);
+      var z = this.bgFaces[i].getAvgZ();
+      // z < 0 is behind me; z > 5 is outside my light radius.
+      if (z > 0 && z <= 6) {
+        visibleBGFaces.push(this.bgFaces[i]);
+      }
     }
 
-    // maybe do some raycasting instead of painter algorithm
-    this.faces.sort(function(a, b) {
+    visibleFaces.sort(function(a, b) {
       return b.getAvgZ() - a.getAvgZ();
     });
 
     // render all ceiling/floor faces
-    for (var i = 0; i < this.bgFaces.length; i++) {
-      this.bgFaces[i].render(this.ctx);
+    for (var i = 0; i < visibleBGFaces.length; i++) {
+      visibleBGFaces[i].render(this.ctx);
     }
 
     // then after that render all wall faces
-    for (var i = 0; i < this.faces.length; i++) {
-      this.faces[i].render(this.ctx);
+    for (var i = 0; i < visibleFaces.length; i++) {
+      visibleFaces[i].render(this.ctx);
     }
 
     // TODO Special case the nearby walls (and floors) that were
@@ -447,6 +463,7 @@ FirstPersonMaze.prototype = {
       // left side
       var wFace = new Face(corner1, corner2, corner6, corner5);
       wFace.setColor(this.wallColor);
+      wFace.setLineColor(this.hardLineColor);
       wFace.addDecorations(this.makeBricks(x, z, "w"));
       if (terrainType == 3) {
         wFace.addDecorations(this.makeDoor(x, z, "w"));
@@ -457,6 +474,7 @@ FirstPersonMaze.prototype = {
       // right side
       var eFace = new Face(corner3, corner4, corner8, corner7);
       eFace.setColor(this.wallColor);
+      eFace.setLineColor(this.hardLineColor);
       eFace.addDecorations(this.makeBricks(x, z, "e"));
       if (terrainType == 3) {
         eFace.addDecorations(this.makeDoor(x, z, "e"));
@@ -468,6 +486,7 @@ FirstPersonMaze.prototype = {
       var nFace = new Face(corner1, corner4, corner8, corner5 );
       nFace.setColor(this.wallColor);
       nFace.addDecorations(this.makeBricks(x, z, "n"));
+      nFace.setLineColor(this.hardLineColor);
       if (terrainType == 3) {
         nFace.addDecorations(this.makeDoor(x, z, "n"));
       }
@@ -478,16 +497,18 @@ FirstPersonMaze.prototype = {
       var sFace = new Face(corner2, corner3, corner7, corner6 );
       sFace.setColor(this.wallColor);
       sFace.addDecorations(this.makeBricks(x, z, "s"));
+      sFace.setLineColor(this.hardLineColor);
       if (terrainType == 3) {
         sFace.addDecorations(this.makeDoor(x, z, "s"));
       }
       this.faces.push(sFace);
     }
+    /* TODO don't use hard line color on edges where it's continuous
+       with another wall */
   },
 
   makeBricks: function(x, z, side) {
     var brickLines= [];
-    // TODO set lines to this.lineColor
     switch (side) {
       case "e":
       var corner1 = new Vector(x + 0.5, -0.08, z+0.5);
@@ -590,6 +611,9 @@ FirstPersonMaze.prototype = {
       break;
 
     }
+    for (var i = 0; i < brickLines.length; i++) {
+      brickLines[i].setLineColor(this.softLineColor);
+    }
     return brickLines;
   },
 
@@ -607,9 +631,21 @@ FirstPersonMaze.prototype = {
       var corner11 = new Vector(x - 0.5, 0.15, z-0.2);
       var corner12 = new Vector(x - 0.5, 0.15, z+0.2);
       break;
+      case "n":
+      var corner9 = new Vector(x + 0.2, -0.25, z-0.5);
+      var corner10 = new Vector(x - 0.2, -0.25, z-0.5);
+      var corner11 = new Vector(x - 0.2, 0.15, z-0.5);
+      var corner12 = new Vector(x + 0.2, 0.15, z-0.5);
+      break;
+      case "s":
+      var corner9 = new Vector(x + 0.2, -0.25, z+0.5);
+      var corner10 = new Vector(x - 0.2, -0.25, z+0.5);
+      var corner11 = new Vector(x - 0.2, 0.15, z+0.5);
+      var corner12 = new Vector(x + 0.2, 0.15, z+0.5);
+      break;
     }
     var doorFace = new Face(corner9, corner10, corner11, corner12);
-    doorFace.setColor("black");
+    doorFace.setColor({r: 0, g: 0, b: 0});
     return [doorFace];
   },
   makeFloorAndCeiling: function(x, z) {
@@ -620,7 +656,7 @@ FirstPersonMaze.prototype = {
                              new Vector(x, -0.25, z +0.5)
                             );
     floorTile.setColor(this.bgColor);
-    floorTile.setLineColor(this.lineColor);
+    floorTile.setLineColor(this.softLineColor);
     this.bgFaces.push(floorTile);
     
     // ceiling
@@ -630,7 +666,7 @@ FirstPersonMaze.prototype = {
                             new Vector(x, 0.25, z +0.5)
                            );
     ceilTile.setColor(this.bgColor);
-    ceilTile.setLineColor(this.lineColor);
+    ceilTile.setLineColor(this.softLineColor);
     this.bgFaces.push(ceilTile);
   },
 
