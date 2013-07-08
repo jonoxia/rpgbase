@@ -131,6 +131,7 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onVictory) {
     this._victoryCallback = options.onVictory;
   }
+  this._randomTargetCallback = null;
   var frameDelay = 50; // default (very fast)
   if (options.frameDelay) {
     frameDelay = options.frameDelay;
@@ -211,18 +212,24 @@ BattleSystem.prototype = {
 
   randomElementFromArray: function(arr) {
     // choose random PC
-    // TODO allow registering a callback to override this function,
-    // to implement aggro.
-    var index = Math.floor( Math.random() * arr.length);
+   var index = Math.floor( Math.random() * arr.length);
     return arr[index];
   },
 
   chooseRandomEnemy: function(team) {
+    // TODO allow registering a callback to override this function,
+    // to implement aggro.
+    var possibleTargets;
     if (team == "monster") {
-      return this.randomElementFromArray(this.monsters);
+	possibleTargets = this.monsters;
     } else {
-      // monsters should only attack alive people:
-      return this.randomElementFromArray(this.getAliveParty());
+	possibleTargets = this.getAliveParty();
+    }
+    
+    if (this._randomTargetCallback) {
+	return this._randomTargetCallback(possibleTargets);
+    } else {
+      return this.randomElementFromArray(possibleTargets);
     }
   },
 
@@ -270,6 +277,10 @@ BattleSystem.prototype = {
       addOneCmd(name, cmdSet.cmds[name]);
     }
     return cmdMenu;
+  },
+
+  onChooseRandomTarget: function(callback) {
+    this._randomTargetCallback = callback;
   },
  
   onStartBattle: function(callback) {
