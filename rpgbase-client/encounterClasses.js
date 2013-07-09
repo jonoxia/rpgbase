@@ -565,6 +565,12 @@ BattleSystem.prototype = {
     // TODO another error:  topMenu.getPos is not a function
     // that appears to be the result of pushing a menu onto the
     // menu stack just as the menu stack is emptied.
+
+    // Clear all temporary stat mods that happened to PCs during
+    // the battle - these should not persist:
+    for (var i = 0; i < this._party.length; i++) {
+      this._party[i].clearTempStatMods();
+    }
   
     var endBattleMessage;
     switch (winLoseRun) {
@@ -782,6 +788,9 @@ var BattlerMixin = function() {
   };
   this.tempStatMod = function(statName, amount, duration) {
     this._statMods.push(new TempStatMod(statName, amount, duration));
+  };
+  this.clearTempStatMods = function() {
+    this._statMods = [];
   };
   this.onEffect = function(effectName, callback) {
     this._effectHandlers[effectName] = callback;
