@@ -510,6 +510,9 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
 
   this._equippableTypes = [];
   this._equippedItems = {};
+
+  this._battleSpells = [];
+  this._fieldSpells = [];
 }
 PlayerCharacter.prototype = {
   gainItem: function(itemType) {
@@ -539,11 +542,22 @@ PlayerCharacter.prototype = {
     // (not that it matters for now)
     //var defaultCmds = defaultCmds.clone();
     var myItemCmd = new BattleCommandSet();
+    // Should we be making this new one every time? Does old one
+    // get garbage collected???
     var myItems = this.getInventoryCmds(true);
     for (var i = 0; i < myItems.length; i++) {
       myItemCmd.add(myItems[i].name, new BatCmd(myItems[i]));
     }
     defaultCmds.add("ITEM", myItemCmd);
+
+    // Override spell list with my spell list!!
+    var myMagicCmd = new BattleCommandSet();
+    for (i = 0; i < this._battleSpells.length; i++) {
+      var spell = this._battleSpells[i];
+      myMagicCmd.add(spell.name, spell);
+    }
+    defaultCmds.add("MAGIC", myMagicCmd);
+
     return defaultCmds;
     // TODO what happens if you REPEAT a round of battle in which
     // somebody used a one-use item?
@@ -621,6 +635,15 @@ PlayerCharacter.prototype = {
       return this._equippedItems[slot].getEquipType();
     }
     return null;
+  },
+
+  learnSpell: function(spellCmd, useInBattle, useInField) {
+    if (useInBattle) {
+      this._battleSpells.push(spellCmd);
+    }
+    if (useInField) {
+      this._fieldSpells.push(spellCmd);
+    }
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

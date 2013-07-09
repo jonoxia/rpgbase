@@ -837,6 +837,38 @@ FieldMenu.prototype = {
     }
 
     this.pushMenu(menu);
+  },
+
+  showSpellMenu: function(character) {
+    var self = this;
+    var menu = this.makeMenu();
+    menu.setTitle("Spells:");
+    var fieldSpells = character._fieldSpells;
+    for (i = 0; i < fieldSpells.length; i++) {
+      (function(spell) {
+        if (spell.target == "ally") {
+          menu.addCommand(spell.name, function() {
+            self.chooseCharacter("On who?", function(target) {
+              spell.effect(self, character, target);
+              self.popMenu();
+              self.popMenu();
+            });
+          });
+        } else {
+          menu.addCommand(spell.name, function() {
+            spell.effect(self, character); // TODO pass party?
+            self.popMenu();
+          });
+        }
+      })(fieldSpells[i]);
+    }
+
+    // if no spells:
+    if (fieldSpells.length == 0) {
+      menu.addCommand("NO MAGIC", function() {});
+    }
+
+    this.pushMenu(menu);
   }
 };
 MenuSystemMixin(FieldMenu.prototype);

@@ -663,6 +663,9 @@ function BatCmd(options) {
   if (options.animate) {
     this.animate = options.animate;
   }
+  if (options.name) {
+    this.name = options.name;
+  }
   this.target = options.target;
   this.effect = options.effect;
   this.onStartRound = options.onStartRound;

@@ -62,6 +62,39 @@ var statsByLevel = [{atk: 4, def: 2},
                     {atk: 12, def: 6},
                     {atk: 16, def: 8}];
 
+var masterSpellBook = {
+  cure1: new BatCmd({
+    name: "CURE1",
+    target: "ally",
+    /* A BatCmd with target "ally" will pop up a menu to choose which
+     * ally you are targeting. */
+    effect: function(battle, user, target) {
+      battle.showMsg(user.name + " casts CURE1 on " + target.name);
+      target.setStat("hp", target.getStat("hp") + rollDice(2, 6));
+    }
+  }),
+  fire1: new BatCmd({
+    name: "FIRE1",
+    target: "random_enemy",
+    /* A BatCmd with target "random_enemy" will randomly choose a
+     * target with no need for player input */
+    effect: function(battle, user, target) {
+      battle.showMsg(user.name + " casts FIRE1 on " + target.name + "!");
+      battle.sendEffect(target, "damage", {amount: rollDice(3, 6)});
+    }
+  }),
+  boost: new BatCmd({
+    name: "BOOST",
+    target: "ally",
+    effect: function(battle, user, target) {
+      // todo test tempStatMod
+      battle.showMsg(target.name + " gains +5 atk and def");
+      target.tempStatMod("atk", 5, 3);
+      target.tempStatMod("def", 5, 3);
+    }
+  })
+};
+
 function pcCheckLevelUp(pc) {
   var currLevel = pc.getStat("level");
   var curExp = pc.getStat("exp");
@@ -137,6 +170,12 @@ function setUpParty(loader) {
   var sidekick = makeOnePC("MYAU", spriteSheet, 0);
   var sidekick2 =  makeOnePC("ODIN", spriteSheet, 0);
   var sidekick3 =  makeOnePC("NOAH", spriteSheet, 0);
+
+  // spells:
+  hero.learnSpell(masterSpellBook["cure1"], true, true);
+  sidekick3.learnSpell(masterSpellBook["cure1"], true, true);
+  sidekick3.learnSpell(masterSpellBook["fire1"], true, false);
+  sidekick3.learnSpell(masterSpellBook["boost"], true, false);
 
   var medicalHerb = new ItemType("Medical Herb", 1);
   medicalHerb.useEffect({target: "ally",
@@ -264,33 +303,6 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
   /* Create the default command list. (Later, individual PCs will
    * be able to override this command list with their own spells/
    * items/ etc. */
-  var spellList = new BattleCommandSet();
-  spellList.add("CURE1", new BatCmd({
-    target: "ally",
-    /* A BatCmd with target "ally" will pop up a menu to choose which
-     * ally you are targeting. */
-    effect: function(battle, user, target) {
-      battle.showMsg(user.name + " casts CURE1 on " + target.name);
-    }
-  }));
-  spellList.add("FIRE1", new BatCmd({
-    target: "random_enemy",
-    /* A BatCmd with target "random_enemy" will randomly choose a
-     * target with no need for player input */
-    effect: function(battle, user, target) {
-      battle.showMsg(user.name + " casts FIRE1 on " + target.name + "!");
-    }
-  }));
-  spellList.add("BOOST", new BatCmd({
-    target: "ally",
-    effect: function(battle, user, target) {
-      // todo test tempStatMod
-      battle.showMsg(target.name + " gains +5 atk and def");
-      target.tempStatMod("atk", 5, 3);
-      target.tempStatMod("def", 5, 3);
-    }
-  }));
-
   var defaultCmdSet = new BattleCommandSet();
 
   var hitSpriteSheet = loader.add("wounds.png");
@@ -337,7 +349,11 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
     }
   }));
   // Here is how you nest a sub-menu inside the main menu:
-  defaultCmdSet.add("MAGIC", spellList);
+  defaultCmdSet.add("MAGIC", new BatCmd({
+    effect: function(battle, user, target) {
+      battle.showMsg(user.name + " magics up a SPELL!");
+    }
+  }));
   defaultCmdSet.add("ITEM", new BatCmd({
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " uses an appropriate ITEM!");
@@ -580,9 +596,11 @@ function setUpFieldMenu() {
     }});
   fieldCommands.add("SPELL",{
     effect: function(menus, party) {
-      menus.showMsg("You sure magiced up that spell!");
+      menus.chooseCharacter("Whose?", function(character) {
+        menus.showSpellMenu(character);
+      });
     }});
-  fieldCommands.add( "EQUIP",{
+  fieldCommands.add("EQUIP",{
     effect: function(menus, party) {
       menus.showMsg("You put your recently purchased upgrades on your body");
     }});
