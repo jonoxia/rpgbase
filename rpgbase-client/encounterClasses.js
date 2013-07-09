@@ -452,17 +452,14 @@ BattleSystem.prototype = {
   },
 
   fightOneRound: function() {
-    var fighters = []; // will be an ORDERED array of who goes
-    var i;
     var aliveParty = this.getAliveParty();
+    var fighters = aliveParty.concat(this.monsters); //everyone
+    var i;
 
     // Tick down all temporary stat mods - they expire now if
     // their duration has run out
-    for (i = 0; i < this.monsters.length; i++) {
-      this.monsters[i].tickDownMods();
-    }
-    for (i = 0; i < aliveParty.length; i++) {
-      aliveParty[i].tickDownMods();
+    for (i = 0; i < fighters.length; i++) {
+      fighters[i].tickDownMods();
     }
 
     // Choose actions for each monster
@@ -471,30 +468,26 @@ BattleSystem.prototype = {
       var action = this.defaultMonsterAI(this.monsters[i]);
       this.monsters[i].lockInCmd(action.cmd, action.target);
     }
-    
-    // TODO apply START OF ROUND stat mods from chosen commands
+
+    // Apply START OF ROUND stat mods from chosen commands
     // i.e. the command you chose may affect your initiative order
     // or your defense for the round, so that must be applied before
     // rolling initiative.
-    // bat cmds will have to have an (optional) onSelect or onStartRound
-    // callback function that is called now.
+    for (i = 0; i < fighters.length; i++) {
+      var action = fighters[i].getLockedInCmd();
+      if (action.cmd.onStartRound) {
+        action.cmd.onStartRound(fighters[i]);
+      }
+    }
 
     if (this._initiativeCallback) {
       // if initiative callback is set, use it to determine
-      // order of fighters.
+      // order of fighters - otherwise, the default order
+      // is every PC followed by every monster.
       fighters = this._initiativeCallback(aliveParty,
                                           this.monsters);
-    } else {
-      // if not set, then everybody in party goes followed by
-      // each monster:
-      for (i = 0; i < aliveParty.length; i++) {
-        fighters.push(aliveParty[i]);
-      }
-      for (i = 0; i < this.monsters.length; i++) {
-        fighters.push(this.monsters[i]);
-      }
     }
-    
+
     // hide menus
     this.emptyMenuStack();
     this.showMsg("A round of battle is starting!");
@@ -521,6 +514,8 @@ BattleSystem.prototype = {
     var fighter = fightQueue.shift();
     var action = fighter.getLockedInCmd();
     var target = action.target;
+
+    console.log(fighter.name + " takes a turn with atk = " + fighter.getStat("atk") + " and def= " + fighter.getStat("def"));
 
     // choose random targets now, right before executing:
     if (target == "random_monster") {
@@ -670,6 +665,7 @@ function BatCmd(options) {
   }
   this.target = options.target;
   this.effect = options.effect;
+  this.onStartRound = options.onStartRound;
 }
 BatCmd.prototype = {
   isContainer: false

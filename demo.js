@@ -339,13 +339,19 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
   // Here is how you nest a sub-menu inside the main menu:
   defaultCmdSet.add("MAGIC", spellList);
   defaultCmdSet.add("ITEM", new BatCmd({
-    effect: function(battle, user) {
+    effect: function(battle, user, target) {
       battle.showMsg(user.name + " uses an appropriate ITEM!");
     }
   }));
   defaultCmdSet.add("DEFEND", new BatCmd({
-    effect: function(battle, user) {
-      battle.showMsg(user.name + " gets ready to DEFEND!");
+    target: "self",
+    effect: function(battle, user, target) {
+      battle.showMsg(user.name + " is DEFENDING!");
+    },
+    onStartRound: function(user) {
+      user.tempStatMod("def", 10, 1); // gain 10 def for 1 round
+      // starting from start of round, not from when your turn comes
+      // up.
     }
   }));
 
