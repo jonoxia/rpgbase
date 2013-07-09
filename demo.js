@@ -4,10 +4,10 @@ var sampleMazeData = [ // 1  2  3  4  5  6  7  8  9
   [1, 1, 0, 0, 2, 0, 0, 0, 0, 1,], // 2
   [1, 0, 0, 0, 0, 2, 0, 0, 0, 1,], // 3
   [1, 0, 0, 2, 0, 0, 2, 0, 0, 1,], // 4
-  [1, 0, 0, 0, 2, 0, 0, 0, 1, 1,], // 5
-  [1, 1, 1, 0, 0, 0, 0, 1, 1, 1,], // 6
-  [1, 1, 1, 0, 0, 1, 0, 0, 1, 1,], // 7
-  [1, 1, 1, 1, 1, 1, 0, 0, 0, 3,], // 8
+  [1, 0, 0, 0, 2, 0, 0, 1, 0, 1,], // 5
+  [1, 1, 1, 0, 0, 0, 0, 1, 3, 1,], // 6
+  [1, 1, 1, 0, 0, 1, 0, 0, 0, 1,], // 7
+  [1, 1, 1, 1, 1, 1, 0, 0, 1, 1,], // 8
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,], // 9
 ];
 
@@ -279,6 +279,15 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
      * target with no need for player input */
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " casts FIRE1 on " + target.name + "!");
+    }
+  }));
+  spellList.add("BOOST", new BatCmd({
+    target: "ally",
+    effect: function(battle, user, target) {
+      // todo test tempStatMod
+      battle.showMsg(target.name + " gains +5 atk and def");
+      target.tempStatMod("atk", 5, 3);
+      target.tempStatMod("def", 5, 3);
     }
   }));
 

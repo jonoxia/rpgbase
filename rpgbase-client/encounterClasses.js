@@ -454,6 +454,16 @@ BattleSystem.prototype = {
   fightOneRound: function() {
     var fighters = []; // will be an ORDERED array of who goes
     var i;
+    var aliveParty = this.getAliveParty();
+
+    // Tick down all temporary stat mods - they expire now if
+    // their duration has run out
+    for (i = 0; i < this.monsters.length; i++) {
+      this.monsters[i].tickDownMods();
+    }
+    for (i = 0; i < aliveParty.length; i++) {
+      aliveParty[i].tickDownMods();
+    }
 
     // Choose actions for each monster
     for (i = 0; i < this.monsters.length; i++) {
@@ -461,8 +471,14 @@ BattleSystem.prototype = {
       var action = this.defaultMonsterAI(this.monsters[i]);
       this.monsters[i].lockInCmd(action.cmd, action.target);
     }
+    
+    // TODO apply START OF ROUND stat mods from chosen commands
+    // i.e. the command you chose may affect your initiative order
+    // or your defense for the round, so that must be applied before
+    // rolling initiative.
+    // bat cmds will have to have an (optional) onSelect or onStartRound
+    // callback function that is called now.
 
-    var aliveParty = this.getAliveParty();
     if (this._initiativeCallback) {
       // if initiative callback is set, use it to determine
       // order of fighters.
@@ -644,7 +660,6 @@ function BatCmd(options) {
     };
   }
   if (options.animate) {
-    console.log("SETTING ANIMATION FOR THIS BATCMD");
     this.animate = options.animate;
   }
   this.target = options.target;
@@ -704,6 +719,12 @@ var BattlerMixin = function() {
   /* Used for Monsters and PlayerCharacters - anybody who can take
    * part in a battle. Syntax for using mixin:
    * BattlerMixin.call(class.prototype);  */
+  this.battlerInit = function() {
+    this._effectHandlers = {};
+    this._statMods = [];
+    this._lockedAction = null;
+    this._dead = false;
+  };
   this.lockInCmd = function(cmd, target) {
     this._lockedAction = {cmd: cmd,
                           target: target};
@@ -727,7 +748,13 @@ var BattlerMixin = function() {
     this._statBlock[statName] = value;
   };
   this.getStat = function(statName) {
-    return this.getBaseStat(statName);
+    // Add all tempStatMods.  Then figure out how that affects
+    // PlayerCharacter's use of this method.
+    var value = this.getBaseStat(statName);
+    for (var i = 0; i < this._statMods.length; i++) {
+      value += this._statMods[i].getVal(statName);
+    }
+    return value;
   };
   this.getBaseStat = function(statName) {
     return this._statBlock[statName];
@@ -741,21 +768,29 @@ var BattlerMixin = function() {
   this.modifyStat = function(statName, delta) {
     this._statBlock[statName] += delta;
   };
-  this.onEffect = function(effectName, callback) {
-    if (!this._effectHandlers) {
-      this._effectHandlers = [];
+  this.tickDownMods = function() {
+    var modsStillActive = [];
+    for (var i = 0; i < this._statMods.length; i++) {
+      this._statMods[i].tickDown();
+      if (this._statMods[i].isActive()) {
+        modsStillActive.push(this._statMods[i]);
+      }
     }
+    this._statMods = modsStillActive;
+    // TODO does this deletion pattern allow original array to be
+    // garbage-collected correctly? Serious question.
+  };
+  this.tempStatMod = function(statName, amount, duration) {
+    this._statMods.push(new TempStatMod(statName, amount, duration));
+  };
+  this.onEffect = function(effectName, callback) {
     this._effectHandlers[effectName] = callback;
   };
   this.takeEffect = function(effectName, data) {
-    if (!this._effectHandlers) {
-      this._effectHandlers = [];
-    }
     if (this._effectHandlers[effectName]) {
       data = this._effectHandlers[effectName](this, data);
       // return null to prevent default
     }
-
     // otherwise, return (possibly modified) data to continue
     // with the default handler.
     return data;
@@ -763,6 +798,7 @@ var BattlerMixin = function() {
 }
 
 function Monster(img, statBlock, effectHandlers) {
+  this.battlerInit();
   this.img = img;
   this._statBlock = statBlock;
   this.x = null;
@@ -792,6 +828,31 @@ BASIC_FIGHT_CMD = new BatCmd({
   }
 });
 // so monsters have something to use if it's not defined elsewhere
+
+
+function TempStatMod(statName, amount, duration) {
+  // give a battler one of these to give it +amount to statName for duration rounds
+  this._statName = statName;
+  this._amount = amount;
+  this._duration = duration;
+}
+TempStatMod.prototype = {
+  getVal: function(statName) {
+    if (this._statName == statName) {
+      return this._amount;
+    } else {
+      return 0;
+    }
+  },
+
+  tickDown: function() {
+    this._duration --;
+  },
+
+  isActive: function() {
+    return (this._duration > 0);
+  }
+};
 
 
 /* TODO:

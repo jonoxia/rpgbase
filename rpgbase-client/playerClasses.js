@@ -497,8 +497,8 @@ function MapSpriteMixin(subClassPrototype) {
 }
 
 function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock) {
+  this.battlerInit();
   this._statBlock = statBlock;
-  this._effectHandlers = {};
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
   this._walksThroughPCs = true;
 
@@ -629,6 +629,7 @@ MapSpriteMixin(PlayerCharacter.prototype);
 // TODO: This is
 // a bit hacky and I should think about how to implement proper
 // subclassing that lets me override but still call the base method:
+PlayerCharacter.prototype.parentGetStat = PlayerCharacter.prototype.getStat;
 PlayerCharacter.prototype.getEquipmentStat = function(statName) {
   var statValue = 0;
   for (var slot in this._equippedItems) {
@@ -642,7 +643,7 @@ PlayerCharacter.prototype.getEquipmentStat = function(statName) {
 PlayerCharacter.prototype.getStat = function(statName) {
   var statValue;
   if (this.hasStat(statName)) {
-    statValue = this.getBaseStat(statName);
+    statValue = this.parentGetStat(statName); // Returning NAN????
   } else {
     statValue = 0;
   }
