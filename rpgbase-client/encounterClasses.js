@@ -246,8 +246,16 @@ BattleSystem.prototype = {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
       } else {
-        // but if it's a "leaf node", then next step is to pick
-        // a target...
+        // but if it's a "leaf node", then next step is to see
+        // whether you can use it right now...
+        if (!cmd.canUse(pc)) {
+          cmdMenu.addCommand(name, function() {
+            self.showMsg("Not enough MP!");
+            // TODO what if this isn't the reason
+          });
+          return;
+        }
+        // and if you can, then pick a target...
         switch (cmd.target) {
         case "random_enemy":
           cmdMenu.addCommand(name, function() {
@@ -653,12 +661,11 @@ BattleSystem.prototype = {
 MenuSystemMixin(BattleSystem.prototype);
 
 function BatCmd(options) {
+  if (options.cost) {
+    this.cost = options.cost;
+  }
   if (options.canUse) {
-    this.canUse = canUse;
-  } else {
-    this.canUse = function(user) {
-      return true;
-    };
+    this._canUse = canUse;
   }
   if (options.animate) {
     this.animate = options.animate;
@@ -667,11 +674,32 @@ function BatCmd(options) {
     this.name = options.name;
   }
   this.target = options.target;
-  this.effect = options.effect;
+  this._effect = options.effect;
   this.onStartRound = options.onStartRound;
 }
 BatCmd.prototype = {
-  isContainer: false
+  isContainer: false,
+  canUse: function(user) {
+    if (this.cost) {
+      if (user.getStat(this.cost.resource) < this.cost.amount) {
+        return false;
+      }
+    }
+    if (this._canUse) {
+      return this._canUse(user);
+    }
+    return true;
+  },
+  effect: function(system, user, target) {
+    if (!this.canUse) {
+      system.showMsg(user.name + " can't use " + this.name);
+      return; // can happen if e.g. you REPEAT a spell when out of MP
+    }
+    if (this.cost) {
+      user.modifyStat(this.cost.resource, (-1)*this.cost.amount);
+    }
+    this._effect(system, user, target);
+  }
 };
 
 

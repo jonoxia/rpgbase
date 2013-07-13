@@ -846,7 +846,11 @@ FieldMenu.prototype = {
     var fieldSpells = character._fieldSpells;
     for (i = 0; i < fieldSpells.length; i++) {
       (function(spell) {
-        if (spell.target == "ally") {
+        if (!spell.canUse(character)) {
+          menu.addCommand(spell.name, function() {
+            self.showMsg("Not enough MP"); // TODO maybe other reason?
+          });
+        } else if (spell.target == "ally") {
           menu.addCommand(spell.name, function() {
             self.chooseCharacter("On who?", function(target) {
               spell.effect(self, character, target);
