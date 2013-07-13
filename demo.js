@@ -57,10 +57,10 @@ var townData = [
 ];
 
 var experienceForLevel = [0, 30, 75, 100];
-var statsByLevel = [{atk: 4, def: 2},
-                    {atk: 8, def: 4},
-                    {atk: 12, def: 6},
-                    {atk: 16, def: 8}];
+var statsByLevel = [{hp: 20, atk: 4, def: 2, mp: 8},
+                    {hp: 30, atk: 8, def: 4, mp: 12},
+                    {hp: 40, atk: 12, def: 6, mp: 16},
+                    {hp: 50, atk: 16, def: 8, mp: 20}];
 
 var masterSpellBook = {
   cure1: new BatCmd({
@@ -71,7 +71,8 @@ var masterSpellBook = {
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " casts CURE1 on " + target.name);
       target.setStat("hp", target.getStat("hp") + rollDice(2, 6));
-    }
+    },
+    cost: {resource: "mp", amount: 3}
   }),
   fire1: new BatCmd({
     name: "FIRE1",
@@ -81,7 +82,8 @@ var masterSpellBook = {
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " casts FIRE1 on " + target.name + "!");
       battle.sendEffect(target, "damage", {amount: rollDice(3, 6)});
-    }
+    },
+    cost: {resource: "mp", amount: 5}
   }),
   boost: new BatCmd({
     name: "BOOST",
@@ -91,7 +93,8 @@ var masterSpellBook = {
       battle.showMsg(target.name + " gains +5 atk and def");
       target.tempStatMod("atk", 5, 3);
       target.tempStatMod("def", 5, 3);
-    }
+    },
+    cost: {resource: "mp", amount: 4}
   })
 };
 
@@ -122,7 +125,7 @@ function makeOnePC(name, spriteSheet, spriteSheetRow) {
    * given spriteSheet for its walk animation. */
 
   var pc = new PlayerCharacter(spriteSheet, 16, 24, 0, -8,
-                               {hp: 20, exp: 0, level: 1});
+                               {exp: 0, level: 1});
   var startingStats = statsByLevel[0];
   for (var statName in startingStats) {
     pc.setStat(statName, startingStats[statName]);
@@ -586,7 +589,8 @@ function setUpFieldMenu() {
   // TODO: this really shouldn't be called a
   // BattleCommandSet then should it?
   // TODO cheating a little here because i'm not creating BatCmd
-  // instances but just throwing in an anoymous object with an 
+  // instances but just throwing in an anoymous object with the same
+  // interface.
   
   fieldCommands.add("ITEM",{
     effect: function(menus, party) {
