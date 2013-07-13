@@ -515,8 +515,6 @@ BattleSystem.prototype = {
     var action = fighter.getLockedInCmd();
     var target = action.target;
 
-    console.log(fighter.name + " takes a turn with atk = " + fighter.getStat("atk") + " and def= " + fighter.getStat("def"));
-
     // choose random targets now, right before executing:
     if (target == "random_monster") {
       target = this.chooseRandomEnemy("monster");
