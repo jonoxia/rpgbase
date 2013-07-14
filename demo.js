@@ -366,6 +366,7 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
     target: "self",
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " is DEFENDING!");
+      console.log("Defender has " + battle.getAllies(user).length + " allies.");
     },
     onStartRound: function(user) {
       user.tempStatMod("def", 10, 1); // gain 10 def for 1 round
@@ -373,6 +374,16 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
       // up.
     }
   }));
+  defaultCmdSet.add("COUNTER", new BatCmd({
+    target: "self",
+    effect: function(battle, user, target) {
+      battle.showMsg(user.name + " is COUNTERING!");
+    },
+    onStartRound: function(user) {
+      user.tempStatus("counter", 1); // be countering for 1 rd
+    }
+  }));
+  
 
   var metaCmdSet = new BattleCommandSet();
   metaCmdSet.add("REPEAT", new BatCmd({
@@ -457,6 +468,20 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
     // check for death:
     if (target.getStat("hp") <= 0) {
       battleSystem.removeFromBattle(target);
+    } else {
+      // if i'm still alive, and countering, counter!
+      if (target.hasStatus("counter")) {
+        var attackSource = data.source;
+        if (!attackSource.hasStatus("counter")) {
+          // don't counterattack a counterattack; this would lead
+          // to infinite loop.
+          var fight = defaultCmdSet.get("FIGHT");
+          // Immediately use the FIGHT command against attack source
+          battleSystem.outOfSequenceAction(target,
+                                           fight,
+                                           attackSource);
+        }
+      }      
     }
   });
 
@@ -902,13 +927,13 @@ $(document).ready( function() {
 
   // When all image loading is done, draw the map screen:
   loader.loadThemAll(function() {
-    // and start listening for (map screen) input:
-    inputDispatcher.mapMode("overworld");
+    // start listening for (map screen) input:
     // and begin map animation:
-    mapScreen.start();
-    /*inputDispatcher.menuMode("battle");
+    /*inputDispatcher.mapMode("overworld");
+    mapScreen.start();*/
+    inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                    number: 3}, 1);*/
+                                    number: 3}, 1);
 
   });
 

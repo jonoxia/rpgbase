@@ -312,6 +312,7 @@ BattleSystem.prototype = {
     this.clearMsg();
     this.landType = landType;
     this._attackSFX = null;
+    this._whoseTurn = null; // currently only used to target counters
 
     this.showPartyStats();
 
@@ -498,30 +499,45 @@ BattleSystem.prototype = {
 
     // hide menus
     this.emptyMenuStack();
-    this.showMsg("A round of battle is starting!");
-    this.executeNextFighterAction(fighters);
+    // build list of {fighter, cmd, target} objects:
+    this._fightQueue = [];
+    for (i = 0; i < fighters.length; i++) {
+      var action = fighters[i].getLockedInCmd();
+      this._fightQueue.push({fighter: fighters[i],
+                             cmd: action.cmd,
+                             target: action.target});
+    }
+    this.executeNextFighterAction();
   },
 
-  executeNextFighterAction: function(fightQueue) {
+  outOfSequenceAction: function(fighter, cmd, target) {
+    // stick this on beginning of fight queue
+    this._fightQueue.unshift({fighter: fighter,
+                              cmd: cmd,
+                              target: target});
+  },
+
+  executeNextFighterAction: function() {
     if (this._theEndHasCome) {
-      // If battle has already ended, don't continue executing.
+      // If battle has already ended mid-round,
+      // don't continue executing.
       return;
     }
     this.displayElem.empty();// clear the message
     // Skip any dead people (they may have died during the round)
-    while (fightQueue.length > 0 && !fightQueue[0].isAlive()) {
-      fightQueue.shift();
+    while (this._fightQueue.length > 0 && 
+           !this._fightQueue[0].fighter.isAlive()) {
+      this._fightQueue.shift();
     }
     
     // If fight queue is empty, then round is done
-    if (fightQueue.length == 0) {
+    if (this._fightQueue.length == 0) {
       this.clearMsg();
       this.showStartRoundMenu();
       return;
     }
-    var fighter = fightQueue.shift();
-    var action = fighter.getLockedInCmd();
-    var target = action.target;
+    var {fighter, cmd, target} = this._fightQueue.shift();
+    this._whoseTurn = fighter;
 
     // choose random targets now, right before executing:
     if (target == "random_monster") {
@@ -530,8 +546,8 @@ BattleSystem.prototype = {
       target = this.chooseRandomEnemy("pc");
     }
         
-    if (action) {
-      action.cmd.effect(this, fighter, target);
+    if (cmd) {
+      cmd.effect(this, fighter, target);
     } else {
       this.showMsg(fighter.name + " has no idea what to do!");
     }
@@ -539,15 +555,15 @@ BattleSystem.prototype = {
     this.showPartyStats();
 
     // run animation for this action, then go on to execute next action.
-    if (action.cmd.animate) {
-      this._attackSFX = action.cmd.animate(this, fighter, target);
+    if (cmd.animate) {
+      this._attackSFX = cmd.animate(this, fighter, target);
     } else {
       this._attackSFX = new Animation(10);
     }
     var self = this;
     this._attackSFX.onFinish(function() {
       self._attackSFX = null; // clear the attack sfx
-      self.executeNextFighterAction(fightQueue);
+      self.executeNextFighterAction();
     });
     this._animator.runAnimation(this._attackSFX);
   },
@@ -597,6 +613,9 @@ BattleSystem.prototype = {
   },
 
   sendEffect: function(target, effectName, data) {
+    // Identify source of effect as whichever fighter just went:
+    data.source = this._whoseTurn;
+    
     // 1. if target has a handler for this name, call that
     // (target.takeEffect)
 
@@ -654,6 +673,16 @@ BattleSystem.prototype = {
 
   animate: function(animation) {
     this._animator.runAnimation(animation);
+  },
+
+  getAllies: function(fighter) {
+    if (this.monsters.indexOf(fighter) > -1) {
+      return this.monsters;
+    }
+    if (this._party.indexOf(fighter) > -1) {
+      return this.getAliveParty();
+    }
+    return [];
   }
 };
 MenuSystemMixin(BattleSystem.prototype);
@@ -753,6 +782,7 @@ var BattlerMixin = function() {
   this.battlerInit = function() {
     this._effectHandlers = {};
     this._statMods = [];
+    this._stati = [];
     this._lockedAction = null;
     this._dead = false;
   };
@@ -814,6 +844,9 @@ var BattlerMixin = function() {
   this.tempStatMod = function(statName, amount, duration) {
     this._statMods.push(new TempStatMod(statName, amount, duration));
   };
+  this.tempStatus = function(statusName, duration) {
+    this._statMods.push(new TempStatusCondition(statusName, duration));
+  };
   this.clearTempStatMods = function() {
     this._statMods = [];
   };
@@ -828,7 +861,18 @@ var BattlerMixin = function() {
     // otherwise, return (possibly modified) data to continue
     // with the default handler.
     return data;
-  }
+  };
+  this.setStatus = function(name, val) {
+    this._stati[name] = val; // should be true or false only
+  };
+  this.hasStatus = function(name) {
+    for (var i = 0; i < this._statMods.length; i++) {
+      if (this._statMods[i].isStatus(name)) {
+        return true;
+      }
+    }
+    return !!(this._stati[name]);
+  };
 }
 
 function Monster(img, statBlock, effectHandlers) {
@@ -885,9 +929,36 @@ TempStatMod.prototype = {
 
   isActive: function() {
     return (this._duration > 0);
+  },
+
+  isStatus: function(statusName) {
+    return false;
   }
 };
 
+function TempStatusCondition(statusName, duration) {
+  // give a battler one of these to give it the status for the given
+  // duration
+  this._statusName = statusName;
+  this._duration = duration;
+}
+TempStatusCondition.prototype = {
+  getVal: function(statName) {
+    return 0;
+  },
+
+  tickDown: function() {
+    this._duration --; // duplicated code
+  },
+
+  isActive: function() {
+    return (this._duration > 0); // duplicated code
+  },
+
+  isStatus: function(statusName) {
+    return (this._statusName == statusName);
+  }
+};
 
 /* TODO:
 Part I: Monster Actions
