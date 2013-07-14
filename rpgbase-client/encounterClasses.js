@@ -485,7 +485,7 @@ BattleSystem.prototype = {
     for (i = 0; i < fighters.length; i++) {
       var action = fighters[i].getLockedInCmd();
       if (action.cmd.onStartRound) {
-        action.cmd.onStartRound(fighters[i]);
+        action.cmd.onStartRound(this, fighters[i]);
       }
     }
 
@@ -536,7 +536,10 @@ BattleSystem.prototype = {
       this.showStartRoundMenu();
       return;
     }
-    var {fighter, cmd, target} = this._fightQueue.shift();
+    var fightRecord = this._fightQueue.shift();
+    var fighter = fightRecord.fighter;
+    var cmd = fightRecord.cmd;
+    var target = fightRecord.target;
     this._whoseTurn = fighter;
 
     // choose random targets now, right before executing:
