@@ -368,7 +368,7 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
       battle.showMsg(user.name + " is DEFENDING!");
       console.log("Defender has " + battle.getAllies(user).length + " allies.");
     },
-    onStartRound: function(user) {
+    onStartRound: function(battle, user) {
       user.tempStatMod("def", 10, 1); // gain 10 def for 1 round
       // starting from start of round, not from when your turn comes
       // up.
@@ -379,7 +379,7 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " is COUNTERING!");
     },
-    onStartRound: function(user) {
+    onStartRound: function(battle, user) {
       user.tempStatus("counter", 1); // be countering for 1 rd
     }
   }));
@@ -402,15 +402,79 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
     }
   }));
 
+  var individualSpreadCmd = new BatCmd({
+    effect: function(battle, user, target) {
+      if (rollDice(1, 2) == 1) {
+        user.setStatus("fled", true);
+        battle.showMsg(user.name + " ESCAPES!");
+      } else {
+        battle.showMsg(user.name + " CAN'T GET AWAY!");
+      }
+    }
+  });
+
+  // TODO with escape stuff:
+  // 1. end round if everybody's run away   OK
+  // 2. the one round of 'fleeing' status doesn't expire in time
+  //    for me to enter commands next round...   OK
+  // 3. the battle message is blank when "speedy" succeeds?
   var escapeCmdSet = new BattleCommandSet();
   escapeCmdSet.add("SAFELY", new BatCmd({
     effect: function(battle, party) {
-      battle.endBattle("run");
+      battle.chooseWholePartyCmd(this);
+    },
+    onStartRound: function(battle, party) {
+      console.log("safely on start round");
+      for (var i = 0; i < party.length; i++) {
+        party[i].setStatus("fleeing", true); // so they won't act
+      }
+    },
+    onEndRound: function(battle, party) {
+      console.log("safely on end round");
+      battle.showMsg("THE PARTY TRIES TO FLEE...");
+      var roll = rollDice(1, 3);
+      console.log("Rolled a " + roll);
+      if (roll == 1) {
+        battle.endBattle("run");
+      } else {
+        battle.showMsg("THE PARTY CAN'T GET AWAY!");
+        for (var i = 0; i < party.length; i++) {
+          party[i].setStatus("fleeing", false); // so they can act again
+        }
+      }
     }
   }));
   escapeCmdSet.add("SPEEDY", new BatCmd({
     effect: function(battle, party) {
-      battle.endBattle("run");
+      battle.chooseWholePartyCmd(this);
+    },
+    onStartRound: function(battle, party) {
+      for (var i = 0; i < party.length; i++) {
+        party[i].setStatus("fleeing", true); 
+      }
+      battle.showMsg("THE PARTY TRIES TO FLEE...");
+      if (rollDice(1, 3) == 1) {
+        battle.endBattle("run");
+      } else {
+        battle.showMsg("THE PARTY CAN'T GET AWAY!");
+      }
+      console.log("Finished speedy . onStartRound");
+    },
+    onEndRound: function(battle, party) {
+      for (var i = 0; i < party.length; i++) {
+        party[i].setStatus("fleeing", false); 
+      }
+    }
+  }));
+  escapeCmdSet.add("SPREAD", new BatCmd({
+    effect: function(battle, party) {
+      battle.chooseWholePartyCmd(this);
+    },
+    onStartRound: function(battle, party) {
+      // all party members will execute the individualSpreadCmd
+      for (var i = 0; i < party.length; i++) {
+        party[i].lockInCmd(individualSpreadCmd, null);
+      }
     }
   }));
   escapeCmdSet.add("PANIC", new BatCmd({
@@ -418,6 +482,7 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
       battle.endBattle("run");
     }
   }));
+
 
   metaCmdSet.add("ESCAPE", escapeCmdSet);
 
@@ -929,11 +994,12 @@ $(document).ready( function() {
   loader.loadThemAll(function() {
     // start listening for (map screen) input:
     // and begin map animation:
-    /*inputDispatcher.mapMode("overworld");
-    mapScreen.start();*/
+    inputDispatcher.mapMode("overworld");
+    mapScreen.start();
+    /*mapScreen.stop();
     inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                    number: 3}, 1);
+                                    number: 3}, 1);*/
 
   });
 
