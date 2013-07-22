@@ -160,18 +160,18 @@ function BattleSystem(htmlElem, canvas, options) {
   });
 }
 BattleSystem.prototype = {
-  getAliveParty: function() {
-    // TODO this duplicates some code in Player.marchInOrder...
-    // BattleSystem and Player are both separately maintaining the
-    // aliveParty list. Should probably just maintain it in Player
-    // and query it from here.
-    var aliveParty = [];
+  getActiveParty: function() {
+    // returns list of all PCs who are 1. alive and 2. have not fled
+    // these are the ones who get to act and can be valid targets
+    // of enemy attacks.
+    var activeParty = [];
     for (var i =0 ; i< this._party.length; i++) {
-      if (this._party[i].isAlive()) {
-        aliveParty.push(this._party[i]);
+      if (this._party[i].isAlive() && 
+          !this._party[i].hasStatus("fled")) {
+        activeParty.push(this._party[i]);
       }
     }
-    return aliveParty;
+    return activeParty;
   },
 
   showMenuForPC: function(pc) {
@@ -195,37 +195,31 @@ BattleSystem.prototype = {
     // show stats so player can see what's locked in:
     this.showPartyStats();
 
-    // If that was the last party member, then hide the menus
-    // and start the round!
-    var aliveParty = this.getAliveParty(); // skip dead people
-
-    var pcIndex = aliveParty.indexOf(pc);
-
-    if (pcIndex == aliveParty.length - 1) {
+    var nextPC = this.getNextActingPC(pc);
+    if (nextPC == null) {
+      // If that was the last party member, then hide the menus
+      // and start the round!
       this.fightOneRound();
     } else {
       // Otherwise, show menu for next alive party member!
-      var nextPC = aliveParty[ pcIndex +1 ];
       this.showMenuForPC(nextPC); 
    }
   },
 
   randomElementFromArray: function(arr) {
     // choose random PC
-   var index = Math.floor( Math.random() * arr.length);
+    var index = Math.floor( Math.random() * arr.length);
     return arr[index];
   },
 
   chooseRandomEnemy: function(team) {
-    // TODO allow registering a callback to override this function,
-    // to implement aggro.
     var possibleTargets;
     if (team == "monster") {
 	possibleTargets = this.monsters;
     } else {
-	possibleTargets = this.getAliveParty();
+	possibleTargets = this.getActiveParty();
     }
-    
+
     if (this._randomTargetCallback) {
 	return this._randomTargetCallback(possibleTargets);
     } else {
@@ -421,8 +415,36 @@ BattleSystem.prototype = {
     }
   },
 
+  getNextActingPC: function(previousPC) {
+    // Return the next PC after previousPC who can
+    // go (is not dead/incapacitated). Returns null
+    // if there are no more; if previousPC is null,
+    // returns first PC who can act.
+    var index;
+    if (previousPC == null) {
+      index = 0;
+    } else {
+      index = this._party.indexOf(previousPC) + 1;
+    }
+    while (index < this._party.length) {
+      if (this._party[index].canAct()) {
+        return this._party[index];
+      }
+      index++;
+    }
+    return null; // no next pc, this was last one
+  },
+
   showFirstPCMenu: function() {
-    this.showMenuForPC(this.getAliveParty()[0]);
+    var firstPC = this.getNextActingPC(null);
+    if (firstPC) {
+      this.showMenuForPC(firstPC);
+    } else {
+      // No PCs can act this turn-- could happen if like
+      // everybody in the party was asleep or something. In which case
+      // we just fight a round without asking anything.
+      this.fightOneRound();
+    }
   },
 
   repeatLastRoundCommands: function() {
@@ -461,8 +483,8 @@ BattleSystem.prototype = {
   },
 
   fightOneRound: function() {
-    var aliveParty = this.getAliveParty();
-    var fighters = aliveParty.concat(this.monsters); //everyone
+    var activeParty = this.getActiveParty();
+    var fighters = activeParty.concat(this.monsters); //everyone
     var i;
 
     // Tick down all temporary stat mods - they expire now if
@@ -473,9 +495,11 @@ BattleSystem.prototype = {
 
     // Choose actions for each monster
     for (i = 0; i < this.monsters.length; i++) {
-      var name = this.monsters[i].name;
-      var action = this.defaultMonsterAI(this.monsters[i]);
-      this.monsters[i].lockInCmd(action.cmd, action.target);
+      if (this.monsters[i].canAct()) {
+        var name = this.monsters[i].name;
+        var action = this.defaultMonsterAI(this.monsters[i]);
+        this.monsters[i].lockInCmd(action.cmd, action.target);
+      }
     }
 
     // Apply START OF ROUND stat mods from chosen commands
@@ -483,9 +507,12 @@ BattleSystem.prototype = {
     // or your defense for the round, so that must be applied before
     // rolling initiative.
     for (i = 0; i < fighters.length; i++) {
-      var action = fighters[i].getLockedInCmd();
-      if (action.cmd.onStartRound) {
-        action.cmd.onStartRound(fighters[i]);
+      if (fighters[i].canAct()) {
+        console.log(fighters[i].name + " can act.");
+        var action = fighters[i].getLockedInCmd();
+        if (action.cmd.onStartRound) {
+          action.cmd.onStartRound(fighters[i]);
+        }
       }
     }
 
@@ -493,7 +520,7 @@ BattleSystem.prototype = {
       // if initiative callback is set, use it to determine
       // order of fighters - otherwise, the default order
       // is every PC followed by every monster.
-      fighters = this._initiativeCallback(aliveParty,
+      fighters = this._initiativeCallback(activeParty,
                                           this.monsters);
     }
 
@@ -502,10 +529,12 @@ BattleSystem.prototype = {
     // build list of {fighter, cmd, target} objects:
     this._fightQueue = [];
     for (i = 0; i < fighters.length; i++) {
-      var action = fighters[i].getLockedInCmd();
-      this._fightQueue.push({fighter: fighters[i],
-                             cmd: action.cmd,
-                             target: action.target});
+      if (fighters[i].canAct()) {
+        var action = fighters[i].getLockedInCmd();
+        this._fightQueue.push({fighter: fighters[i],
+                               cmd: action.cmd,
+                               target: action.target});
+      }
     }
     this.executeNextFighterAction();
   },
@@ -524,9 +553,11 @@ BattleSystem.prototype = {
       return;
     }
     this.displayElem.empty();// clear the message
-    // Skip any dead people (they may have died during the round)
+    // Skip any dead or otherwise incapacitated people
+    // (they may have died, fled, etc. during the round before their
+    // turn came up)
     while (this._fightQueue.length > 0 && 
-           !this._fightQueue[0].fighter.isAlive()) {
+           !this._fightQueue[0].fighter.canAct()) {
       this._fightQueue.shift();
     }
     
@@ -682,7 +713,7 @@ BattleSystem.prototype = {
       return this.monsters;
     }
     if (this._party.indexOf(fighter) > -1) {
-      return this.getAliveParty();
+      return this.getActiveParty();
     }
     return [];
   }
@@ -874,6 +905,12 @@ var BattlerMixin = function() {
       }
     }
     return !!(this._stati[name]);
+  };
+  this.canAct = function() {
+    // TODO make this under-rideable; these specific status codes
+    // belong in userland!!
+    return (! this._dead ) && (! this.hasStatus("asleep")) &&
+      (! this.hasStatus("fleeing")) && (! this.hasStatus("fled"));
   };
 }
 
