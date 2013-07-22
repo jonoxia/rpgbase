@@ -522,7 +522,7 @@ BattleSystem.prototype = {
       if (fighters[i].canAct()) {
         var action = fighters[i].getLockedInCmd();
         if (action.cmd.onStartRound) {
-          action.cmd.onStartRound(fighters[i]);
+          action.cmd.onStartRound(this, fighters[i]);
         }
       }
     }
@@ -578,10 +578,11 @@ BattleSystem.prototype = {
       this.finishRound();
       return;
     }
-    var {fighter, cmd, target} = this._fightQueue.shift();
+    var fightRecord = this._fightQueue.shift();
+    var fighter = fightRecord.fighter;
+    var cmd = fightRecord.cmd;
+    var target = fightRecord.target;
     this._whoseTurn = fighter;
-
-    console.log(fighter.name + " takes a turn with atk = " + fighter.getStat("atk") + " and def= " + fighter.getStat("def"));
 
     // choose random targets now, right before executing:
     if (target == "random_monster") {
