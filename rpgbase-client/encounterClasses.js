@@ -141,6 +141,7 @@ function BattleSystem(htmlElem, canvas, options) {
   } else {
     this._rootMenu = null;
   }
+  this._wholePartyCmd = null;
 
   this._effectHandlers = {};
 
@@ -204,6 +205,11 @@ BattleSystem.prototype = {
       // Otherwise, show menu for next alive party member!
       this.showMenuForPC(nextPC); 
    }
+  },
+
+  chooseWholePartyCmd: function(cmd) {
+    this._wholePartyCmd = cmd;
+    this.fightOneRound();
   },
 
   randomElementFromArray: function(arr) {
@@ -408,6 +414,7 @@ BattleSystem.prototype = {
       this.pcMenus[i].reset();
     }
     if (this._rootMenu) {
+      this._wholePartyCmd = null;
       this._rootMenu.reset();
       this.pushMenu(this._rootMenu);
     } else {
@@ -506,9 +513,11 @@ BattleSystem.prototype = {
     // i.e. the command you chose may affect your initiative order
     // or your defense for the round, so that must be applied before
     // rolling initiative.
+    if (this._wholePartyCmd) {
+      this._wholePartyCmd.onStartRound(this, activeParty);
+    }
     for (i = 0; i < fighters.length; i++) {
       if (fighters[i].canAct()) {
-        console.log(fighters[i].name + " can act.");
         var action = fighters[i].getLockedInCmd();
         if (action.cmd.onStartRound) {
           action.cmd.onStartRound(fighters[i]);
@@ -563,8 +572,7 @@ BattleSystem.prototype = {
     
     // If fight queue is empty, then round is done
     if (this._fightQueue.length == 0) {
-      this.clearMsg();
-      this.showStartRoundMenu();
+      this.finishRound();
       return;
     }
     var {fighter, cmd, target} = this._fightQueue.shift();
@@ -599,6 +607,16 @@ BattleSystem.prototype = {
       self.executeNextFighterAction();
     });
     this._animator.runAnimation(this._attackSFX);
+  },
+
+  finishRound: function() {
+    if (this._wholePartyCmd) {
+      if (this._wholePartyCmd.onEndRound) {
+        this._wholePartyCmd.onEndRound(this, this.getActiveParty());
+      }
+    }
+    this.clearMsg();
+    this.showStartRoundMenu();
   },
 
   endBattle: function(winLoseRun) {
@@ -736,6 +754,7 @@ function BatCmd(options) {
   this.target = options.target;
   this._effect = options.effect;
   this.onStartRound = options.onStartRound;
+  this.onEndRound = options.onEndRound;
 }
 BatCmd.prototype = {
   isContainer: false,
@@ -995,7 +1014,8 @@ TempStatusCondition.prototype = {
   },
 
   isStatus: function(statusName) {
-    return (this._statusName == statusName);
+    var result = (this._statusName == statusName);
+    return result;
   }
 };
 
