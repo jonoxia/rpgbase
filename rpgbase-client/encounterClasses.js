@@ -207,8 +207,19 @@ BattleSystem.prototype = {
    }
   },
 
-  chooseWholePartyCmd: function(cmd) {
+  chooseWholePartyCmd: function(cmd, skipPCTurns) {
     this._wholePartyCmd = cmd;
+
+    if (skipPCTurns) {
+      for (var i = 0; i < this._party.length; i++) {
+        this._party[i].setStatus("fleeing", true); 
+        // so they won't act on thier turn
+        // TODO maybe call this status something that implies
+        // "busy with whole-party command" instead of fleeing
+        // specifically -- no reason it can only work for escape
+        // commands.
+      }
+    }
     this.fightOneRound();
   },
 
@@ -614,6 +625,11 @@ BattleSystem.prototype = {
   },
 
   finishRound: function() {
+    for (var i = 0; i < this._party.length; i++) {
+      this._party[i].setStatus("fleeing", false);
+      // clear fleeing status so they can go again
+    }
+
     if (this._wholePartyCmd) {
       if (this._wholePartyCmd.onEndRound) {
         this._wholePartyCmd.onEndRound(this, this.getActiveParty());
