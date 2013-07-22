@@ -304,7 +304,6 @@ BattleSystem.prototype = {
     // TODO this is similar to MenuSystemMixin.open() but not quite
     // the same:
     this._freelyExit = false;
-    this._theEndHasCome = false;
     this.deadMonsters = [];
     this.player = player;
     this._party = player.getParty();
@@ -313,8 +312,6 @@ BattleSystem.prototype = {
     this.landType = landType;
     this._attackSFX = null;
     this._whoseTurn = null; // currently only used to target counters
-
-    this.showPartyStats();
 
     this.monsters = [];
     if (encounter.number) {
@@ -331,12 +328,17 @@ BattleSystem.prototype = {
     this.emptyMenuStack();
     this.pcMenus = [];
     for (var i = 0; i < this._party.length; i++) {
+      // undo any "fled" status set at the end of last battle...
+      this._party[i].setStatus("fled", false);
+      this._party[i].setStatus("fleeing", false);
+
       // callback to userland to let menu be customized for this PC:
       var customCmds = this._party[i].customizeCmds(
         this.defaultCmdSet);
       this.pcMenus.push(this.makeMenuForPC(this._party[i],
                                            customCmds));
     }
+    this.showPartyStats();
     this._animator.start();
 
     if (this._startBattleCallback) {
@@ -556,7 +558,8 @@ BattleSystem.prototype = {
   },
 
   executeNextFighterAction: function() {
-    if (this._theEndHasCome) {
+    // first, make sure the fight hasn't ended:
+    if (this.checkBattleEndConditions()) {
       // If battle has already ended mid-round,
       // don't continue executing.
       return;
@@ -623,7 +626,6 @@ BattleSystem.prototype = {
     // Trigger a ScrollingTextBox to come up
     // with end of battle messages; closing the ScrollingTextBox
     // closes the battle menu system.
-    this._theEndHasCome = true;
     this._animator.cancelAllCallbacks();
     this.emptyMenuStack();
     this.pcMenus = [];
@@ -687,37 +689,16 @@ BattleSystem.prototype = {
     // dead fighters will be skipped during command input and execution
     target.die();
     
-    if (this._party.indexOf(target) > -1) {
-      // if it's a player...
-      // check for tpk:
-      var tpk = true;
-      for (var i = 0; i < this._party.length; i++) {
-        if (this._party[i].isAlive()) {
-          tpk = false;
-        }
-      }
-      if (tpk) {
-        this.endBattle("lose");
-      }
-    }
-
     var index = this.monsters.indexOf(target);
     if (index > -1) {
       // if it's a monster...
       this.monsters.splice(index, 1);
-      // just remove it from the list.
-
+      // remove it from active monsters list...
       this.deadMonsters.push(target);
-      // put it in the dead monsters list.
+      // and put it in the dead monsters list.
 
-      if (this.monsters.length == 0) {
-        // if all monsters die, you win!
-        this.endBattle("win");
-      } else {
-        // redraw so we see what's gone missing:
-        this.draw();
-      }
-
+      // redraw so we see what's gone missing:
+      this.draw();
     }
     
   },
@@ -734,6 +715,32 @@ BattleSystem.prototype = {
       return this.getActiveParty();
     }
     return [];
+  },
+
+  checkBattleEndConditions: function() {
+    var activeParty = this.getActiveParty();
+
+    if (this.monsters.length == 0) {
+      // if all monsters die, you win!
+      this.endBattle("win");
+      return true;
+    }
+    
+    if (activeParty.length == 0) {
+      // if no pcs left fighting...
+      for (var i = 0; i < this._party.length; i++) {
+        if (this._party[i].isAlive() && 
+           this._party[i].hasStatus("fled")) {
+          // if any of them escaped, count it as a run
+          this.endBattle("run");
+          return true;
+        }
+      }
+      // if nobody escaped, it's a tpk
+      this.endBattle("lose");
+      return true;
+    }
+    return false;
   }
 };
 MenuSystemMixin(BattleSystem.prototype);
