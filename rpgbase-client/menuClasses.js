@@ -856,12 +856,16 @@ FieldMenu.prototype = {
               spell.effect(self, character, target);
               self.popMenu();
               self.popMenu();
+	      // update stats display to show effect of heal:
+	      self.showPartyStats();
             });
           });
         } else {
           menu.addCommand(spell.name, function() {
             spell.effect(self, character); // TODO pass party?
             self.popMenu();
+	    // update stats display to show effect of heal:
+	    self.showPartyStats();
           });
         }
       })(fieldSpells[i]);
