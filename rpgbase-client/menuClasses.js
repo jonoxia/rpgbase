@@ -860,7 +860,15 @@ FieldMenu.prototype = {
 	      self.showPartyStats();
             });
           });
+        } else if (spell.target == "all_allies") {
+          menu.addCommand(spell.name, function() {
+            var party = self._player.getAliveParty();
+            spell.effect(self, character, party);
+            self.popMenu();
+            self.showPartyStats();
+          });
         } else {
+          // non-target spells:
           menu.addCommand(spell.name, function() {
             spell.effect(self, character); // TODO pass party?
             self.popMenu();

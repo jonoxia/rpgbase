@@ -85,6 +85,32 @@ var masterSpellBook = {
     },
     cost: {resource: "mp", amount: 5}
   }),
+  fire2: new BatCmd({
+    name: "MASS FIRE",
+    target: "all_enemies",
+    effect: function(battle, user, targets) {
+      battle.showMsg(user.name + " casts MASS FIRE on all enemies!");
+      for (var i = 0; i < targets.length; i++) {
+        console.log("Mass fire hits " + targets[i].name);
+        battle.sendEffect(targets[i],
+                          "damage", {amount: rollDice(3, 6)});
+      }
+    },
+    cost: {resource: "mp", amount: 8}
+  }),
+  cure2: new BatCmd({
+    name: "MASS CURE",
+    target: "all_allies",
+    effect: function(battle, user, targets) {
+      battle.showMsg(user.name + " casts MASS CURE.");
+      for (var i = 0; i < targets.length; i++) {
+        console.log("Mass cure hits " + targets[i].name);
+        targets[i].modifyStat("hp", rollDice(2, 6));
+      }
+    },
+    cost: {resource: "mp", amount: 6}
+  }),
+
   boost: new BatCmd({
     name: "BOOST",
     target: "ally",
@@ -176,8 +202,8 @@ function setUpParty(loader) {
 
   // spells:
   hero.learnSpell(masterSpellBook["cure1"], true, true);
-  sidekick3.learnSpell(masterSpellBook["cure1"], true, true);
-  sidekick3.learnSpell(masterSpellBook["fire1"], true, false);
+  sidekick3.learnSpell(masterSpellBook["cure2"], true, true);
+  sidekick3.learnSpell(masterSpellBook["fire2"], true, false);
   sidekick3.learnSpell(masterSpellBook["boost"], true, false);
 
   var medicalHerb = new ItemType("Medical Herb", 1);

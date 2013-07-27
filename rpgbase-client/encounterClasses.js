@@ -286,7 +286,7 @@ BattleSystem.prototype = {
           // if no target needed, then choosing it
           // locks in the command for the PC.
           cmdMenu.addCommand(name, function() {
-            self.choosePCCommand(pc, cmd);
+            self.choosePCCommand(pc, cmd, cmd.target);
           });
           break;
         }
@@ -601,6 +601,14 @@ BattleSystem.prototype = {
     } else if (target == "random_pc") {
       target = this.chooseRandomEnemy("pc");
     }
+    // Turn "all allies" and "all enemies" target types into
+    // arrays:
+    else if (target == "all_allies") {
+      target = this.getAllies(fighter);
+    } else if (target == "all_enemies") {
+      target = this.getEnemies(fighter);
+      console.log("All enemies of " + fighter.name + " is array: "+ target);
+    }
         
     if (cmd) {
       cmd.effect(this, fighter, target);
@@ -725,11 +733,28 @@ BattleSystem.prototype = {
   },
 
   getAllies: function(fighter) {
+    // returns array of everybody active on fighter's side
     if (this.monsters.indexOf(fighter) > -1) {
       return this.monsters;
     }
     if (this._party.indexOf(fighter) > -1) {
       return this.getActiveParty();
+    }
+    return [];
+  },
+
+  getEnemies: function(fighter) {
+    // oppostite of getAllies: returns array of everybody
+    // active on side opposing fighter.
+    // The slice is to copy the array, so that the command's
+    // effect function has a working copy that's guaranteed not
+    // to be modified during iteration (if e.g. it kills some monsters
+    // during the loop)
+    if (this.monsters.indexOf(fighter) > -1) {
+      return this.getActiveParty().slice();
+    }
+    if (this._party.indexOf(fighter) > -1) {
+      return this.monsters.slice();
     }
     return [];
   },
