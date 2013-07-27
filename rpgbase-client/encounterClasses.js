@@ -1,8 +1,8 @@
-function Encounter(monsterList) {
-  
+
+function randomElementFromArray(arr) {
+  var index = Math.floor( Math.random() * arr.length);
+  return arr[index];
 }
-Encounter.prototype = {
-};
 
 function EncounterTable(data, dieSize) {
   if (dieSize) {
@@ -95,7 +95,6 @@ EncounterTableSet.prototype = {
 };
 
 
-
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
   this._init(htmlElem);
@@ -112,6 +111,18 @@ function BattleSystem(htmlElem, canvas, options) {
     this.defaultMsg = "Monsters appeared!";
   }
 
+  if (options.defaultMonsterCmd) {
+    this._defaultMonsterCmd = options.defaultMonsterCmd;
+  } else {
+    this._defaultMonsterCmd = new BatCmd({
+      target: "random_enemy",
+      effect: function(battle, user, target) {
+        battle.showMsg(user.name + " uses PLACEHOLDER ATTACK on "
+                       + target.name + "!");
+      }
+    });
+    // so monsters have something to use if it's not defined elsewhere
+  }
   if (options.defaultCmdSet) {
     this.defaultCmdSet = options.defaultCmdSet;
   }
@@ -132,6 +143,7 @@ function BattleSystem(htmlElem, canvas, options) {
     this._victoryCallback = options.onVictory;
   }
   this._randomTargetCallback = null;
+
   var frameDelay = 50; // default (very fast)
   if (options.frameDelay) {
     frameDelay = options.frameDelay;
@@ -223,12 +235,6 @@ BattleSystem.prototype = {
     this.fightOneRound();
   },
 
-  randomElementFromArray: function(arr) {
-    // choose random PC
-    var index = Math.floor( Math.random() * arr.length);
-    return arr[index];
-  },
-
   chooseRandomEnemy: function(team) {
     var possibleTargets;
     if (team == "monster") {
@@ -240,7 +246,7 @@ BattleSystem.prototype = {
     if (this._randomTargetCallback) {
 	return this._randomTargetCallback(possibleTargets);
     } else {
-      return this.randomElementFromArray(possibleTargets);
+      return randomElementFromArray(possibleTargets);
     }
   },
 
@@ -485,21 +491,13 @@ BattleSystem.prototype = {
     }
   },
 
-  defaultMonsterAI: function(monster) {
-    // TODO allow overriding this with custom AI
-    // for now have them all fight random players
-    var fight = this.defaultCmdSet.get("FIGHT");
-    // TODO this assumes there's a "fight" in the players' default
-    // command set!
-    
-    if (!fight || fight.isContainer) {
-      fight = BASIC_FIGHT_CMD;
-    }
-    var target = "random_pc";
-    return {
-      cmd: fight,
-      target: target
-    };
+  setDefaultMonsterCmd: function(cmd) {
+    // this command will be used by monsters without AI
+    this._defaultMosnterCmd = cmd;
+  },
+
+  getDefaultMonsterCmd: function(cmd) {
+    return this._defaultMonsterCmd;
   },
 
   fightOneRound: function() {
@@ -517,8 +515,7 @@ BattleSystem.prototype = {
     for (i = 0; i < this.monsters.length; i++) {
       if (this.monsters[i].canAct()) {
         var name = this.monsters[i].name;
-        var action = this.defaultMonsterAI(this.monsters[i]);
-        this.monsters[i].lockInCmd(action.cmd, action.target);
+        this.monsters[i].defaultAI(this);
       }
     }
 
@@ -849,21 +846,28 @@ BattleCommandSet.prototype = {
   isContainer: true
 };
 
-function MonsterType(img, name, statBlock) {
+function MonsterType(img, name, statBlock, commandList) {
   this.img = img;
   this.statBlock = statBlock;
   this.name = name;
-  // TODO: monster type command list
   // TODO: monster AI callback
   // TODO: need a way to set some generic functions, like, default monster
   // AI, default monster on-die handler, etc. I guess we set those on
   // the battle system?
-
+  if (commandList) {
+    this._commandList = commandList;
+  } else {
+    this._commandList = [];
+  }
   this._effectHandlers = {};
 }
 MonsterType.prototype = {
   onEffect: function(effectName, callback) {
     this._effectHandlers[effectName] = callback;
+  },
+
+  knowsCommand: function(cmd) {
+    this._commandList.push(cmd);
   },
 
   instantiate: function() {
@@ -872,7 +876,9 @@ MonsterType.prototype = {
     for (var name in this.statBlock) {
       cloneStats[name] = this.statBlock[name];
     }
-    return new Monster(this.img, cloneStats, this._effectHandlers);
+    var cloneCmds = this._commandList.slice();
+    return new Monster(this.img, cloneStats, cloneCmds,
+                       this._effectHandlers);
   }
 };
 
@@ -982,13 +988,14 @@ var BattlerMixin = function() {
   };
 }
 
-function Monster(img, statBlock, effectHandlers) {
+function Monster(img, statBlock, cmdList, effectHandlers) {
   this.battlerInit();
   this.img = img;
   this._statBlock = statBlock;
   this.x = null;
   this.y = null;
   this.name = "A Monster";
+  this._commands = cmdList;
   this._effectHandlers = effectHandlers; // shallow copy, not cloned
 };
 Monster.prototype = {
@@ -1001,19 +1008,24 @@ Monster.prototype = {
   },
   plot: function(ctx) {
     ctx.drawImage(this.img, this.x, this.y);
+  },
+  defaultAI: function(battleSystem) {
+    if (this._commands.length > 0) {
+      var cmd = randomElementFromArray(this._commands);
+    } else {
+      cmd = battleSystem.getDefaultMonsterCmd();
+    }
+    var target = cmd.target;
+    if (target == "ally") {
+      target = randomElementFromArray(battleSystem.getAllies(this));
+    } else if (target == "random_enemy") {
+      target = "random_pc";
+    }
+    
+    this.lockInCmd(cmd, target);
   }
 };
 BattlerMixin.call(Monster.prototype);
-
-BASIC_FIGHT_CMD = new BatCmd({
-  target: "random_enemy",
-  effect: function(battle, user, target) {
-    battle.showMsg(user.name + " attacks " + target.name + "!");
-    battle.sendEffect(target, "damage", {amount: rollDice(1, 6)});
-  }
-});
-// so monsters have something to use if it's not defined elsewhere
-
 
 function TempStatMod(statName, amount, duration) {
   // give a battler one of these to give it +amount to statName for duration rounds

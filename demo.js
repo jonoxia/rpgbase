@@ -392,7 +392,6 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
     target: "self",
     effect: function(battle, user, target) {
       battle.showMsg(user.name + " is DEFENDING!");
-      console.log("Defender has " + battle.getAllies(user).length + " allies.");
     },
     onStartRound: function(battle, user) {
       user.tempStatMod("def", 10, 1); // gain 10 def for 1 round
@@ -659,10 +658,13 @@ function setUpMonstrousManuel(loader) {
                               {hp: 30, gp: 12, exp: 17}),
     eastWorm: new MonsterType(loader.add("monsters/biteworm.png"),
                               "Eastworm",
-                              {hp: 20, gp: 8, exp: 12}),
+                              {hp: 20, gp: 8, exp: 12, mp:15},
+                              [masterSpellBook.fire1,
+                               masterSpellBook.cure1]),
     eastSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                               "Eastsnake",
-                              {hp: 30, gp: 12, exp: 17})
+                              {hp: 30, gp: 12, exp: 17},
+                              [masterSpellBook.fire2])
 
     // TODO - Add more monster definitions here. Comma-separated.
   };
