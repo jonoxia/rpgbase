@@ -121,6 +121,17 @@ var masterSpellBook = {
       target.tempStatMod("def", 5, 3);
     },
     cost: {resource: "mp", amount: 4}
+  }),
+
+  poison: new BatCmd({
+    name: "POISON",
+    target: "random_enemy",
+    effect: function(battle, user, target) {
+      // todo saving throw??
+      battle.showMsg(target.name + " IS POISONED!");
+      target.setStatus("poisoned", true);
+    },
+    cost: {resource: "mp", amount: 2}
   })
 };
 
@@ -545,6 +556,20 @@ function setUpBattleSystem(canvas, loader, mazeScreen) {
       monsters[i].plot(context);
     }
   });
+
+  battleSystem.onEndRound(function(battle, fighters) {
+    // poison damage:
+    for (var i = 0; i < fighters.length; i++) {
+      if (fighters[i].hasStatus("poisoned")) {
+        console.log(fighters[i].name + " takes poison damage");
+        battle.sendEffect(fighters[i], "damage",
+                          {amount: rollDice(1, 6),
+                           type: "poison"});
+        // TODO make poison-type damage not trigger counterattack!
+        // (or else modify hp directly instead of sendEffect)
+      }
+    }
+  });
   
   /*battleSystem.onRollInitiative(function(party, monsters)) {
     // TODO
@@ -649,7 +674,9 @@ function setUpMonstrousManuel(loader) {
                               {hp: 10, gp: 2, exp: 3}),
     groundSnake: new MonsterType(loader.add("monsters/groundsnake.png"),
                                  "Groundsnake",
-                                 {hp: 15, gp: 4, exp: 7}),
+                                 {hp: 15, gp: 4, exp: 7},
+                                [masterSpellBook.poison]
+                                ),
     seaWorm: new MonsterType(loader.add("monsters/biteworm.png"),
                               "Seaworm",
                               {hp: 20, gp: 8, exp: 12}),
@@ -981,8 +1008,31 @@ $(document).ready( function() {
     startEncounter(x, y, landType);
   });
 
-  var townMap = setUpTownMap(loader, mapScreen);
+  // Every step (e.g. poison)
+  player.onMove(function(player, dx, dy, canMove) {
+    if (canMove) {
+      player.forEachAliveMember(function(pc){
+        if (pc.hasStatus("poisoned")) {
+          /* TODO this is the first thing that can damage you on
+           * the map screen, so it's bypassing the usual way of
+           * receiving damage (battleSystem default "damage" effect
+           * handler.) That means any special logic added to that
+           * handler may need to be duplicated here.*/
+          pc.modifyStat("hp", -1);
+          // TODO flash screen
+          if (pc.getStat("hp") <= 0) {
+            pc.die();
+            player.marchInOrder();
+            inputDispatcher.menuMode("dialog").open(player);
+            dialoglog.scrollText(pc.name + " has died of poison.");
+            // TODO check for TPK and do game-over screen?
+          }
+        }
+      });
+    }
+  });
 
+  var townMap = setUpTownMap(loader, mapScreen);
 
   function situateTown(theTownMap, theOverworldMap, x1, y1, x2, y2) {
     /* Enter the town: */
@@ -1024,10 +1074,13 @@ $(document).ready( function() {
     // and begin map animation:
     inputDispatcher.mapMode("overworld");
     mapScreen.start();
-    /*mapScreen.stop();
+
+
+    mapScreen.stop();
+    battleSystem.originalMode = "overworld";
     inputDispatcher.menuMode("battle");
-    battleSystem.startBattle(player, {type: manuel.biteWorm,
-                                    number: 3}, 1);*/
+    battleSystem.startBattle(player, {type: manuel.groundSnake,
+                                    number: 3}, 1);
 
   });
 

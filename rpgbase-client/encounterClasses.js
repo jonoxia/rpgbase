@@ -144,6 +144,11 @@ function BattleSystem(htmlElem, canvas, options) {
   }
   this._randomTargetCallback = null;
 
+  this._endRoundCallback = null;
+  if (options.onEndRound) {
+    this._endRoundCallback = options.onEndRound;
+  }
+
   var frameDelay = 50; // default (very fast)
   if (options.frameDelay) {
     frameDelay = options.frameDelay;
@@ -310,6 +315,10 @@ BattleSystem.prototype = {
  
   onStartBattle: function(callback) {
     this._startBattleCallback = callback;
+  },
+
+  onEndRound: function(callback) {
+    this._endRoundCallback = callback;
   },
 /*
   onEndBattle: function(callback) {
@@ -630,9 +639,16 @@ BattleSystem.prototype = {
   },
 
   finishRound: function() {
-    for (var i = 0; i < this._party.length; i++) {
-      this._party[i].setStatus("fleeing", false);
+    var activeParty = this.getActiveParty();
+    var fighters = activeParty.concat(this.monsters); //everyone
+    for (var i = 0; i < fighters.length; i++) {
       // clear fleeing status so they can go again
+      fighters[i].setStatus("fleeing", false);
+      // any special end-of-round effects (e.g. poison damage)
+    }
+
+    if (this._endRoundCallback) {
+      this._endRoundCallback(this, fighters);
     }
 
     if (this._wholePartyCmd) {
@@ -641,6 +657,8 @@ BattleSystem.prototype = {
       }
     }
     this.clearMsg();
+    this.showPartyStats(); // in case end of round effects changed 
+    // anything
     this.showStartRoundMenu();
   },
 

@@ -150,7 +150,7 @@ Player.prototype = {
     // When animation is done, call user-defined callbacks!
     animation.onFinish(function() {
       for (i = 0; i < self.moveListeners.length; i++) {
-        self.moveListeners[i].call(self, dx, dy, canMove);
+        self.moveListeners[i](self, dx, dy, canMove);
       }
     });
 
