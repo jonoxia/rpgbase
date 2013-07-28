@@ -493,7 +493,7 @@ BattleSystem.prototype = {
 
   setDefaultMonsterCmd: function(cmd) {
     // this command will be used by monsters without AI
-    this._defaultMosnterCmd = cmd;
+    this._defaultMonsterCmd = cmd;
   },
 
   getDefaultMonsterCmd: function(cmd) {
