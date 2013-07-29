@@ -122,6 +122,10 @@ ItemType.prototype = {
     return instance;
   },
 
+  getDefaultPrice: function() {
+    return this._defaultPrice;
+  },
+
   inBattleEffect: function(options) {
     this._battleTarget = options.target;
     this._battleEffect = options.effect;

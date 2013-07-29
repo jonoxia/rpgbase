@@ -178,6 +178,10 @@ function makeShop(spriteSheet, mapScreen, width, height,
   var strLens = [];
   for (var i = 0; i < inventory.length; i++) {
     var strLen = inventory[i].item.getName().length;
+    if (!inventory[i].price) {
+	// use default price if not specified
+	inventory[i].price = inventory[i].item.getDefaultPrice();
+    }
     strLen += (" " + inventory[i].price).length;
     if (strLen > longestString) {
       longestString = strLen;
@@ -209,7 +213,7 @@ function makeShop(spriteSheet, mapScreen, width, height,
   }
 
   function chooseItemToSell(dialog, player, character, item) {
-    var salePrice = item.reference.getDefaultPrice();
+    var salePrice = Math.floor(item.reference.getDefaultPrice() / 2);
     dialog.showMsg("Sell " + item.name
                    + " for " + 
                    salePrice + 
