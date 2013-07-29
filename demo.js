@@ -217,7 +217,7 @@ function setUpParty(loader) {
   sidekick3.learnSpell(masterSpellBook["fire2"], true, false);
   sidekick3.learnSpell(masterSpellBook["boost"], true, false);
 
-  var medicalHerb = new ItemType("Medical Herb", 1);
+  var medicalHerb = new ItemType("Medical Herb", 1, 5);
   medicalHerb.useEffect({target: "ally",
                          inBattle: true,
                          outOfBattle: true,
@@ -234,7 +234,7 @@ function setUpParty(loader) {
                          }
                         });
 
-  var sword = new ItemType("Crummy Sword");
+  var sword = new ItemType("Crummy Sword", null, 50);
   sword.equippable("hand", "sword", {atk: 5});
   var fur = new ItemType("Crummy Fur");
   fur.equippable("body", "fur", {def: 5});
@@ -321,7 +321,7 @@ function setUpTownMap(loader, mapScreen) {
                    {item: potion, price: 90},
                    {item: coolarmor, price: 850}];
   var shop = makeShop(spriteSheet, mapScreen, 16, 24, 0, -8,
-                      0, 2, inventory, "gold");
+                      0, 2, inventory, "gold", "Welcome!");
   town.addNPC(shop, 10, 4);
 
   var treasureSheet = loader.add("treasure.png");
@@ -1075,12 +1075,12 @@ $(document).ready( function() {
     inputDispatcher.mapMode("overworld");
     mapScreen.start();
 
-
+/*
     mapScreen.stop();
     battleSystem.originalMode = "overworld";
     inputDispatcher.menuMode("battle");
     battleSystem.startBattle(player, {type: manuel.groundSnake,
-                                    number: 3}, 1);
+                                    number: 3}, 1);*/
 
   });
 

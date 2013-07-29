@@ -94,13 +94,18 @@ Inventory.prototype = {
 };
 
 
-function ItemType(name, numUses) {
+function ItemType(name, numUses, defaultPrice) {
   // can be used infinity times if numUses is not provided.
   this._name = name;
   if (numUses) {
     this._numUses = numUses;
   } else {
     this._numUses = null;
+  }
+  if (defaultPrice) {
+    this._defaultPrice = defaultPrice;
+  } else {
+    this._defaultPrice = 0;
   }
   this._battleEffect = null;
   this._fieldEffect = null;
@@ -112,7 +117,8 @@ ItemType.prototype = {
     var instance = new ItemInstance(this._name, this._numUses,
                             this._battleEffect, this._battleTarget,
                             this._fieldEffect,
-                            this._equipSlot, this._equipType, this._equipStats);
+                            this._equipSlot, this._equipType,
+                            this._equipStats, this._defaultPrice);
     return instance;
   },
 
@@ -150,8 +156,10 @@ ItemType.prototype = {
 
 function ItemInstance(name, numUses, battleEffect, battleTarget,
                       fieldEffect,
-                      equipSlot, equipType, equipStats) {
+                      equipSlot, equipType, equipStats,
+                      defaultPrice) {
   this._name = name;
+  this._defaultPrice = defaultPrice;
   this._numUses = numUses;
   var self = this;
   
@@ -176,6 +184,10 @@ function ItemInstance(name, numUses, battleEffect, battleTarget,
 ItemInstance.prototype = {
   getName: function() {
     return this._name;
+  },
+
+  getDefaultPrice: function() {
+    return this._defaultPrice;
   },
 
   getTargetType: function() {
