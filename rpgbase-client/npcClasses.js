@@ -160,7 +160,6 @@ MoneyChest.prototype = {
 MapSpriteMixin(MoneyChest.prototype);
 
 
-
 function makeShop(spriteSheet, mapScreen, width, height,
                   offsetX, offsetY, spriteX, spriteY, inventory,
                   denomination, shopMessage) {
@@ -209,13 +208,27 @@ function makeShop(spriteSheet, mapScreen, width, height,
     }
   }
 
-  shopkeeper.onTalk(function(dialog, player) {
-    dialog.open(player);
-    dialog.showPartyResources(player, denomination);
-    dialog.showMsg(shopMessage);
+  function chooseItemToSell(dialog, player, character, item) {
+    var salePrice = item.reference.getDefaultPrice();
+    dialog.showMsg("Sell " + item.name
+                   + " for " + 
+                   salePrice + 
+                   denomination + " ?");
+    dialog.yesOrNo(function(choice) {
+      if (choice) {
+        character.loseItem(item.reference);
+        player.gainResource(denomination,
+                            salePrice);
+        dialog.showMsg("Thank you!");
+      }
+      dialog.popMenu();
+      dialog.popMenu();
+    });
+  }
+
+  function buyMenu(dialog, player) {
     var menu = dialog.makeMenu();
     menu.setTitle("Buy");
-
     for (var i = 0; i < inventory.length; i++) {
       var menuText = textRows[i];
       (function(entry) {
@@ -235,7 +248,44 @@ function makeShop(spriteSheet, mapScreen, width, height,
       })(inventory[i]);
     }
     dialog.pushMenu(menu);
+  }
+
+  function sellMenu(dialog, player) {
+    dialog.chooseCharacter("Who will sell?", function(seller) {
+      var menu = dialog.makeMenu();
+      menu.setTitle("Sell what?");
+      
+      var itemCmds = seller.getInventoryCmds(false);
+      for (var i = 0; i < itemCmds.length; i++) {
+        (function(saleItem) {
+          menu.addCommand(saleItem.name,
+                          function() {
+                            chooseItemToSell(dialog,
+                                             player,
+                                             seller, 
+                                             saleItem);
+                          });
+        })(itemCmds[i]);
+      }
+      dialog.pushMenu(menu);
+    });
+  }
+
+  shopkeeper.onTalk(function(dialog, player) {
+    dialog.open(player);
+    dialog.showPartyResources(player, denomination);
+    dialog.showMsg(shopMessage);
+
+    var menu = dialog.makeMenu();
+    menu.addCommand("buy", function() {
+      buyMenu(dialog, player);
+    });
+    menu.addCommand("sell", function() {
+      sellMenu(dialog, player);
+    });
+    dialog.pushMenu(menu);
   });
+  
   shopkeeper.setSprite(spriteX, spriteY);
   return shopkeeper;
 }
