@@ -72,7 +72,14 @@ EncounterTableSet.prototype = {
                            bottom: bottom, code: code});
   },
 
+  setEncounterCodeMap: function(mapData) {
+    this._encounterCodeMap = mapData;
+  },
+
   getRegion: function(x, y) {
+    if (this._encounterCodeMap) {
+	return this._encounterCodeMap[y][x];
+    }
     for (var i = 0; i < this._geoRegions.length; i++) {
       var region = this._geoRegions[i];
       if (x >= region.left && x <= region.right &&
