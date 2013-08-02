@@ -186,6 +186,9 @@ function ItemInstance(name, numUses, battleEffect, battleTarget,
   
 }
 ItemInstance.prototype = {
+  isConsumable: function() {
+    return (this._numUses != null);
+  },
   getName: function() {
     return this._name;
   },
