@@ -93,7 +93,7 @@ function SerializableMixin(subclassConstructor) {
 	for (var i = 0; i < fields.length; i++) {
 	  var fieldName = fields[i];
 	  var value = jsonobj[fieldName];
-	  // TODO if any sub object is itself serializable, then
+	  // if any sub object is itself serializable, then
 	  // restore its data recursively from the json
 
           if (value.serializedClass) {
@@ -113,25 +113,11 @@ function SerializableMixin(subclassConstructor) {
           } else {
             this[fieldName] = value;
           }
-	    
-	    // TODO if restoring serializable subobjects, we'll need
-	    // to instantiate them here, which means we may need to
-	    // store some metadata about which subclass to instantiate
-
-	    // maybe a serialized subobject is stored as
-	    // {serializr_type: "classname",
-	    // data: "json.stringify of instance"}
-	    // that would also let us instantly realize that something
-	    // is a seralizable subobject
-
-	    // we can have the mixin keep a list of all its subclasses
-	    // and use that to figure out the class name to use
-	    // for serializr_type -- and then get from the class name
-	    // back to the constructor when we restore.
-
-	    // (oh, but we mixin the prototype, not the constructor...
-	    // is there a way to get from the prototype back to the
-	    // constructor???)
+	  // A serialized subobject is stored as
+	  // {serializedClass: "classname",
+	  // data: "json.stringify of instance"}
+	  // we use classname to look up constructor
+          // to recreate subobject.
 	}
     };
 }
