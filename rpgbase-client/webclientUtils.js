@@ -15,6 +15,16 @@ AssetLoader.prototype = {
     return tag;
   },
 
+  listUnloaded: function() {
+    var unloaded = [];
+    for (var i = 0; i < this._things.length; i++) {
+      if (!this._things[i].loaded) {
+        unloaded.push(this._things[i].url);
+      }
+      console.log("waiting for: " + unloaded.join(", "));
+    }
+  },
+
   loadThemAll: function(callback, updateFunc) {
     var self = this;
     // Edge case where nothing has been added - call callback immediately:
@@ -26,6 +36,7 @@ AssetLoader.prototype = {
       (function(thing) {
 	thing.tag.onload = function() {
 	  self._thingsLoaded ++;
+          thing.loaded = true;
 	  if (updateFunc) {
 	    updateFunc( self._thingsLoaded / self._thingsToLoad );
 	  }
