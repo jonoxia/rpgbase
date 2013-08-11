@@ -594,11 +594,7 @@ function MenuSystemMixin(subClassPrototype) {
     // use this._positioning.statsLeft, statsTop, statsXOffset etc.
     this._htmlElem.find(".stats").remove();
     if (this.menuImpl == "canvas") {
-      this.canvasPartyStats = [];
-      for (var i = 0; i < this._party.length; i++) {
-        this.canvasPartyStats.push(
-          this._party[i].getStatDisplay(this._statDisplayType));
-      }
+        this.canvasPartyStats = true;
     } else {
       for (var i = 0; i < this._party.length; i++) {
         var statHtml = this._party[i].getStatDisplay(this._statDisplayType);
@@ -640,7 +636,7 @@ function MenuSystemMixin(subClassPrototype) {
         this.drawCanvasMsgText(ctx, this.canvasStyleMsgText);
       }
       if (this.canvasPartyStats) {
-        this.drawCanvasPartyStats(ctx, this.canvasPartyStats);
+          this.drawCanvasPartyStats(ctx, this._party);
       }
       if (this._resourceVisible) {
         this.drawCanvasPartyResources(ctx);
@@ -665,15 +661,13 @@ function MenuSystemMixin(subClassPrototype) {
     CanvasTextUtils.drawTextBox(ctx, x, y, width, height, lines);
   };
 
-  subClassPrototype.drawCanvasPartyStats = function(ctx, stats) {
+  subClassPrototype.drawCanvasPartyStats = function(ctx, party) {
     var x = this._positioning.statsLeft;
     var y = this._positioning.statsTop;
     var width = this._positioning.statsWidth;
     var height = this._positioning.statsHeight;
-    for (var i = 0; i < stats.length; i++) {
-      var textLines = stats[i].split("<br>");
-      CanvasTextUtils.drawTextBox(ctx, x, y, width, height,
-                                 textLines);
+    for (var i = 0; i < party.length; i++) {
+      party[i].displayStats(ctx, x, y, width, height);
       x += this._positioning.statsXOffset;
       y += this._positioning.statsYOffset;
     }
