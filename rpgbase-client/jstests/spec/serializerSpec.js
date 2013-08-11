@@ -107,4 +107,24 @@ describe("Game Entity Serializer", function() {
     expect(newGuy.pants.serializableClassName).toEqual("Pants");
   });
 
+  it("Should handle arrays of serializable subobjects", function() {
+    var oldCloset = new Closet();
+    oldCloset.addPants(new Pants(34, 29, "jeans"));
+    oldCloset.addPants(new Pants(34, 29, "khaki"));
+    oldCloset.addPants(new Pants(34, 18, "shorts"));
+
+    var pickle = oldCloset.serialize();
+    console.log(pickle);
+    var newCloset = new Closet();
+    newCloset.restore(pickle);
+
+    expect(newCloset.pants.length).toEqual(3);
+    expect(newCloset.pants[0].serializableClassName).toEqual("Pants");
+    expect(newCloset.pants[1].serializableClassName).toEqual("Pants");
+    expect(newCloset.pants[2].serializableClassName).toEqual("Pants");
+    expect(newCloset.pants[0].color).toEqual("jeans");
+    expect(newCloset.pants[1].color).toEqual("khaki");
+    expect(newCloset.pants[2].color).toEqual("shorts");
+  });
+
 });

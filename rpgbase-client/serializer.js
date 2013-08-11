@@ -33,6 +33,15 @@ function SerializableMixin(subclassConstructor) {
     subclassPrototype.serialize = function() {
       var jsonobj = {};
       var fields = this.serializableFields;
+
+      var serializeSubObj = function(subObj) {
+        // subobject is itself serializable
+          var className = subObj.serializableClassName;
+          var subObjectJson = subObj.serialize();
+          return {serializedClass: className,
+                  json: subObjectJson};
+      };
+
       for (var i = 0; i < fields.length; i++) {
 	var fieldName = fields[i];
         var value = this[fieldName];
@@ -45,17 +54,26 @@ function SerializableMixin(subclassConstructor) {
 	// serializable -- if so, then call serialize on it;
 	// if not, just json.stringify it.
         if (value.serializableClassName) {
-          // subobject is itself serializable
-          var className = value.serializableClassName;
-          var subObjectJson = value.serialize();
-          jsonobj[fieldName] = {serializedClass: className,
-                                json: subObjectJson};
+          jsonobj[fieldName] = serializeSubObj(value);
+        } else if (value instanceof Array && 
+                   value.length > 0 &&
+                   value[0].serializableClassName) {
+          // array of serializable subobjects
+          // tricksy hobbitses
+          // assume for now that if array contains one serializable,
+          // all its contents are serializables.
+          var serializedArray = [];
+          for (var i =0; i < value.length; i++) {
+            serializedArray.push(serializeSubObj(value[i]));
+          }
+          jsonobj[fieldName] = serializedArray;
         } else {
 	  jsonobj[fieldName] = value;
         }
-        
-	// TODO what if fieldName is an array of serializable
-	// subobjects? what if it's a dictionary?
+        // TODO what about dictionary of serializable subobjects?
+        // what about a nest of arrays and dictionaries for many
+        // levels and somewhere down in the bottom of it is a
+        // serializable subobject?
       }
       return JSON.stringify(jsonobj);
     };
@@ -63,6 +81,15 @@ function SerializableMixin(subclassConstructor) {
     subclassPrototype.restore = function(jsonstr) {
       var jsonobj = JSON.parse(jsonstr);
       var fields = this.serializableFields;
+
+      var restoreSubObj = function(value) {
+        var cons = Serializer.getConstructor(
+          value.serializedClass);
+        var newSubObj = new cons();
+        newSubObj.restore(value.json);
+        return newSubObj;
+      };
+
 	for (var i = 0; i < fields.length; i++) {
 	  var fieldName = fields[i];
 	  var value = jsonobj[fieldName];
@@ -74,11 +101,15 @@ function SerializableMixin(subclassConstructor) {
             // instantiate and restore.
             // (Any constructor used as a subobject must work when
             // called with no arguments).
-            var cons = Serializer.getConstructor(
-              value.serializedClass);
-            var newSubObj = new cons();
-            newSubObj.restore(value.json);
-            this[fieldName] = newSubObj;
+            this[fieldName] = restoreSubObj(value);
+          } else if (value instanceof Array && 
+                     value.length > 0 &&
+                     value[0].serializedClass) {
+            var restoredArray = [];
+            for (var i = 0; i < value.length; i++) {
+              restoredArray.push(restoreSubObj(value[i]));
+            }
+            this[fieldName] = restoredArray;
           } else {
             this[fieldName] = value;
           }
