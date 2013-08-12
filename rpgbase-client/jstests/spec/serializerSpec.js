@@ -57,6 +57,41 @@ describe("Game Entity Serializer", function() {
   };
   SerializableMixin(Closet);
 
+  function PantsInspector(name, closet) {
+    this.name = name;
+    this.pants = [];
+    // these are references to pants that belong to the closet
+    this.closet = closet;
+  }
+  PantsInspector.prototype = {
+    serializableClassName: "PantsInspector",
+    serializableFields: ["name"],
+
+    onSerialize: function(jsonobj) {
+      jsonobj.pants = [];
+      for (var i = 0; i < this.pants.length; i++) {
+        var p = this.pants[i];
+        var id = this.closet.pants.indexOf(p);
+        jsonobj.pants.push(id);
+      }
+      // pants are external references, so
+      // instead of storing pants directly, store their ids
+    },
+
+    onDeserialize: function(jsonobj) {
+      // restore pants from their ids
+      for (var i = 0; i < jsonobj.pants.length; i++) {
+        var id = jsonobj.pants[i];
+        var p = this.closet.pants[id];
+        this.pants.push(p);
+      }
+    },
+    
+    addPants: function(pantsRef) {
+      this.pants.push(pantsRef);
+    }
+  };
+  SerializableMixin(PantsInspector);
   
   it("Should serialize and restore basic fields ", function() {
 
@@ -114,7 +149,6 @@ describe("Game Entity Serializer", function() {
     oldCloset.addPants(new Pants(34, 18, "shorts"));
 
     var pickle = oldCloset.serialize();
-    console.log(pickle);
     var newCloset = new Closet();
     newCloset.restore(pickle);
 
@@ -125,6 +159,25 @@ describe("Game Entity Serializer", function() {
     expect(newCloset.pants[0].color).toEqual("jeans");
     expect(newCloset.pants[1].color).toEqual("khaki");
     expect(newCloset.pants[2].color).toEqual("shorts");
+  });
+
+  it("Should call pre-serialize/post-deserialize hooks", function() {
+    var oldCloset = new Closet();
+    oldCloset.addPants(new Pants(34, 29, "jeans"));
+    oldCloset.addPants(new Pants(34, 29, "khaki"));
+    oldCloset.addPants(new Pants(34, 18, "shorts"));
+
+    var oldInspector = new PantsInspector("carl", oldCloset);
+    oldInspector.addPants(oldCloset.pants[1]);
+    oldInspector.addPants(oldCloset.pants[0]);
+    var pickle = oldInspector.serialize();
+    var newInspector = new PantsInspector(null, oldCloset);
+    newInspector.restore(pickle);
+
+    expect(newInspector.pants.length).toEqual(2);
+    expect(newInspector.name).toEqual("carl");
+    expect(newInspector.pants[0] === oldCloset.pants[1]).toEqual(true);
+    expect(newInspector.pants[1] === oldCloset.pants[0]).toEqual(true);
   });
 
 });

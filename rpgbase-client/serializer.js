@@ -1,10 +1,3 @@
-
-//pG&E account number 1522941853-6
-
-//conf #2244345062933
-
-// comcast account number  8155 1001 5096 0833
-
 var Serializer = {
   _serializableConstructors: {},
 
@@ -75,6 +68,12 @@ function SerializableMixin(subclassConstructor) {
         // levels and somewhere down in the bottom of it is a
         // serializable subobject?
       }
+
+      // call any custom serialization hook:
+      if (this.onSerialize) {
+        this.onSerialize(jsonobj);
+      }
+
       return JSON.stringify(jsonobj);
     };
     
@@ -90,34 +89,39 @@ function SerializableMixin(subclassConstructor) {
         return newSubObj;
       };
 
-	for (var i = 0; i < fields.length; i++) {
-	  var fieldName = fields[i];
-	  var value = jsonobj[fieldName];
-	  // if any sub object is itself serializable, then
-	  // restore its data recursively from the json
-
-          if (value.serializedClass) {
-            // look up constructor based on serialzied class name;
-            // instantiate and restore.
-            // (Any constructor used as a subobject must work when
-            // called with no arguments).
-            this[fieldName] = restoreSubObj(value);
-          } else if (value instanceof Array && 
-                     value.length > 0 &&
-                     value[0].serializedClass) {
-            var restoredArray = [];
-            for (var i = 0; i < value.length; i++) {
-              restoredArray.push(restoreSubObj(value[i]));
-            }
-            this[fieldName] = restoredArray;
-          } else {
-            this[fieldName] = value;
+      for (var i = 0; i < fields.length; i++) {
+	var fieldName = fields[i];
+	var value = jsonobj[fieldName];
+	// if any sub object is itself serializable, then
+	// restore its data recursively from the json
+        
+        if (value.serializedClass) {
+          // look up constructor based on serialzied class name;
+          // instantiate and restore.
+          // (Any constructor used as a subobject must work when
+          // called with no arguments).
+          this[fieldName] = restoreSubObj(value);
+        } else if (value instanceof Array && 
+                   value.length > 0 &&
+                   value[0].serializedClass) {
+          var restoredArray = [];
+          for (var i = 0; i < value.length; i++) {
+            restoredArray.push(restoreSubObj(value[i]));
           }
-	  // A serialized subobject is stored as
-	  // {serializedClass: "classname",
-	  // data: "json.stringify of instance"}
-	  // we use classname to look up constructor
-          // to recreate subobject.
-	}
+          this[fieldName] = restoredArray;
+        } else {
+          this[fieldName] = value;
+        }
+	// A serialized subobject is stored as
+	// {serializedClass: "classname",
+	// data: "json.stringify of instance"}
+	// we use classname to look up constructor
+        // to recreate subobject.
+      }
+
+      // call any custom deserialization hook:
+      if (this.onDeserialize) {
+        this.onDeserialize(jsonobj);
+      }
     };
 }
