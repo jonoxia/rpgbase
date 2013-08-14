@@ -15,7 +15,13 @@
 // I guess there are also some items which are neither useable nor equippable but only plot triggers (no wait they could be infinite use, and the use just display sa message.)
 
 // the Use of a usable item is kind of like a BatCmd isn't it? Requires a target choice and so on...
-// oh oh on ok.  The useInBattle is a batCmd. useOutOfBattle is a mapCmd (see menuClasses.js)  Define one, the other, both, or neither.
+// oh oh oh ok.  The useInBattle is a batCmd. useOutOfBattle is a mapCmd (see menuClasses.js)  Define one, the other, both, or neither.
+
+
+// global map of item names to ItemType instances, because we
+// need these to re-instantiate your items on reloading a saved
+// game.
+var g_inventoryHack = {};
 
 function Inventory(limit) {
   // items with same name stack?
@@ -26,6 +32,28 @@ function Inventory(limit) {
   this._itemList = [];
 }
 Inventory.prototype = {
+  serializableClassName: "Inventory",
+  serializableFields: ["_limit"],
+
+  onSerialize: function(jsonobj) {
+    jsonobj.itemList = [];
+    for (var i = 0; i < this._itemList.length; i++) {
+      // just remember the names of the items
+      jsonobj.itemList.push(this._itemList[i].getName());
+      // TODO: numUses should be stored too if we want
+      // to have items with neither 1 nor infinity uses
+    }
+  },
+  
+  onDeserialize: function(jsonobj) {
+    // Re-instantiate the items from their stored names
+    for (var i = 0; i < jsonobj.itemList.length; i++) {
+      var name = jsonobj.itemList[i];
+      var itemType = g_inventoryHack[name];
+      this.gainItem(itemType);
+    }
+  },
+
   gainItem: function(itemType) {
     // returns false if item cannot be gained
     if (this.isFull()) {
@@ -92,7 +120,7 @@ Inventory.prototype = {
     return (this._itemList.length >= this._limit);
   }
 };
-
+SerializableMixin(Inventory);
 
 function ItemType(name, numUses, defaultPrice) {
   // can be used infinity times if numUses is not provided.
@@ -111,6 +139,9 @@ function ItemType(name, numUses, defaultPrice) {
   this._fieldEffect = null;
   this._equipSlot = null;
   this._equipStats = null;
+
+  // register item type globally
+  g_inventoryHack[name] = this;
 }
 ItemType.prototype = {
   instantiate: function() {
@@ -186,6 +217,14 @@ function ItemInstance(name, numUses, battleEffect, battleTarget,
   
 }
 ItemInstance.prototype = {
+  serializableClassName: "Item",
+  serializableFields: ["_name", "_defaultPrice", "_numUses"],
+
+  // TODO battleEffect and fieldEffect are references to things
+  // defined elsewhere; the Item doesn't own them. In fact, it
+  // might be better to just store the item name and 
+  // re-instantiate the item on game load.
+
   isConsumable: function() {
     return (this._numUses != null);
   },
@@ -266,6 +305,7 @@ ItemInstance.prototype = {
     }
   }
 };
+SerializableMixin(ItemInstance);
 /*
 var healingHerb = new ItemType("Healing Herb", 1);
 healingHerb.useEffect({target: "ally",

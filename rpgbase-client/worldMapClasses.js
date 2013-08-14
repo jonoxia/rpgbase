@@ -1,4 +1,4 @@
-function Map(data, spritesheet) {
+function Map(id, data, spritesheet) {
   // mapData must be array of dimensions equal to dimX and dimY.
   this._mapData = data;
   this._dimX = data[0].length;
@@ -9,8 +9,13 @@ function Map(data, spritesheet) {
   this._stepHandlers = [];
   this._npcs = [];
   this._vehicles = [];
+  this._id = id;
 }
 Map.prototype = {
+  getId: function() {
+    return this._id;
+  },
+
   getTileForCode: function(mapCode) {
     return {x:mapCode, y:0};
   },
@@ -177,6 +182,10 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this._audioPlayer = null;
 }
 MapScreen.prototype = {
+  getCurrentMapId: function() {
+    return this._currentDomain.getId();
+  },
+
   setScrollMargins: function( newMargins ) {
     this.margins = newMargins;
   },
@@ -195,7 +204,6 @@ MapScreen.prototype = {
   },
 
   setNewDomain: function( domain ) {
-
     if (this._currentDomain) {
       this._currentDomain.unload();
     }

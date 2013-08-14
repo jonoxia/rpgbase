@@ -809,6 +809,11 @@ BattleSystem.prototype = {
 };
 MenuSystemMixin(BattleSystem.prototype);
 
+// name-> instance map, 
+// for recovering spell references after game reload
+var g_batCmdHack = {
+};
+
 function BatCmd(options) {
   if (options.cost) {
     this.cost = options.cost;
@@ -862,6 +867,10 @@ BattleCommandSet.prototype = {
     this.cmds[name] = battleCommand;
     // battleCommand can be another BattleCommandSet
     // so these sets can nest recursively.
+
+    if (name && !battleCommand.isContainer) {
+      g_batCmdHack[name] = battleCommand;
+    }
   },
 
   get: function(name) {

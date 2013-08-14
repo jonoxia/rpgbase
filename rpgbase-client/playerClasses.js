@@ -7,6 +7,28 @@ function Player() {
   this.inVehicle = null;
 }
 Player.prototype = {
+  serializableClassName: "Player",
+  serializableFields: ["_resources", "party"],
+
+  onSerialize: function(jsonobj) {
+    // TODO record lead character x, y, the name or ID of the
+    // MapDomain I'm standing in,
+    // and where I left my boat.
+
+    var pos = this.aliveParty[0].getPos();
+    jsonobj.x = pos.x;
+    jsonobj.y = pos.y;
+    
+    jsonobj.mapId = this.mapScreen.getCurrentMapId();
+  },
+
+  onDeserialize: function(jsonobj) {
+    // TODO
+    // Restore mapDomain, restore boat position, etc.
+    // Call post-constructor initialize method on each PC
+    // to get our ducks in a row.
+  },
+
   enterMapScreen: function(mapScreen, x, y) {
     this.mapScreen = mapScreen;
     mapScreen.setPlayer(this);
@@ -295,20 +317,17 @@ Player.prototype = {
 	callback(this.aliveParty[i]);
     }
   }
-}
+};
+SerializableMixin(Player);
 
 
 // Prototype hackery!
 var MapSprite = {
   _subClassPrototypes: [],
-  defaultCrossable: function(callback) {
+  
+  setDefault: function(propertyName, value) {
     for (var i = 0; i < this._subClassPrototypes.length; i++) {
-      this._subClassPrototypes[i].canCross = callback;
-    }
-  },
-  defaultSpritePicker: function(callback) {
-    for (var i = 0; i < this._subClassPrototypes.length; i++) {
-      this._subClassPrototypes[i]._animationCallback = callback;
+      this._subClassPrototypes[i][propertyName] = value;
     }
   }
 };
@@ -496,10 +515,15 @@ function MapSpriteMixin(subClassPrototype) {
   };
 }
 
-function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock) {
+function PlayerCharacter() {
   this.battlerInit();
-  this._statBlock = statBlock;
-  this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+  this._statBlock = {};
+  // spriteSheet and spriteDimensions have been set on prototype
+  this.defineSprite(this.spriteSheet,
+                    this.spriteDimensions.width,
+                    this.spriteDimensions.height,
+                    this.spriteDimensions.offsetX,
+                    this.spriteDimensions.offsetY);
   this._walksThroughPCs = true;
 
   this._inventory = new Inventory(8); // TODO don't hard-code
@@ -515,6 +539,56 @@ function PlayerCharacter(spriteSheet, width, height, offsetX, offsetY, statBlock
   this._fieldSpells = [];
 }
 PlayerCharacter.prototype = {
+  serializableClassName: "PlayerCharacter",
+  serializableFields: ["name", "_statBlock", "_inventory", 
+                       "_dead", "_stati", "_equippableTypes",
+                       "_marchOrder", "_spriteSlice"],
+
+  onSerialize: function(jsonobj) {
+    // handle serialization of important external references
+    // Spell list: Serialize names of spells only
+    jsonobj.battleSpells = [];
+    jsonobj.fieldSpells = [];
+    for (var i =0; i < this._battleSpells.length; i++) {
+      jsonobj.battleSpells.push(this._battleSpells[i].name);
+    }
+    for (i =0; i < this._fieldSpells.length; i++) {
+      jsonobj.fieldSpells.push(this._fieldSpells[i].name);
+    }
+
+    // Equipped equipment: Serialize indices into inventory
+    jsonobj.equipped = {};
+    for (var slot in this._equippedItems) {
+      var item = this._equippedItems[slot];
+      var index = this._inventory._itemList.indexOf(item);
+      jsonobj.equipped[slot] = index;
+    }
+
+    // TODO other external refs: _lockedAction,
+    //  _portrait
+    // onEffect handlers ("heal" and "fullheal")
+  },
+
+  onDeserialize: function(jsonobj) {
+    // Restore spell list!
+    for (var i =0; i < jsonobj.battleSpells.length; i++) {
+      var cmd = g_batCmdHack[jsonobj.battleSpells[i].name];
+      this._battleSpells.push(cmd);
+    }
+    for (i =0; i < jsonobj.fieldSpells.length; i++) {
+      var cmd = g_batCmdHack[jsonobj.fieldSpells[i].name];
+      this._fieldSpells.push(cmd);
+    }
+
+    // Restore equipped equipment (assumes inventory already restored)
+    jsonobj.equipped = {};
+    for (var slot in jsonobj.equipped) {
+      var index = jsonobj.equipped[slot];
+      var item = this._inventory._itemList[index];
+      this._equippedItems[slot] = item;
+    }
+  },
+
   gainItem: function(itemType) {
     this._inventory.gainItem(itemType);
   },
@@ -648,6 +722,8 @@ PlayerCharacter.prototype = {
 };
 BattlerMixin.call(PlayerCharacter.prototype);
 MapSpriteMixin(PlayerCharacter.prototype);
+SerializableMixin(PlayerCharacter);
+
 // Overriding the getStat that is defined in MapSpriteMixin.
 // TODO: This is
 // a bit hacky and I should think about how to implement proper

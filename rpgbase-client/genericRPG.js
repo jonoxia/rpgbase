@@ -2,7 +2,7 @@ function GenericRPG(canvasTagId) {
   this._canvasTagId = canvasTagId;
   this._setupCallbacks = [];
   this._mapScreenDim = {};
-  this._spriteDim = {};
+  this._maps = [];
 }
 GenericRPG.prototype = {
 
@@ -15,13 +15,6 @@ GenericRPG.prototype = {
                           pixelsY: pixelsY};
   },
   
-  setSpriteDimensions: function(pixelsX, pixelsY, xOffset, yOffset) {
-    this._spriteDim = { pixelsX: pixelsX,
-                        pixelsY: pixelsY,
-                        xOffset: xOffset,
-                        yOffset: yOffset };
-  },
-
   _setUpMapScreen: function() {
     var dim = this._mapScreenDim;
     this.mapScreen = new MapScreen(this.canvas,
@@ -66,6 +59,9 @@ GenericRPG.prototype = {
                                         this.mazeScreen);
   this.manuel = setUpMonstrousManuel(this.loader); // monster dictionary
   this.overworld = setUpOverworldMap(this);
+
+  this._maps[this.overworld.getId()] = this.overworld;
+
   this.fieldMenu = setUpFieldMenu();
     // TODO the root html tag should be decided by userland
   this.dialoglog = new Dialoglog($("#battle-system"));
@@ -166,6 +162,7 @@ GenericRPG.prototype = {
 
       if (delX != 0 || delY != 0) {
         // Animate the player moving over the course of 8 frames
+        // TODO inject this 8 from userland, don't hard-code it.
         var anim = self.player.move(delX, delY, 8);
         dispatcher.waitForAnimation(anim);
         self.mapScreen.animate(anim);
@@ -207,19 +204,16 @@ GenericRPG.prototype = {
   },
   
   setup: function(callback) {
-    console.log("Setup called");
     this._setupCallbacks.push(callback);
   },
 
   start: function() {
     for (var i = 0; i < this._setupCallbacks; i++) {
-      console.log("Calling back a setup callback.");
       this._setupCallbacks[i](this);
     }
 
     var self = this;
     this.loader.loadThemAll(function() {
-      console.log("Start gaeM?");
       self.inputDispatcher.mapMode("overworld");
       self.mapScreen.start();
     });
@@ -249,12 +243,7 @@ GenericRPG.prototype = {
   },
 
   makeNPC: function(spriteSheet) {
-    var dim = this._spriteDim;
-    return new NPC(spriteSheet, this.mapScreen,
-                   dim.pixelsX,
-                   dim.pixelsY,
-                   dim.xOffset,
-                   dim.yOffset);
+    return new NPC(spriteSheet, this.mapScreen);
   },
 
   addNPCToTown: function(town, spriteSheet, spriteSliceX, 
@@ -400,6 +389,14 @@ GenericRPG.prototype = {
     // TODO audio track choice should be up to userland
     self.audioPlayer.changeTrack("music/boss", true);
     self.battleSystem.startBattle(self.player, encounter, landType);
+  },
+
+  registerMap: function(map) {
+    this._maps[map.getId()] = map;
+  },
+
+  getMapById: function(id) {
+    return this._maps[id];
   }
 
 };

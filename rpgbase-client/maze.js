@@ -215,7 +215,7 @@ MazeMap.prototype = {
       }
       
       if (triggered) {
-        // TODO: This doesn't have a ref to the actua player
+        // TODO: This doesn't have a ref to the actual player
         // so it's passing bogus data to the first argument
         // of step handler
         result(null, x, y, landType);
