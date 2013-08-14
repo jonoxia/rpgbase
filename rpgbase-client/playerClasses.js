@@ -555,6 +555,8 @@ PlayerCharacter.prototype = {
     for (i =0; i < this._fieldSpells.length; i++) {
       jsonobj.fieldSpells.push(this._fieldSpells[i].name);
     }
+    // TODO i think this is pushing in undefined objects? Anyway
+    // spells aren't castable after reloading a saved game.
 
     // Equipped equipment: Serialize indices into inventory
     jsonobj.equipped = {};
@@ -572,19 +574,19 @@ PlayerCharacter.prototype = {
   onDeserialize: function(jsonobj) {
     // Restore spell list!
     for (var i =0; i < jsonobj.battleSpells.length; i++) {
-      var cmd = g_batCmdHack[jsonobj.battleSpells[i].name];
+      var cmd = g_batCmdHack[jsonobj.battleSpells[i]];
       this._battleSpells.push(cmd);
     }
     for (i =0; i < jsonobj.fieldSpells.length; i++) {
-      var cmd = g_batCmdHack[jsonobj.fieldSpells[i].name];
+      var cmd = g_batCmdHack[jsonobj.fieldSpells[i]];
       this._fieldSpells.push(cmd);
     }
 
     // Restore equipped equipment (assumes inventory already restored)
-    jsonobj.equipped = {};
     for (var slot in jsonobj.equipped) {
       var index = jsonobj.equipped[slot];
       var item = this._inventory._itemList[index];
+      console.log("which is " + item.getName());
       this._equippedItems[slot] = item;
     }
   },
