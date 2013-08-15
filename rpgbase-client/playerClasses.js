@@ -586,7 +586,6 @@ PlayerCharacter.prototype = {
     for (var slot in jsonobj.equipped) {
       var index = jsonobj.equipped[slot];
       var item = this._inventory._itemList[index];
-      console.log("which is " + item.getName());
       this._equippedItems[slot] = item;
     }
   },
