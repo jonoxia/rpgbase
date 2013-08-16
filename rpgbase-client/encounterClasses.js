@@ -4,6 +4,50 @@ function randomElementFromArray(arr) {
   return arr[index];
 }
 
+function SpecialEncounter(number, type) {
+  /* For special plot-relevant encounters, 
+   * put this in an encounter
+   * table instead of a {type, number} record */
+  this.number = number;
+  this.type = type;
+  this._startCallback = null;
+  this._winCallback = null;
+  this._loseCallback = null;
+}
+SpecialEncounter.prototype = {
+  onStart: function(callback) {
+    this._startCallback = callback;
+  },
+  onWin: function(callback) {
+    this._winCallback = callback;
+  },
+  onLose: function(callback) {
+    this._loseCallback = callback;
+  },
+  canHappen: function(party) {
+    // Override me!
+    // if it returns false, then the
+    // encounter will be nullified when rolled.
+    return true;
+  },
+  start: function(system, party) {
+    if (this._startCallback) {
+      this._startCallback(system, party);
+    }
+  },
+  win: function(system, party) {
+    if (this._winCallback) {
+      this._winCallback(system, party);
+    }
+  },
+  lose: function(system, party) {
+    if (this._loseCallback) {
+      this._loseCallback(system, party);
+    }
+  }
+};
+
+
 function EncounterTable(data, dieSize) {
   if (dieSize) {
     this._dieSize = dieSize;
@@ -25,6 +69,11 @@ EncounterTable.prototype = {
       }
     }
     var encounter = this._data[matchIndex];
+
+    if (encounter.special) {
+      return encounter.special;
+    }
+
     return {number: encounter.number, type: encounter.type};
   }
 };
@@ -345,6 +394,7 @@ BattleSystem.prototype = {
     this.landType = landType;
     this._attackSFX = null;
     this._whoseTurn = null; // currently only used to target counters
+    this.encounter = encounter;
 
     this.monsters = [];
     if (encounter.number) {
@@ -355,7 +405,7 @@ BattleSystem.prototype = {
         monster.setName(encounter.type.name + " " + letters[i]);
         this.monsters.push(monster);
       }
-    }
+    } // else? can that happen?
 
     this.showMsg(this.defaultMsg);
     this.emptyMenuStack();
@@ -374,12 +424,21 @@ BattleSystem.prototype = {
     this.showPartyStats();
     this._animator.start();
 
+    // startBattleCallback needs to itself take a callback!
+    var self = this;
+    var afterAnimation = function() {
+      if (encounter.start) {
+        encounter.start(self, self.player);
+      }
+      self.showStartRoundMenu();
+    };
+
     if (this._startBattleCallback) {
       // do any start-battle animation
-      this._startBattleCallback(this);
+      this._startBattleCallback(this, afterAnimation);
     } else {
       // just start the round!
-      this.showStartRoundMenu();
+      afterAnimation();
     }
   },
 
@@ -688,8 +747,8 @@ BattleSystem.prototype = {
     for (var i = 0; i < this._party.length; i++) {
       this._party[i].clearTempStatMods();
     }
-  
-    var endBattleMessage;
+
+      var endBattleMessage;
     switch (winLoseRun) {
     case "win":
       this._freelyExit = true;
@@ -699,9 +758,17 @@ BattleSystem.prototype = {
       } else {
         endBattleMessage = "You won! Let's assume there is a whole lot of end battle text, including how many experience points you got, how much gold you got, whether anybody went up a level, and all that jazz.";
       }
+      if (this.encounter.win) {
+        // special encounter win results
+        this.encounter.win(this, this.player);
+      }
       break;
     case "lose":
       endBattleMessage = "You lost! It is very sad. There should probably be a button here to reload a save or whatever.";
+      if (this.encounter.lose) {
+        // special encounter lose results
+        this.encounter.lose(this, this.player);
+      }
       break;
     case "run":
       this._freelyExit = true;

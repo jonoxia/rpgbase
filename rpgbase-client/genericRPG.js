@@ -376,6 +376,15 @@ GenericRPG.prototype = {
 
   startEncounter: function(encounter, originalMode, landType) {
     var self = this;
+
+    if (encounter.canHappen) {
+      //special encounters have conditions
+      if (!encounter.canHappen(self.player)) {
+        // if conditions are false, don't start encounter
+        return; 
+      }
+    }
+
     self.inputDispatcher.menuMode("battle");
     if (originalMode == "maze") {
       self.mazeScreen.stop();
