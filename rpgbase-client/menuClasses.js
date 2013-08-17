@@ -574,7 +574,7 @@ function MenuSystemMixin(subClassPrototype) {
     this.canvasStyleMsgLines = [];
   };
 
-  subClassPrototype.chooseCharacter = function(title, callback) {
+  subClassPrototype.chooseOne = function(title, set, callback) {
     var charMenu = this.makeMenu();
     charMenu.setTitle(title);
     var self = this;
@@ -583,10 +583,14 @@ function MenuSystemMixin(subClassPrototype) {
         callback(target);
       });
     };
-    for (var i = 0; i < this._party.length; i++) {
-      addOneCmd(this._party[i]);
+    for (var i = 0; i < set.length; i++) {
+      addOneCmd(set[i]);
     }
     this.pushMenu(charMenu);
+  };
+
+  subClassPrototype.chooseCharacter = function(title, callback) {
+    this.chooseOne(title, this._party, callback);
   };
   
   subClassPrototype.showPartyStats = function() {

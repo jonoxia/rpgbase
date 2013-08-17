@@ -62,7 +62,7 @@ GenericRPG.prototype = {
 
   this._maps[this.overworld.getId()] = this.overworld;
 
-  this.fieldMenu = setUpFieldMenu();
+  this.fieldMenu = setUpFieldMenu(this);
     // TODO the root html tag should be decided by userland
   this.dialoglog = new Dialoglog($("#battle-system"));
   //var boat = makeBoat(loader, overworld);
