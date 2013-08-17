@@ -406,6 +406,53 @@ GenericRPG.prototype = {
 
   getMapById: function(id) {
     return this._maps[id];
+  },
+
+  reorderParty: function() {
+    var party = this.player.party;
+    var player = this.player;
+
+    if (party.length < 2) {
+      this.fieldMenu.showMsg("There's only one of you!");
+      return;
+    }
+    var newOrder = [];
+    var labels = ["1st?", "2nd?", "3rd?"]; // todo more labels
+  
+    // this is maybe a useful utility function...
+    var without = function(array, elem) {
+      var newArray = array.slice();
+      newArray.splice(newArray.indexOf(elem), 1);
+      return newArray;
+    };
+
+    var setPartyOrder = function(newOrder) {
+      player.party = newOrder;
+      for (var i = 0; i < player.party.length; i++) {
+        player.party[i]._marchOrder = i;
+      }
+      player.marchInOrder();
+    };
+
+    // recursive:
+    this.fieldMenu.saveStackDepth();
+    var subReorder = function(menus, party, depth) {
+      if (party.length == 1) {
+        newOrder[depth] = party[0];
+        menus.restoreStackDepth();
+        setPartyOrder(newOrder);
+        return;
+      } else {
+        menus.chooseOne(labels[depth], party, function(charNext) {
+          newOrder[depth] = charNext;
+          var remainingParty = without(party, charNext);
+          subReorder(menus, remainingParty, depth + 1);
+        });
+      }
+    };
+
+    subReorder(this.fieldMenu, party, 0);
   }
+
 
 };
