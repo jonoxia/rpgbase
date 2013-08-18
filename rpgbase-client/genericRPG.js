@@ -355,10 +355,11 @@ GenericRPG.prototype = {
         function(pc, x, y, landType) {
 	  self.inputDispatcher.mapMode("maze");
 	  self.mapScreen.stop();
-	  self.mazeScreen.loadMaze(maze,
-				   mazeX,
-				   mazeY,
-				   facing);
+	  self.mazeScreen.loadMaze(maze);
+          self.mazeScreen.enterPlayer(self.player,
+				      mazeX,
+				      mazeY,
+				      facing);
 	  self.mazeScreen.start();
 	});
 

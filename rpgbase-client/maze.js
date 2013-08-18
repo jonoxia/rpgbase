@@ -9,8 +9,6 @@ function darkenColor(color, brightness) {
     +")";
 }
   
-
-
 function Vector(x, y, z) {
   this.x = x;
   this.y = y;
@@ -151,15 +149,17 @@ Face.prototype = {
   }
 };
 
-function MazeMap(data) {
-    // duplicates stuff from mapomain
-    this._mapData = data;
-    this._dimX = data[0].length;
-    this._dimY = data.length;
+// Replace this with Map class.
+// will be using the getLandType of map to decide if player can cross;
+// since these are 0s and 1s the results will probably be wrong; need
+// to make canCross deal with named land types and then give map 
+// domain a mapping of codes to names, so we can just define the
+// maze map codes as 0 = open 1 = wall and default canCross returns
+// false for wall.
+// hacky workaround for now: override getLandType to return some
+// impassible land type code if data[y][x] == 1
 
-    this._stepHandlers = [];
-}
-MazeMap.prototype = {
+/*
   isOpenSpace: function(x, z) {
     if (x < 0 || x >= this._dimX) {
       return false;
@@ -170,63 +170,7 @@ MazeMap.prototype = {
     var terrainType = this._mapData[z][x];
     return (terrainType == 0);
   },
-
-  onStep: function(filter, callback) {
-    this._stepHandlers.push({trigger: filter, result: callback});
-  },
-
-  processStep: function(x, y) {
-    // COPIED FROM MAPSCREEN no es bueno
-    // check all the step handlers:
-    for (var i = 0; i < this._stepHandlers.length; i++) {
-
-      var trigger = this._stepHandlers[i].trigger;
-      var result = this._stepHandlers[i].result;
-      var landType = this._mapData[y][x];
-
-      var triggered = true;
-      if (trigger.x != undefined) {
-        if (trigger.x != x ||
-            trigger.y != y) {
-          triggered = false;
-        }
-      }
-
-      if (trigger.landType != undefined) {
-        if (trigger.landType != landType) {
-          triggered = false;
-        }
-      }
-
-      if (trigger.chance != undefined) {
-        if (Math.random() > trigger.chance) {
-          triggered = false;
-        }
-      }
-
-      if (trigger.edge != undefined) {
-        if (trigger.edge == "any") {
-          if (x != 0 && x != this._dimX-1 &&
-              y != 0 && y != this._dimY-1) {
-            triggered = false;
-          }
-              
-        }
-      }
-      
-      if (triggered) {
-        // TODO: This doesn't have a ref to the actual player
-        // so it's passing bogus data to the first argument
-        // of step handler
-        result(null, x, y, landType);
-      }
-    }
-  },
-
-  getMapData: function() {
-    return this._mapData;
-  }
-};
+*/
 
 function FirstPersonMaze(ctx, width, height) {
   this.width = width;
@@ -245,7 +189,6 @@ FirstPersonMaze.prototype = {
     this.faces = [];
     this.bgFaces = [];
     this.cameraOrientation = new Vector(0, 0, 0);
-    this.playerPos = new Vector(0, 0, 0);
     this.cameraPoint = new Vector(0, -0.1, 0);
     this.viewerPos = new Vector(0, 0, -5); // determined by experiment
     var self = this;
@@ -253,10 +196,18 @@ FirstPersonMaze.prototype = {
                                  function() { self.render(); });
   },
   
-  loadMaze: function(mazeMap, startX, startZ, startDirection) {
+  loadMaze: function(mazeMap) {
     this._currentMap = mazeMap;
     this.faces = [];
     this.bgFaces = [];
+    this.setupScene();
+  },
+
+  enterPlayer: function(player, startX, startZ, startDirection) {
+    this.player = player;
+    // TODO what do we do with player.mapScreen? Do we need to null
+    // it out or set it to something?
+
     var theta;
     switch(startDirection) {
       case "e": theta = Math.PI/2;break;
@@ -265,8 +216,29 @@ FirstPersonMaze.prototype = {
       case "s": theta = 0;break;
     }
     this.cameraOrientation = new Vector(0, theta, 0);
-    this.playerPos = new Vector(startX, 0, startZ);
-    this.setupScene(this._currentMap.getMapData());
+    
+    var party = this.player.party;
+    for (var i = 0; i < party.length; i++) {
+      party[i].setPos(startX, startZ);
+      party[i].clearLastMoved();
+    }
+  },
+
+  playerPosVector: function() {
+    var leadCharPos = this.player.aliveParty[0].getPos();
+    return new Vector(leadCharPos.x, 0, leadCharPos.y);
+    // TODO make cameraOrientation a function of character facing?
+  },
+
+  isOpenSpace: function(x, y) {
+    // TODO move this to Map class?
+    if (x < 0 || x >= this._currentMap._dimX) {
+      return false;
+    }
+    if (y < 0 || y >= this._currentMap._dimY) {
+      return false;
+    }
+    return (this._currentMap._mapData[y][x] == 0);
   },
 
   start: function() {
@@ -282,13 +254,14 @@ FirstPersonMaze.prototype = {
     // dir is +1 for forward, -1 for backward
     // This duplicates logic from mapscreen
     var theta = this.cameraOrientation.y;
-    var newZ = this.playerPos.z + dir * Math.cos(theta);
-    var newX = this.playerPos.x + dir * Math.sin(theta);
+    var playerPos = this.playerPosVector();
+    var newZ = playerPos.z + dir * Math.cos(theta);
+    var newX = playerPos.x + dir * Math.sin(theta);
     
     newX = Math.floor(newX + 0.5);
     newZ = Math.floor(newZ + 0.5);
 
-    return this._currentMap.isOpenSpace(newX, newZ);
+    return this.isOpenSpace(newX, newZ);
   },
 
   goForward: function() {
@@ -296,11 +269,9 @@ FirstPersonMaze.prototype = {
     var self = this;
     if (this.canPass(1)) {
       return new Animation(5, function() {
-        self.playerPos.z += 0.2 * Math.cos(theta);
-        self.playerPos.x += 0.2 * Math.sin(theta);
+        self.movePlayer(0.2 * Math.sin(theta), 0.2 * Math.cos(theta));
       }, function() {
-        self.playerPos.z = Math.floor(self.playerPos.z + 0.5);
-        self.playerPos.x = Math.floor(self.playerPos.x + 0.5);
+        self.roundPlayerPos();
         self.processStep();
       });
     } else {
@@ -313,15 +284,32 @@ FirstPersonMaze.prototype = {
     var self = this;
     if (this.canPass(-1)) {
       return new Animation(5, function() {
-        self.playerPos.z -= 0.2 * Math.cos(theta);
-        self.playerPos.x -= 0.2 * Math.sin(theta);
+        self.movePlayer(-0.2 * Math.sin(theta), -0.2 * Math.cos(theta));
       }, function() {
-        self.playerPos.z = Math.floor(self.playerPos.z + 0.5);
-        self.playerPos.x = Math.floor(self.playerPos.x + 0.5);
+        self.roundPlayerPos();
         self.processStep();
       });
     } else {
       return new Animation(5);
+    }
+  },
+
+  movePlayer: function(deltaX, deltaZ) {
+    var party = this.player.party;
+    for (var i = 0; i < party.length; i++) {
+      var oldPos = party[i].getPos();
+      party[i].setPos(oldPos.x + deltaX, oldPos.y + deltaZ);
+      // TODO do anything with lastMoved direction?
+    }
+  },
+
+  roundPlayerPos: function() {
+    // round 'em all off to whole numbers so that map indices make
+    // sense
+    var party = this.player.party;
+    for (var i = 0; i < party.length; i++) {
+      var oldPos = party[i].getPos();
+      party[i].setPos(Math.round(oldPos.x), Math.round(oldPos.y));
     }
   },
 
@@ -363,9 +351,10 @@ FirstPersonMaze.prototype = {
 
     var theta = this.cameraOrientation.y;
 
-    this.cameraPoint = new Vector(this.playerPos.x - 0.3*Math.sin(theta),
+    var playerPos = this.playerPosVector();
+    this.cameraPoint = new Vector(playerPos.x - 0.3*Math.sin(theta),
                                   -0.05,
-                                  this.playerPos.z - 0.3*Math.cos(theta));
+                                  playerPos.z - 0.3*Math.cos(theta));
       /*new Vector(this.playerPos.X - 0.4 * Math.sin(theta),
         -0.05,
         this.playerPos.z - 0.4 * Math.cos(theta));*/
@@ -441,10 +430,10 @@ FirstPersonMaze.prototype = {
   },
 
   processStep: function() {
-    var player = null;
-    var x = Math.floor(this.playerPos.x + 0.5);
-    var y = Math.floor(this.playerPos.z + 0.5);
-    this._currentMap.processStep(x, y);
+    var playerPos = this.playerPosVector();
+    var x = Math.round(playerPos.x);
+    var y = Math.round(playerPos.z);
+    this._currentMap.processStep(x, y, this.player);
   },
 
   afterRender: function(callback) {
@@ -469,7 +458,7 @@ FirstPersonMaze.prototype = {
 
     // Add ONLY the faces of cube touching open space - otherwise
     // it will never get drawn so no point!!
-    if (this._currentMap.isOpenSpace(x - 1, z)) {
+    if (this.isOpenSpace(x - 1, z)) {
       // left side
       var wFace = new Face(corner1, corner2, corner6, corner5);
       wFace.setColor(this.wallColor);
@@ -480,7 +469,7 @@ FirstPersonMaze.prototype = {
       }
       this.faces.push(wFace);
     }
-    if (this._currentMap.isOpenSpace(x + 1, z)) {
+    if (this.isOpenSpace(x + 1, z)) {
       // right side
       var eFace = new Face(corner3, corner4, corner8, corner7);
       eFace.setColor(this.wallColor);
@@ -491,7 +480,7 @@ FirstPersonMaze.prototype = {
       }
       this.faces.push(eFace);
     }
-    if (this._currentMap.isOpenSpace(x, z-1)) {
+    if (this.isOpenSpace(x, z-1)) {
       // front
       var nFace = new Face(corner1, corner4, corner8, corner5 );
       nFace.setColor(this.wallColor);
@@ -502,7 +491,7 @@ FirstPersonMaze.prototype = {
       }
       this.faces.push(nFace);
     }
-    if (this._currentMap.isOpenSpace(x, z +1)) {
+    if (this.isOpenSpace(x, z +1)) {
       // back
       var sFace = new Face(corner2, corner3, corner7, corner6 );
       sFace.setColor(this.wallColor);
@@ -681,55 +670,25 @@ FirstPersonMaze.prototype = {
   },
 
   setupScene: function(map) {
-    for (var z = 0; z < map.length; z++) {
-      for (var x = 0; x < map[0].length; x++) {
-        if (map[z][x] > 0) {
-          this.makeACube(x, z, map[z][x]);
+    var map = this._currentMap;
+    for (var z = 0; z < map._dimY; z++) {
+      for (var x = 0; x < map._dimX; x++) {
+        if (!this.isOpenSpace(x, z)) {
+          this.makeACube(x, z, map._mapData[z][x]);
         }
       }
     }
 
     // floor/ceiling grid = 2 lines per space so count by 0.5s
-    for (var z = 0; z < map.length; z+= 0.5) {
-      for (var x = 0; x < map[0].length; x+= 0.5) {
-        // TODO only add these polygons if the space is 0
+    for (var z = 0; z < map._dimY; z+= 0.5) {
+      for (var x = 0; x < map._dimX; x+= 0.5) {
+        // Only add these polygons if the space is 0
         // otherwise they're under a wall and there's no point
-        if (map[Math.floor(z)][Math.floor(x)] == 0) {
-          this.makeFloorAndCeiling(x, z);
-        } else if (this._currentMap.isOpenSpace(Math.ceil(x),
-                                                Math.ceil(z))) {
+        if (this.isOpenSpace(Math.ceil(x),
+                             Math.ceil(z))) {
           this.makeFloorAndCeiling(x, z);
         }
       }
     }
   }
 };
-
-/*
-$(document).ready(function() {
-  var canvas = $("#the-canvas")[0];
-  var ctx = canvas.getContext("2d");
-  var maze = new FirstPersonMaze(sampleMazeData, ctx);
-  var keyHandler = new DPadStyleKeyHandler(50, function(key) {
-    var anim;
-    switch (key) {
-      case 38: 
-      anim = maze.goForward();
-      break;
-      case 37: 
-      anim = maze.turnLeft();
-      break;
-      case 39:
-      anim = maze.turnRight();
-      break;
-      case 40: 
-      anim = maze.goBackward();
-    }
-    keyHandler.waitForAnimation(anim);
-    maze.animator.runAnimation(anim);
-
-  });
-  keyHandler.startListening();
-
-  maze.start();
-});*/
