@@ -8,6 +8,10 @@ function darkenColor(color, brightness) {
     Math.floor(color.b * brightness)
     +")";
 }
+
+function fuzzyMatch(a, b) {
+  return Math.abs(a - b) < 0.1;
+}
   
 function Vector(x, y, z) {
   this.x = x;
@@ -321,6 +325,7 @@ FirstPersonMaze.prototype = {
         self.cameraOrientation.y -= Math.PI * 2;
       }
     });
+    // TODO update player facing?
   },
 
   turnRight: function() {
@@ -331,6 +336,7 @@ FirstPersonMaze.prototype = {
         self.cameraOrientation.y += Math.PI * 2;
       }
     });
+    // TODO update player facing?
   },
 
   render: function() {
@@ -400,6 +406,70 @@ FirstPersonMaze.prototype = {
     if (this._afterRenderCallback) {
       this._afterRenderCallback(this.ctx);
     }
+
+    // draw NPCs/chests/ etc as sprites in maze:
+    var npcs = this._currentMap.getAllNPCs();
+    for (var i = 0; i < npcs.length; i++) {
+      var dist = this.npcInFrontOfMe(npcs[i]);
+      if (dist > 0) {
+        this.drawNPC(npcs[i], dist);
+      }
+    }
+  },
+
+  npcInFrontOfMe: function(npc) {
+    var theta = this.cameraOrientation.y;
+    var npcPos = npc.getPos();
+    var myPos = this.playerPosVector();
+    var dx = npcPos.x - myPos.x;
+    var dz = npcPos.y - myPos.z;
+    
+    if (fuzzyMatch(theta, 2 * Math.PI) || fuzzyMatch(theta, 0)) {
+      if (dx == 0 ) {
+        return dz;
+      }
+    }
+    if (fuzzyMatch(theta, Math.PI)) {
+      if (dx == 0) {
+        return (-1) * dz;
+      }
+    }
+    if (fuzzyMatch(theta, Math.PI/2)) {
+      if (dz == 0) {
+        return dx;
+      }
+    }
+    if (fuzzyMatch(theta, 3*Math.PI/2)) {
+      if (dz == 0) {
+        return (-1) * dx;
+      }
+    }
+    return 0;
+  },
+
+  getNPC: function() {
+    var npcs = this._currentMap.getAllNPCs();
+    for (var i = 0; i < npcs.length; i++) {
+      var dist = this.npcInFrontOfMe(npcs[i]);
+      if (dist == 1) {
+        return npcs[i];
+      }
+    }
+    return null;
+  },
+  
+  drawNPC: function(npc, dist) {
+    var scaleWidth = 64 / dist;
+    var centerX = this.width / 2;
+    var centerY = this.height / 2;
+    
+    var x = centerX - (scaleWidth/2);
+    var y = centerY - (scaleWidth/2);
+    
+    // TODO make this a method of NPC?
+    this.ctx.drawImage(npc._img, npc._spriteSlice.x * 16,
+             npc._spriteSlice.y * 16,
+             16, 16, x, y, scaleWidth, scaleWidth);
   },
 
   perspectiveProject: function(a) {

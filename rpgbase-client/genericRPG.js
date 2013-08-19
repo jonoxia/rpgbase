@@ -117,6 +117,14 @@ GenericRPG.prototype = {
       case RIGHT_ARROW:
         anim = self.mazeScreen.turnRight();
         break;
+      case CONFIRM_BUTTON:
+        // If you're facing an NPC, talk to them!
+        var npc = self.mazeScreen.getNPC();
+        if (npc) {
+          npc.talk(dispatcher.menuMode("dialog"), self.player);
+        }
+        break;
+
       case CANCEL_BUTTON:
         // Pop open the field menu system
         console.log("Opening field menu from maze");
