@@ -3,6 +3,8 @@ function GenericRPG(canvasTagId) {
   this._setupCallbacks = [];
   this._mapScreenDim = {};
   this._maps = [];
+  this._mainMode = "map"; // "map" or "maze"
+  this._subMode = null; // null, "menus", or "battle"
 }
 GenericRPG.prototype = {
 
@@ -87,6 +89,8 @@ GenericRPG.prototype = {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   this.battleSystem.onClose(function(winLoseDraw) {
+    // TODO use this._mainMode instead of 
+    // battleSystem.originalMode
     if (self.battleSystem.originalMode == "overworld") {
       self.mapScreen.start();
     } 
@@ -222,8 +226,14 @@ GenericRPG.prototype = {
 
     var self = this;
     this.loader.loadThemAll(function() {
-      self.inputDispatcher.mapMode("overworld");
-      self.mapScreen.start();
+
+      if (this._mainMode == "maze") {
+        self.inputDispatcher.mapMode("maze");
+        self.mazeScreen.start();
+      } else {
+        self.inputDispatcher.mapMode("overworld");
+        self.mapScreen.start();
+      }
     });
 
   },
@@ -360,20 +370,22 @@ GenericRPG.prototype = {
 				   mazeX, mazeY, facing) {
     var self = this;
     this.overworld.onStep({x: overworldX, y: overworldY},
-        function(pc, x, y, landType) {
-	  self.inputDispatcher.mapMode("maze");
-	  self.mapScreen.stop();
-	  self.mazeScreen.loadMaze(maze);
-          self.mazeScreen.enterPlayer(self.player,
+      function(pc, x, y, landType) {
+        self._mainMode = "maze";
+        self.inputDispatcher.mapMode("maze");
+        self.mapScreen.stop();
+        self.mazeScreen.loadMaze(maze);
+        self.mazeScreen.enterPlayer(self.player,
 				      mazeX,
 				      mazeY,
 				      facing);
-	  self.mazeScreen.start();
-	});
+        self.mazeScreen.start();
+      });
 
     maze.onStep({x: mazeX, y: mazeY},
         function(pc, x, y) {
 	  // TODO pc argument is bogus, don't use it
+        self._mainMode = "map";
 	  self.inputDispatcher.mapMode("overworld");
 	  self.mazeScreen.stop();
 	  self.mapScreen.start();
@@ -461,7 +473,54 @@ GenericRPG.prototype = {
     };
 
     subReorder(this.fieldMenu, party, 0);
+  },
+
+  getCurrentMapId: function() {
+    if (this._mainMode == "maze") {
+        return this.mazeScreen.getCurrentMapId();
+    } else {
+        return this.mapScreen.getCurrentMapId();
+    }
+  },
+
+  saveGame: function(data) {
+    // TODO this is a json string, need access to
+    // json object. Temporary hackaround:
+    jsonobj = JSON.parse(data);
+    jsonobj.mapId = this.getCurrentMapId();
+    console.log("Saving mapID " + jsonobj.mapId);
+    jsonobj.mainMode = this._mainMode;
+    // TODO save direction player is facing in maze!!
+    // (TODO make serializable?)
+    return JSON.stringify(jsonobj);
+  },
+  
+  loadGame: function(jsonobj) {
+    this._mainMode = jsonobj.mainMode;
+    var map = this.getMapById(jsonobj.mapId);
+    console.log("MapID to load is " + jsonobj.mapId);
+    
+    if (this._mainMode == "maze") {
+        this.mazeScreen.loadMaze(map);
+        this.mazeScreen.enterPlayer(this.player,
+                                    jsonobj.x,
+                                    jsonobj.y, "e");
+
+        // (TODO run the following only if
+        // the game has already started in map mode -- it
+        // will break othrewise)
+        this.inputDispatcher.mapMode("maze");
+        this.mapScreen.stop();
+        this.mazeScreen.start();
+        // TODO load direction
+        // player is facing in maze
+    } else {
+        this.mapScreen.setNewDomain(map);
+        this.player.enterMapScreen(this.mapScreen,
+                                   jsonobj.x,
+                                   jsonobj.y);
+    }
+    this.player.marchInOrder();
+    console.log("Load game done");
   }
-
-
 };

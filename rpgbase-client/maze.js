@@ -760,5 +760,10 @@ FirstPersonMaze.prototype = {
         }
       }
     }
+    },
+
+  getCurrentMapId: function() {
+    return this._currentMap.getId();
   }
+
 };

@@ -18,8 +18,6 @@ Player.prototype = {
     var pos = this.aliveParty[0].getPos();
     jsonobj.x = pos.x;
     jsonobj.y = pos.y;
-    
-    jsonobj.mapId = this.mapScreen.getCurrentMapId();
   },
 
   onDeserialize: function(jsonobj) {
