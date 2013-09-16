@@ -27,7 +27,7 @@ if __name__ == "__main__":
                       gameData = gameData)
         msg = "Saved"
 
-    if action == "load":
+    elif action == "load":
         query= SavedGame.selectBy(playerName = player,
                                   saveSlot = slot)
         if query.count() > 0:
@@ -35,7 +35,8 @@ if __name__ == "__main__":
             msg = savedGame.gameData
         else:
             msg = "No matching save file"
-
+    else:
+        msg = "No action specified."
     print "Content-type: text/html"
     print ""
     print msg
