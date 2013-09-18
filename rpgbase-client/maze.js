@@ -32,26 +32,26 @@ Line.prototype = {
     this._screenB = camera.perspectiveProject(this.b);
   },
 
-  render: function(ctx) {
+  render: function(ctx, light) {
     var a = this._screenA;
     var b = this._screenB;
 
     // don't draw me if I'm behind the screen:
-    if (a.z < 1e-12 && b.z < 1e-12) {
+    if (a.z < 1e-9 && b.z < 1e-9) {
       return;
     }
 
     ctx.beginPath();
-    var scale = 40;
+    var scale = 35;
     ctx.moveTo(scale * a.x, scale * a.y);
     ctx.lineTo(scale * b.x, scale * b.y);
     // Scale lineColor by distance
-    var brightness;
-    var dist = (a.z + b.z )/2;
-    if (dist <= 1) {
-      brightness = 60;
+    var brightness = light * 12;
+    var z = (a.z + b.z )/2;
+    if (z < 1) {
+      brightness = Math.round(brightness * 1.1);
     } else {
-      brightness = Math.floor(60/dist);
+      brightness = Math.round(brightness/ z);
     }
     ctx.strokeStyle = darkenColor(this._lineColor, brightness);
     ctx.stroke();
@@ -97,29 +97,22 @@ Face.prototype = {
                     this._screenD.z);
   },
 
-  render: function(ctx) {
+  render: function(ctx, light) {
     var a = this._screenA;
     var b = this._screenB;
     var c = this._screenC;
     var d = this._screenD;
 
     // don't draw me if I'm at or behind the screen:
-      if (a.z < 1e-12 && b.z < 1e-12 && c.z < 1e-12 && d.z < 1e-12) {
-      // If z is very close to zero, then the transformed x and y
-      // values will be something crazy innacurate and we shouldn't
-      // try to draw them.
+    if (a.z < 1e-9 && b.z < 1e-9 && c.z < 1e-9 && d.z < 1e-9) {
       return;
     }
-      // to avoid the peripheral vision glitch, though, we need to 
-      // do something about polygons that have some points in front
-      // of screen and others behind...!
 
-
-    // TODO also don't render beyond max viewing distnace!!
+    // TODO also don't render beyond max viewing distance!!
 
     ctx.beginPath();
 
-    var scale = 40;
+    var scale = 35;
     ctx.moveTo(scale * a.x, scale * a.y);
     ctx.lineTo(scale * b.x, scale * b.y);
     ctx.lineTo(scale * c.x, scale * c.y);
@@ -127,12 +120,12 @@ Face.prototype = {
     ctx.lineTo(scale * a.x, scale * a.y);
 
     // Darken fill color when farther away
-    var brightness;
-    var z= this.getAvgZ();
+    var brightness = light * 20;
+    var z = this.getAvgZ();
     if (z < 1) {
-      brightness = 110;
+      brightness = Math.round(brightness * 1.1);
     } else {
-      brightness = 100/z;
+      brightness = Math.round(brightness/ z);
     }
     ctx.fillStyle = darkenColor(this._fillColor, brightness);
     var lineBrightness = Math.floor(0.5*brightness);
@@ -141,7 +134,7 @@ Face.prototype = {
     ctx.stroke();
 
     for (var i =0; i < this._decorations.length; i++) {
-      this._decorations[i].render(ctx);
+      this._decorations[i].render(ctx, light);
     }
   },
 
@@ -356,9 +349,10 @@ FirstPersonMaze.prototype = {
     
     // Very backest background -- goes behind all polygons, will show
     // through where polygons are missing. Black in the middle
-    // (= darkness of distnace); floor-color around edges (so missing
+    // (= darkness of distance); floor-color around edges (so missing
     // floor pieces will not be as obvious)
-    this.ctx.fillStyle = darkenColor(this.bgColor, 110);
+    var lightLevel = this.getLightLevel();
+    this.ctx.fillStyle = darkenColor(this.bgColor, 1.1 * 20 * lightLevel);
     this.ctx.fillRect(0, 0, this.width, this.height);
     this.ctx.save();
     this.ctx.translate(this.width/2, this.height/2);
@@ -376,13 +370,12 @@ FirstPersonMaze.prototype = {
       /*new Vector(this.playerPos.X - 0.4 * Math.sin(theta),
         -0.05,
         this.playerPos.z - 0.4 * Math.cos(theta));*/
-
     var visibleFaces = [];
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].calc(this);
       var z = this.faces[i].getAvgZ();
       // z < 0 is behind me; z > 5 is outside my light radius.
-      if (z > 0 && z <= 6) {
+      if (z > 0 && z <= lightLevel) {
         visibleFaces.push(this.faces[i]);
       }
     }
@@ -391,7 +384,7 @@ FirstPersonMaze.prototype = {
       this.bgFaces[i].calc(this);
       var z = this.bgFaces[i].getAvgZ();
       // z < 0 is behind me; z > 5 is outside my light radius.
-      if (z > 0 && z <= 6) {
+      if (z > 0 && z <= lightLevel) {
         visibleBGFaces.push(this.bgFaces[i]);
       }
     }
@@ -402,12 +395,12 @@ FirstPersonMaze.prototype = {
 
     // render all ceiling/floor faces
     for (var i = 0; i < visibleBGFaces.length; i++) {
-      visibleBGFaces[i].render(this.ctx);
+      visibleBGFaces[i].render(this.ctx, lightLevel);
     }
 
     // then after that render all wall faces
     for (var i = 0; i < visibleFaces.length; i++) {
-      visibleFaces[i].render(this.ctx);
+      visibleFaces[i].render(this.ctx, lightLevel);
     }
 
     // TODO Special case the nearby walls (and floors) that were
@@ -451,8 +444,9 @@ FirstPersonMaze.prototype = {
         // diagonally (i.e. mid-turn)
         return null;
     }
-    var viewDistance = 5; // TODO Should depend on light level
-    for (var i = 0; i < viewDistance; i++) {
+
+    for (var i = 0; i < this.getLightLevel(); i++) {
+        // beyond lightLevel squares away, it's too dark to see
         var pos = {x: Math.floor(myPos.x + i * dx),
                    y: 0,
                    z: Math.floor(myPos.z + i * dz)};
@@ -534,7 +528,7 @@ FirstPersonMaze.prototype = {
     var b = {};
 
     // don't divide by d.z if it's 0 or very close to 0!!
-    var dividend = (d.z < 1e-12)? 0.001 : d.z;
+    var dividend = (d.z < 1e-9)? 0.001 : d.z;
     b.x = (e.z * d.x / dividend) - e.x;
     b.y = (e.z * d.y / dividend) - e.y;
     b.z = d.z;
@@ -831,6 +825,12 @@ FirstPersonMaze.prototype = {
 
   getCurrentMapId: function() {
     return this._currentMap.getId();
+  },
+
+  getLightLevel: function() {
+      // TODO this needs to depend on maze, which means Map
+      // class needs a place to put the light level...
+      return 2; // was 5
   }
 
 };
