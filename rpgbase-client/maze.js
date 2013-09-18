@@ -77,6 +77,7 @@ Face.prototype = {
     this._screenB = camera.perspectiveProject(this.b);
     this._screenC = camera.perspectiveProject(this.c);
     this._screenD = camera.perspectiveProject(this.d);
+
     for (var i =0; i < this._decorations.length; i++) {
       this._decorations[i].calc(camera);
     }
@@ -102,9 +103,11 @@ Face.prototype = {
     var c = this._screenC;
     var d = this._screenD;
 
-
-    // don't draw me if I'm behind the screen:
-    if (a.z < 0 || b.z < 0 || c.z < 0 || d.z < 0) {
+    // don't draw me if I'm at or behind the screen:
+    if (a.z < 1e-12 || b.z < 1e-12 || c.z < 1e-12 || d.z < 1e-12) {
+      // If z is very close to zero, then the transformed x and y
+      // values will be something crazy innacurate and we shouldn't
+      // try to draw them.
       return;
     }
     // also don't render beyond max viewing distnace!!
@@ -117,6 +120,7 @@ Face.prototype = {
     ctx.lineTo(scale * c.x, scale * c.y);
     ctx.lineTo(scale * d.x, scale * d.y);
     ctx.lineTo(scale * a.x, scale * a.y);
+
     // Darken fill color when farther away
     var brightness;
     var z= this.getAvgZ();
@@ -525,6 +529,7 @@ FirstPersonMaze.prototype = {
     var b = {};
     b.x = (e.z / d.z) * d.x - e.x;
     b.y = (e.z / d.z) * d.y - e.y;
+      // TODO what if d.z is zero??
     b.z = d.z; // um I think?
     return b;
   },
