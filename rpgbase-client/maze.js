@@ -265,7 +265,10 @@ FirstPersonMaze.prototype = {
     newX = Math.floor(newX + 0.5);
     newZ = Math.floor(newZ + 0.5);
 
-    return this.isOpenSpace(newX, newZ);
+    // This line assumes that newX and newZ are within bounds
+    // which might be false if you had tunnels running off the
+    // edge of the map, so... don't do that?
+    return (this._currentMap._mapData[newZ][newX] != 1);
   },
 
   goForward: function() {
@@ -535,9 +538,11 @@ FirstPersonMaze.prototype = {
       wFace.setLineColor(this.hardLineColor);
       wFace.addDecorations(this.makeBricks(x, z, "w"));
       if (terrainType == 3) {
-        wFace.addDecorations(this.makeDoor(x, z, "w"));
+        //wFace.addDecorations();
+          this.makeDoor(x, z, "w");
+      } else {
+          this.faces.push(wFace);
       }
-      this.faces.push(wFace);
     }
     if (this.isOpenSpace(x + 1, z)) {
       // right side
@@ -546,9 +551,11 @@ FirstPersonMaze.prototype = {
       eFace.setLineColor(this.hardLineColor);
       eFace.addDecorations(this.makeBricks(x, z, "e"));
       if (terrainType == 3) {
-        eFace.addDecorations(this.makeDoor(x, z, "e"));
+          //eFace.addDecorations();
+          this.makeDoor(x, z, "e");
+      } else {
+          this.faces.push(eFace);
       }
-      this.faces.push(eFace);
     }
     if (this.isOpenSpace(x, z-1)) {
       // front
@@ -557,9 +564,11 @@ FirstPersonMaze.prototype = {
       nFace.addDecorations(this.makeBricks(x, z, "n"));
       nFace.setLineColor(this.hardLineColor);
       if (terrainType == 3) {
-        nFace.addDecorations(this.makeDoor(x, z, "n"));
+        //nFace.addDecorations();
+          this.makeDoor(x, z, "n");
+      } else {
+          this.faces.push(nFace);
       }
-      this.faces.push(nFace);
     }
     if (this.isOpenSpace(x, z +1)) {
       // back
@@ -568,9 +577,11 @@ FirstPersonMaze.prototype = {
       sFace.addDecorations(this.makeBricks(x, z, "s"));
       sFace.setLineColor(this.hardLineColor);
       if (terrainType == 3) {
-        sFace.addDecorations(this.makeDoor(x, z, "s"));
+          // sFace.addDecorations();
+          this.makeDoor(x, z, "s");
+      } else {
+        this.faces.push(sFace);
       }
-      this.faces.push(sFace);
     }
     /* TODO don't use hard line color on edges where it's continuous
        with another wall */
@@ -687,35 +698,52 @@ FirstPersonMaze.prototype = {
   },
 
   makeDoor: function(x, z, side) {
+      // what if we try putting solid polygons everywhere the
+      // door isn't??
     switch (side) {
-      case "e":
-      var corner9 = new Vector(x + 0.5, -0.25, z+0.2);
-      var corner10 = new Vector(x + 0.5, -0.25, z-0.2);
-      var corner11 = new Vector(x + 0.5, 0.15, z-0.2);
-      var corner12 = new Vector(x + 0.5, 0.15, z+0.2);
+    case "e": case "w":
+        var xMod = side == "e"? 0.5 : -0.5;
+        var lintel = new Face(new Vector(x + xMod, 0.25, z + 0.5),
+                              new Vector(x + xMod, 0.15, z + 0.5),
+                              new Vector(x + xMod, 0.15, z - 0.5),
+                              new Vector(x + xMod, 0.25, z - 0.5));
+
+        var leftFrame = new Face(new Vector(x + xMod, -0.25, z - 0.5),
+                              new Vector(x + xMod, 0.15, z - 0.5),
+                              new Vector(x + xMod, 0.15, z - 0.2),
+                              new Vector(x + xMod, -0.25, z - 0.2)
+                                );
+        var rightFrame = new Face(new Vector(x + xMod, -0.25, z + 0.5),
+                              new Vector(x + xMod, 0.15, z + 0.5),
+                              new Vector(x + xMod, 0.15, z + 0.2),
+                              new Vector(x + xMod, -0.25, z + 0.2)
+                                );
       break;
-      case "w":
-      var corner9 = new Vector(x - 0.5, -0.25, z+0.2);
-      var corner10 = new Vector(x - 0.5, -0.25, z-0.2);
-      var corner11 = new Vector(x - 0.5, 0.15, z-0.2);
-      var corner12 = new Vector(x - 0.5, 0.15, z+0.2);
-      break;
-      case "n":
-      var corner9 = new Vector(x + 0.2, -0.25, z-0.5);
-      var corner10 = new Vector(x - 0.2, -0.25, z-0.5);
-      var corner11 = new Vector(x - 0.2, 0.15, z-0.5);
-      var corner12 = new Vector(x + 0.2, 0.15, z-0.5);
-      break;
-      case "s":
-      var corner9 = new Vector(x + 0.2, -0.25, z+0.5);
-      var corner10 = new Vector(x - 0.2, -0.25, z+0.5);
-      var corner11 = new Vector(x - 0.2, 0.15, z+0.5);
-      var corner12 = new Vector(x + 0.2, 0.15, z+0.5);
+      case "n":case "s":
+        var zMod = side == "s"? 0.5 : -0.5;
+        var lintel = new Face(new Vector(x + 0.5, 0.25, z + zMod),
+                              new Vector(x + 0.5, 0.15, z + zMod),
+                              new Vector(x - 0.5, 0.15, z + zMod),
+                              new Vector(x - 0.5, 0.25, z + zMod));
+
+        var leftFrame = new Face(new Vector(x - 0.5, -0.25, z + zMod),
+                              new Vector(x - 0.5, 0.15, z + zMod),
+                              new Vector(x - 0.2, 0.15, z + zMod),
+                              new Vector(x - 0.2, -0.25, z + zMod)
+                                );
+        var rightFrame = new Face(new Vector(x + 0.5, -0.25, z + zMod),
+                              new Vector(x + 0.5, 0.15, z + zMod),
+                              new Vector(x + 0.2, 0.15, z + zMod),
+                              new Vector(x + 0.2, -0.25, z + zMod)
+                                );
       break;
     }
-    var doorFace = new Face(corner9, corner10, corner11, corner12);
-    doorFace.setColor({r: 0, g: 0, b: 0});
-    return [doorFace];
+      lintel.setColor(this.wallColor);
+      leftFrame.setColor(this.wallColor);
+      rightFrame.setColor(this.wallColor);
+      this.faces.push(lintel);
+      this.faces.push(leftFrame);
+      this.faces.push(rightFrame);
   },
   makeFloorAndCeiling: function(x, z) {
     // floor

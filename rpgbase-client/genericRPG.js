@@ -369,6 +369,18 @@ GenericRPG.prototype = {
   connectMazeToOverworld: function(maze, overworldX, overworldY,
 				   mazeX, mazeY, facing) {
     var self = this;
+      // assymmetry: when entering maze, put you on the space
+      // in FRONT of the stairs, but don't exit maze until you
+      // step ONTO the stairs.
+      var entryX = mazeX;
+      var entryY = mazeY;
+      switch (facing) {
+      case "e": entryX ++; break;
+      case "w": entryX --; break;
+      case "n": entryY --; break;
+      case "s": entryY ++; break;
+      }
+
     this.overworld.onStep({x: overworldX, y: overworldY},
       function(pc, x, y, landType) {
         self._mainMode = "maze";
@@ -376,9 +388,9 @@ GenericRPG.prototype = {
         self.mapScreen.stop();
         self.mazeScreen.loadMaze(maze);
         self.mazeScreen.enterPlayer(self.player,
-				      mazeX,
-				      mazeY,
-				      facing);
+				    entryX,
+				    entryY,
+				    facing);
         self.mazeScreen.start();
       });
 
