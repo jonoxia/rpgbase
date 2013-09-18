@@ -37,7 +37,7 @@ Line.prototype = {
     var b = this._screenB;
 
     // don't draw me if I'm behind the screen:
-    if (a.z < 0 || b.z < 0) {
+    if (a.z < 1e-12 && b.z < 1e-12) {
       return;
     }
 
@@ -104,13 +104,18 @@ Face.prototype = {
     var d = this._screenD;
 
     // don't draw me if I'm at or behind the screen:
-    if (a.z < 1e-12 || b.z < 1e-12 || c.z < 1e-12 || d.z < 1e-12) {
+      if (a.z < 1e-12 && b.z < 1e-12 && c.z < 1e-12 && d.z < 1e-12) {
       // If z is very close to zero, then the transformed x and y
       // values will be something crazy innacurate and we shouldn't
       // try to draw them.
       return;
     }
-    // also don't render beyond max viewing distnace!!
+      // to avoid the peripheral vision glitch, though, we need to 
+      // do something about polygons that have some points in front
+      // of screen and others behind...!
+
+
+    // TODO also don't render beyond max viewing distnace!!
 
     ctx.beginPath();
 
@@ -527,10 +532,12 @@ FirstPersonMaze.prototype = {
     d.y = sin(theta.x)*(cos(theta.y)*(a.z -c.z) + sin(theta.y) * (sin(theta.z)*(a.y - c.y) + cos(theta.z) *(a.x - c.x))) + cos(theta.x) * (cos(theta.z) *(a.y - c.y) - sin(theta.z) * (a.x - c.x));
     d.z = cos(theta.x) * (cos(theta.y) * (a.z - c.z) + sin(theta.y) * (sin(theta.z) * ( a.y - c.y) + cos(theta.z) * ( a.x - c.x))) - sin(theta.x)*(cos(theta.z) * (a.y - c.y ) - sin(theta.z)*(a.x-c.x));
     var b = {};
-    b.x = (e.z / d.z) * d.x - e.x;
-    b.y = (e.z / d.z) * d.y - e.y;
-      // TODO what if d.z is zero??
-    b.z = d.z; // um I think?
+
+    // don't divide by d.z if it's 0 or very close to 0!!
+    var dividend = (d.z < 1e-12)? 0.001 : d.z;
+    b.x = (e.z * d.x / dividend) - e.x;
+    b.y = (e.z * d.y / dividend) - e.y;
+    b.z = d.z;
     return b;
   },
 
