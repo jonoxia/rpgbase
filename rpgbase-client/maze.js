@@ -411,58 +411,85 @@ FirstPersonMaze.prototype = {
     }
 
     // draw NPCs/chests/ etc as sprites in maze:
-    var npcs = this._currentMap.getAllNPCs();
-    for (var i = 0; i < npcs.length; i++) {
-      var dist = this.npcInFrontOfMe(npcs[i]);
-      if (dist > 0) {
-        this.drawNPC(npcs[i], dist);
-      }
+    var record = this.npcInFrontOfMe();
+    if (record != null) {
+      this.drawNPC(record.npc, record.dist);
     }
   },
 
-  npcInFrontOfMe: function(npc) {
+  npcInFrontOfMe: function() {
     var theta = this.cameraOrientation.y;
-    var npcPos = npc.getPos();
     var myPos = this.playerPosVector();
-    var dx = npcPos.x - myPos.x;
-    var dz = npcPos.y - myPos.z;
+    var dx, dz;
     
     if (fuzzyMatch(theta, 2 * Math.PI) || fuzzyMatch(theta, 0)) {
-      if (dx == 0 ) {
-        return dz;
-      }
+        dx = 0;
+        dz = 1;
     }
-    if (fuzzyMatch(theta, Math.PI)) {
-      if (dx == 0) {
-        return (-1) * dz;
-      }
+    else if (fuzzyMatch(theta, Math.PI)) {
+        dx = 0;
+        dz = -1;
     }
-    if (fuzzyMatch(theta, Math.PI/2)) {
-      if (dz == 0) {
-        return dx;
-      }
+    else if (fuzzyMatch(theta, Math.PI/2)) {
+        dx = 1;
+        dz = 0;
     }
-    if (fuzzyMatch(theta, 3*Math.PI/2)) {
-      if (dz == 0) {
-        return (-1) * dx;
-      }
+    else if (fuzzyMatch(theta, 3*Math.PI/2)) {
+        dx = -1;
+        dz = 0;
+    } else {
+        // for simplicity sake, you can't see NPCs when looking
+        // diagonally (i.e. mid-turn)
+        return null;
     }
-    return 0;
+    var viewDistance = 5; // TODO Should depend on light level
+    for (var i = 0; i < viewDistance; i++) {
+        var pos = {x: Math.floor(myPos.x + i * dx),
+                   y: 0,
+                   z: Math.floor(myPos.z + i * dz)};
+        
+        // If pos is blocked by solid wall, stop here -- can't see
+        // through.
+        if (!this.isOpenSpace(pos.x, pos.z)) {
+            break;
+        }
+        
+        var npc = this.getNPCAt(pos);
+        if (npc) {
+            console.log("Found NPC");
+            var dist = this.distanceToNPC(npc);
+            return {npc: npc, dist: dist};
+        }
+    }
+    return null;
   },
 
   getNPC: function() {
+    return this.getNPCAt(this.playerPosVector());
+  },
+    
+  distanceToNPC: function(npc) {
+      var playerPos = this.playerPosVector();
+      var npcPos = npc.getPos();
+      return Math.sqrt( Math.pow( playerPos.x - npcPos.x, 2) + 
+                        Math.pow( playerPos.z - npcPos.y, 2));
+  },
+
+  getNPCAt: function(pos) {
+    //var theta = this.cameraOrientation.y;
     var npcs = this._currentMap.getAllNPCs();
     for (var i = 0; i < npcs.length; i++) {
-      var dist = this.npcInFrontOfMe(npcs[i]);
-      if (dist == 1) {
-        return npcs[i];
+      var npcPos = npcs[i].getPos();
+      if (npcPos.x == pos.x &&
+          npcPos.y == pos.z) {
+          return npcs[i];
       }
     }
     return null;
   },
   
   drawNPC: function(npc, dist) {
-    var scaleWidth = 64 / dist;
+    var scaleWidth = 64 / (dist + 1);
     var centerX = this.width / 2;
     var centerY = this.height / 2;
     
