@@ -482,7 +482,7 @@ function MapSpriteMixin(subClassPrototype) {
     this._facing = {x: dx, y: dy};
   };
 
-  subClassPrototype.getFacing = function(dx, dy) {
+  subClassPrototype.getFacing = function() {
     if (!this._facing) {
       this._facing = {x: 0, y: 1}; //facing south is default
     }

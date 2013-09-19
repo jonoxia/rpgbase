@@ -403,8 +403,6 @@ FirstPersonMaze.prototype = {
       visibleFaces[i].render(this.ctx, lightLevel);
     }
 
-    // TODO Special case the nearby walls (and floors) that were
-    // clipped out of the scene
     this.ctx.restore();
 
     // TODO this is another bit of code copied with map screen:
@@ -420,6 +418,9 @@ FirstPersonMaze.prototype = {
   },
 
   npcInFrontOfMe: function() {
+    // follow the line of the player's vision until
+    // we hit a wall or run out of light; return any
+    // NPC found in those squares and the distance to it.
     var theta = this.cameraOrientation.y;
     var myPos = this.playerPosVector();
     var dx, dz;
@@ -459,6 +460,15 @@ FirstPersonMaze.prototype = {
         
         var npc = this.getNPCAt(pos);
         if (npc) {
+            if (i == 0) {
+                boxFacing = npc.getFacing();
+                // don't show chests in my space that i'm facing
+                // away from
+                if (boxFacing.x != -1 * dx ||
+                    boxFacing.y != -1 * dz) {
+                    continue;
+                }
+            }
             console.log("Found NPC");
             var dist = this.distanceToNPC(npc);
             return {npc: npc, dist: dist};
@@ -468,6 +478,7 @@ FirstPersonMaze.prototype = {
   },
 
   getNPC: function() {
+    // returns any NPC sharing the player's space
     return this.getNPCAt(this.playerPosVector());
   },
     
@@ -532,6 +543,10 @@ FirstPersonMaze.prototype = {
     b.x = (e.z * d.x / dividend) - e.x;
     b.y = (e.z * d.y / dividend) - e.y;
     b.z = d.z;
+
+    if (Math.abs(b.x) > 100000 || Math.abs(b.y) > 10000) {
+        console.log("x = " + b.x + ", y = " + b.y + ", z = " + b.z);
+    }
     return b;
   },
 

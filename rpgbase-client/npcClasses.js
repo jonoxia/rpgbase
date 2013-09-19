@@ -130,6 +130,11 @@ TreasureChest.prototype = {
       dialoglog.scrollText("It's empty. :-(");
     }
   },
+
+  setFacing: function(dir) {
+      console.log("SetFacing called");
+      this.facing = dir;
+  }
 };
 MapSpriteMixin(TreasureChest.prototype);
 
@@ -159,7 +164,7 @@ MoneyChest.prototype = {
     } else {
       dialoglog.scrollText("It's empty. :-(");
     }
-  },
+  }
 };
 MapSpriteMixin(MoneyChest.prototype);
 
