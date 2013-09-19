@@ -830,7 +830,7 @@ FirstPersonMaze.prototype = {
   getLightLevel: function() {
       // TODO this needs to depend on maze, which means Map
       // class needs a place to put the light level...
-      return 2; // was 5
+      return 5;
   }
 
 };
