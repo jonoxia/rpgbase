@@ -411,6 +411,16 @@ function MapSpriteMixin(subClassPrototype) {
                              this._width, this._height);
   };
 
+  subClassPrototype.scalePlot = function(ctx, scaleWidth, scaleHeight,
+                                         x, y) {
+    var spriteOffsetX = this._spriteSlice.x * this._width;
+    var spriteOffsetY = this._spriteSlice.y * this._height;
+    ctx.drawImage(this._img, spriteOffsetX,
+                  spriteOffsetY,
+                  this._width, this._height, x, y,
+                  scaleWidth, scaleHeight);
+  };
+
   subClassPrototype.canMove = function(mapScreen, deltaX, deltaY) {
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;

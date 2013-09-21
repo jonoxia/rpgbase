@@ -152,6 +152,17 @@ Face.prototype = {
 
   addDecorations: function(decorations) {
     this._decorations = this._decorations.concat(decorations);
+  },
+
+  getScreenRect: function() {
+    var a = this._screenA;
+    var b = this._screenB;
+    var c = this._screenC;
+    var d = this._screenD;
+    return { left: Math.min(a.x, b.x, c.x, d.x),
+             top: Math.min(a.y, b.y, c.y, d.y),
+             right: Math.max(a.x, b.x, c.x, d.x),
+             bottom: Math.max(a.y, b.y, c.y, d.y) };
   }
 };
 
@@ -403,17 +414,17 @@ FirstPersonMaze.prototype = {
       visibleFaces[i].render(this.ctx, lightLevel);
     }
 
+    // draw NPCs/chests/ etc as sprites in maze:
+    var record = this.npcInFrontOfMe();
+    if (record != null) {
+      this.drawNPC(record.npc, record.dist);
+    }
+
     this.ctx.restore();
 
     // TODO this is another bit of code copied with map screen:
     if (this._afterRenderCallback) {
       this._afterRenderCallback(this.ctx);
-    }
-
-    // draw NPCs/chests/ etc as sprites in maze:
-    var record = this.npcInFrontOfMe();
-    if (record != null) {
-      this.drawNPC(record.npc, record.dist);
     }
   },
 
@@ -469,7 +480,6 @@ FirstPersonMaze.prototype = {
                     continue;
                 }
             }
-            console.log("Found NPC");
             var dist = this.distanceToNPC(npc);
             return {npc: npc, dist: dist};
         }
@@ -503,17 +513,34 @@ FirstPersonMaze.prototype = {
   },
   
   drawNPC: function(npc, dist) {
-    var scaleWidth = 64 / (dist + 1);
-    var centerX = this.width / 2;
-    var centerY = this.height / 2;
+    var pos = npc.getPos();
+    var face = npc.getFacing();
+    // TODO some of these numbers are treasure-chest specific,
+    // will need refactoring to handle other maze sprites (like actual
+    // NPCs)
+    var npcPoly = new Face(new Vector(pos.x + face.y * 0.25,
+                                      0,
+                                      pos.y + face.x * 0.25),
+                            new Vector(pos.x - face.y * 0.25 ,
+                                      0,
+                                      pos.y - face.x * 0.25),
+                            new Vector(pos.x - face.y * 0.25 ,
+                                      -0.25,
+                                      pos.y - face.x * 0.25),
+                           new Vector(pos.x + face.y * 0.25 ,
+                                      -0.25,
+                                      pos.y + face.x * 0.25)
+                           );
+
+    npcPoly.calc(this);
+    var screenRect = npcPoly.getScreenRect();
+    var scale = 35; // TODO this constant appears in several places
+    scaleWidth = scale * (screenRect.right - screenRect.left)/2;
     
-    var x = centerX - (scaleWidth/2);
-    var y = centerY - (scaleWidth/2);
-    
-    // TODO make this a method of NPC?
-    this.ctx.drawImage(npc._img, npc._spriteSlice.x * 16,
-             npc._spriteSlice.y * 16,
-             16, 16, x, y, scaleWidth, scaleWidth);
+    var x = scale * screenRect.left/2;
+    var y = scale * screenRect.top/2;
+
+    npc.scalePlot(this.ctx, scaleWidth, scaleWidth, x, y);
   },
 
   perspectiveProject: function(a) {
@@ -544,9 +571,9 @@ FirstPersonMaze.prototype = {
     b.y = (e.z * d.y / dividend) - e.y;
     b.z = d.z;
 
-    if (Math.abs(b.x) > 100000 || Math.abs(b.y) > 10000) {
+   /* if (Math.abs(b.x) > 100000 || Math.abs(b.y) > 10000) {
         console.log("x = " + b.x + ", y = " + b.y + ", z = " + b.z);
-    }
+    }*/
     return b;
   },
 
