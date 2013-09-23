@@ -870,9 +870,17 @@ FirstPersonMaze.prototype = {
   },
 
   getLightLevel: function() {
-      // TODO this needs to depend on maze, which means Map
-      // class needs a place to put the light level...
+    if (this._currentMap.lightLevel != undefined) {
+      return this._currentMap.lightLevel;
+    } else {
+      // default
       return 5;
+    }
+  },
+
+  setLightLevel: function(newLevel) {
+    // TODO make this a method on MazeMap class or something?
+    this._currentMap.lightLevel = newLevel;
   }
 
 };
