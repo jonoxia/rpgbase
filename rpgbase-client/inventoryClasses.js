@@ -240,7 +240,7 @@ ItemInstance.prototype = {
     return this._target;
   },
 
-  checkUsesLeft: function() {
+  consume: function() {
     if (this._numUses != null) {
       this._numUses -= 1;
       if (this._numUses <= 0) {
@@ -259,8 +259,10 @@ ItemInstance.prototype = {
 
   useInBattle: function(system, user, target) {
     if (this._battleEffect) {
-      this.checkUsesLeft();
-      this._battleEffect(system, user, target);
+      var used = this._battleEffect(system, user, target);
+      if (used) {
+          this.consume();
+      }
     } else {
       system.showMsg(user.name 
                      + " tries to use the "
@@ -271,8 +273,10 @@ ItemInstance.prototype = {
 
   useInField: function(system, user, target) {
     if (this._fieldEffect) {
-      this.checkUsesLeft();
-      this._fieldEffect(system, user, target);
+      var used = this._fieldEffect(system, user, target);
+      if (used) {
+          this.consume();
+      }
     } else {
       system.showMsg(user.name 
                      + " tries to use the "
