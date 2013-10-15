@@ -23,10 +23,6 @@ ScriptedEvent.prototype = {
   // could make a new menu system just for holding the keyboard
   // focus during scripted events...
   npcSpeak: function(npc, text) {
-    // if this event was triggered by talking to an NPC, then
-    // dispatcher has already set menu mode to dialog.... and if
-    // you've dismissed the first npcSpeak, then the dispatcher
-    // has been set back to map mode.  Hmm, this is a problem.
     var self = this;
     this._addStep(function() {
       var dlg = self._dialoglog;

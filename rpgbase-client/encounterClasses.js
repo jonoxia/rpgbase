@@ -645,6 +645,7 @@ BattleSystem.prototype = {
     if (this.checkBattleEndConditions()) {
       // If battle has already ended mid-round,
       // don't continue executing.
+      this.finishRound();
       return;
     }
     this.displayElem.empty();// clear the message
@@ -725,7 +726,10 @@ BattleSystem.prototype = {
     this.clearMsg();
     this.showPartyStats(); // in case end of round effects changed 
     // anything
-    this.showStartRoundMenu();
+    if (!this._freelyExit) {
+      // Unless fight has ended already, show menu for next round
+      this.showStartRoundMenu();
+    }
   },
 
   endBattle: function(winLoseRun) {
@@ -849,6 +853,7 @@ BattleSystem.prototype = {
   },
 
   checkBattleEndConditions: function() {
+    // TODO set some kind of guard flag? didn't we used to have one?
     var activeParty = this.getActiveParty();
 
     if (this.monsters.length == 0) {
