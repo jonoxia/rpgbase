@@ -535,8 +535,8 @@ GenericRPG.prototype = {
     this.player.marchInOrder();
     console.log("Load game done");
   },
-  
-  inMazeNow: function() {
+
+  inMaze: function() {
     return (this._mainMode == "maze");
   }
 };
