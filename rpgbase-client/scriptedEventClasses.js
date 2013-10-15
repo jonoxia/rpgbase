@@ -14,20 +14,27 @@ ScriptedEvent.prototype = {
   npcEnter: function(npc, x, y) {
     var self = this;
     this._addStep(function() {
-      // do stuff here
+      self._mapScreen._currentDomain.addNPC(npc, x, y);
       self.nextStep();
     });
     return this; // for daisy-chaining
   },
 
+  // could make a new menu system just for holding the keyboard
+  // focus during scripted events...
   npcSpeak: function(npc, text) {
     var self = this;
     this._addStep(function() {
       // do stuff here
+      self._dialoglog.open(self._player);
+      self._dialoglog.scrollText(text);
+      self._dialoglog.onClose(function() {
 
-      // TODO call nextStep when player closes the dialog
-      // window.
-      self.nextStep();
+        self._dialoglog._freelyExit = false; // push a root menu?
+        self._dialoglog.
+
+        self.nextStep();
+      });
     });
     return this; // for daisy-chaining
   },
@@ -35,9 +42,9 @@ ScriptedEvent.prototype = {
   npcMove: function(npc, directionList) {
     var self = this;
     this._addStep(function() {
-      // do stuff here
-      // TODO call nextStep when npc move animation is done
-      self.nextStep();
+      npc.walkPath(directionList, function() {
+        self.nextStep();
+      });
     });
     return this; // for daisy-chaining
   },
@@ -56,6 +63,8 @@ ScriptedEvent.prototype = {
     var self = this;
     this._addStep(function() {
       // do stuff here
+      self._mapScreen._currentDomain.removeNPC(npc);
+      // wow that's encapsulation breaky
       self.nextStep();
     });
     return this; // for daisy-chaining
@@ -92,11 +101,12 @@ ScriptedEvent.prototype = {
     return this; // for daisy-chaining
   },
 
-  switchMapDomain: function(mapDomain) {
+  switchMapDomain: function(mapDomain, x, y) {
     var self = this;
     this._addStep(function() {
-      // do stuff here
-      // self._mapScreen
+      self._mapScreen.setNewDomain(mapDomain);
+      self._mapScreen.scrollToShow(x, y);
+      // TODO animate map screen...
       self.nextStep();
     });
     return this; // for daisy-chaining
@@ -120,24 +130,28 @@ ScriptedEvent.prototype = {
   nextStep: function() {
     this.currStep += 1;
     if (this.currStep < this._steps.length) {
-      this._steps[currStep].call(this);
+      this._steps[this.currStep].call(this);
     } else {
       this._finish();
     }
   },
 
-  play: function(party, mapScreen, dialoglog) {
+  play: function(player, mapScreen, dialoglog) {
     var self = this;
-    self._party = party;
+    self._player = player;
     self._mapScreen = mapScreen;
     self._dialoglog = dialoglog;
 
     this.currStep = 0;
-    this._steps[currStep].call(this);
-    // TODO test!!!
+    this._steps[this.currStep].call(this);
+    // TODO set dialoglog._freelyExit to false -- can't leave
+    // the scripted event until it's done.
   },
 
   _finish: function() {
+    console.log("Scripted event finished.");
+    self._dialoglog._freelyExit = true;
+    this._dialoglog.close(); // and TODo set freelyExit to true again
     // TODO put party back in order, center map screen on them,
     // and resume player control.
   }

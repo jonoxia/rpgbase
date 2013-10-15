@@ -28,7 +28,46 @@ NPC.prototype = {
       // just turn to face the direction without moving
       this.turn(deltaX, deltaY);
     }
+  },
 
+  walkPath: function(directionList, onFinished) {
+
+    var numAnimFrames = 5; // TODO don't hardcode
+    var deltaX, deltaY;
+    var firstAnim = null, lastAnim = null;
+    var mapScreen = this._mapScreen;
+
+    function chainAnimation(anim1, anim2) {
+      anim1.onFinish(function() {
+        mapScreen.animate(anim2);
+      });
+    }
+
+    for (var i = 0; i < directionList.length; i++) {
+      switch(directionList[i]) {
+        case "n":
+        deltaX = 0, deltaY = -1; break;
+        case "s":
+        deltaX = 0, deltaY = 1; break;
+        case "e":
+        deltaX = 1, deltaY = 0; break;
+        case "w":
+        deltaX = -1, deltaY = 0; break;
+      }
+      // TODO make this into an animation.chain function?
+      var stepAnim = this.makeStepAnimation(mapScreen,
+                                            numAnimFrames,
+                                            deltaX, deltaY);
+      if (firstAnim == null) {
+        firstAnim = stepAnim;
+      } else {
+        chainAnimation(lastAnim, stepAnim);
+      }
+      // TODO seems to get stuck after two steps?
+      lastAnim = stepAnim;
+    }
+    lastAnim.onFinish(onFinished);
+    mapScreen.animate(firstAnim);
   },
 
   wander: function() {
