@@ -899,6 +899,7 @@ function ScrollingTextBox(text, menuSystem) {
 
   this.height = styles.topMargin + styles.bottomMargin
     + this.linesAtOnce * styles.lineHeight;
+  this._closeCallbacks = [];
 }
 ScrollingTextBox.prototype = {
   // Satisfies same interface as a CmdMenu, so it can go on
@@ -910,11 +911,17 @@ ScrollingTextBox.prototype = {
     } else {
       // if done, treat any key as cancel button
       this.menuSystem.handleKey(CANCEL_BUTTON);
+      for (var i = 0; i < this._closeCallbacks.length; i++) {
+        this._closeCallbacks[i]();
+      }
     }
   },
   setPos: function(x, y) {
     this.x = x;
     this.y = y;
+  },
+  getPos: function() {
+    return {x: this.x, y: this.y};
   },
   display: function(ctx) {
     if (!ctx) { return; }
@@ -924,7 +931,9 @@ ScrollingTextBox.prototype = {
                                 this.width, this.height, lines);
   },
   close: function() {
-    // not used
+  },
+  onClose: function(callback) {
+    this._closeCallbacks.push(callback);
   }
 };
 
@@ -956,6 +965,9 @@ FixedTextBox.prototype = {
     this.x = x;
     this.y = y;
   },
+  getPos: function() {
+    return {x: this.x, y: this.y};
+  },
   display: function(ctx) {
     if (!ctx) { return; }
     // TODO only works in Canvas world - make it work in CSS world
@@ -965,6 +977,27 @@ FixedTextBox.prototype = {
   },
   close: function() {
     // not used
+  }
+};
+
+function InvisibleTextBox() {
+  this.x = this.y = 0;
+}
+InvisibleTextBox.prototype = {
+  // Satisfies same interface as a CmdMenu, so it can go on
+  // the menu stack.
+  onKey: function(key) {
+  },
+  setPos: function(x, y) {
+    this.x = x;
+    this.y = y;
+  },
+  getPos: function() {
+    return {x: this.x, y: this.y};
+  },
+  display: function(ctx) {
+  },
+  close: function() {
   }
 };
 
@@ -988,7 +1021,7 @@ Dialoglog.prototype = {
   },
 
   scrollText: function(dialogText) {
-    // Turn into a scorolling message box and push onto stack
+    // Turn into a scrolling message box and push onto stack
     this.clearMsg();
     var textBox = new ScrollingTextBox(dialogText, this);
     this.pushMenu(textBox);

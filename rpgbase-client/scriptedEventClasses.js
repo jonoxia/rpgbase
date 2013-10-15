@@ -23,16 +23,20 @@ ScriptedEvent.prototype = {
   // could make a new menu system just for holding the keyboard
   // focus during scripted events...
   npcSpeak: function(npc, text) {
+    // if this event was triggered by talking to an NPC, then
+    // dispatcher has already set menu mode to dialog.... and if
+    // you've dismissed the first npcSpeak, then the dispatcher
+    // has been set back to map mode.  Hmm, this is a problem.
     var self = this;
     this._addStep(function() {
-      // do stuff here
-      self._dialoglog.open(self._player);
-      self._dialoglog.scrollText(text);
-      self._dialoglog.onClose(function() {
-
-        self._dialoglog._freelyExit = false; // push a root menu?
-        self._dialoglog.
-
+      var dlg = self._dialoglog;
+      // This code is duplicated from Dialoglog.scrollText()
+      dlg.clearMsg();
+      var textBox = new ScrollingTextBox(text, dlg);
+      dlg.pushMenu(textBox);
+      textBox.setPos(dlg._positioning.msgLeft,
+                     dlg._positioning.msgTop);
+      textBox.onClose(function() {
         self.nextStep();
       });
     });
@@ -141,17 +145,24 @@ ScriptedEvent.prototype = {
     self._player = player;
     self._mapScreen = mapScreen;
     self._dialoglog = dialoglog;
+    self._dialoglog._freelyExit = false; // can't leave
+    // the scripted event until it's done.
+
+    self._dialoglog._rootMenu = new InvisibleTextBox();
+    self._dialoglog.open(self._player);
+    // TODO maybe it's easier not to use dialoglog at all, but create
+    // a new MenuSystem that does exactly what we want
 
     this.currStep = 0;
     this._steps[this.currStep].call(this);
-    // TODO set dialoglog._freelyExit to false -- can't leave
-    // the scripted event until it's done.
   },
 
   _finish: function() {
     console.log("Scripted event finished.");
-    self._dialoglog._freelyExit = true;
-    this._dialoglog.close(); // and TODo set freelyExit to true again
+    this._dialoglog._freelyExit = true;
+    this._dialoglog._rootMenu = null;
+    this._dialoglog.emptyMenuStack();
+    this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
     // and resume player control.
   }
