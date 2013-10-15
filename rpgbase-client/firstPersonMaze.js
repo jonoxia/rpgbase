@@ -81,6 +81,8 @@ FirstPersonPlayer.prototype = {
   },
 
   animate: function(callback, finishedCallback) {
+    // TODO use keyboardClasses animator, return the instance so
+    // the keyboard controller can delay till animation's done
     var frame = 0;
     var self = this;
     self.animationBusy = true;
@@ -174,7 +176,7 @@ FirstPersonPlayer.prototype = {
 };
 
 
-function FirstPersonMaze(mapData) {
+function FirstPersonMaze(mapData, canvas) {
   this.scene = null;
   this.renderer = null;
   this.width = 512;
@@ -183,12 +185,12 @@ function FirstPersonMaze(mapData) {
   this.mapData = mapData;
   this.player = null;
   this._stepHandlers = [];
-  this.init();
+  this.init(canvas);
 }
 FirstPersonMaze.prototype = {
-  init: function() {
+  init: function(canvas) {
     this.scene = this.setupScene(this.mapData);
-    this.scene.fog = new THREE.FogExp2(0x000000, 0.001); // color, density
+    //this.scene.fog = new THREE.FogExp2(0x000000, 0.001); // color, density
   
     this.player = new FirstPersonPlayer(2, 2, 0, this.aspect);
     
@@ -198,26 +200,44 @@ FirstPersonMaze.prototype = {
     
     // TODO figure out if browser has WebGL support, then decide
     // whether to instantiate WebGLRenderer or CanvasRenderer.
-    this.renderer = new THREE.WebGLRenderer();
-    //renderer = new t.CanvasRenderer();
+    //this.renderer = new THREE.WebGLRenderer({antialias: false});
+    //canvas: canvasElem});
+    this.renderer = new THREE.CanvasRenderer({antialias: false});
     this.renderer.setSize(this.width, this.height);
     
     // Add the canvas to the document
     //renderer.domElement.style.backgroundColor = '#D6F1FF'; // easier to see
     document.body.appendChild(this.renderer.domElement);
+    //this.render();
+  },
+  
+  getCanvas: function() {
+    return this.renderer.domElement;
+  },
 
+  start: function() {
+    this.renderer.domElement.getContext("2d").clearRect(0, 0,
+                                                this.width, this.height);
     this.render();
   },
 
+  stop: function() {
+  },
+
   goForward: function() {
+    console.log("go forward called");
     this.player.goForward(this);
     this.processStep(this.player.x, this.player.z, this.player);
     // yes z not y
+
+    // return an Animation
   },
 
   goBackward: function() {
     this.player.goBackward(this);
     this.processStep(this.player.x, this.player.z, this.player);
+
+    // return an Animation
   },
 
   turnLeft: function() {
@@ -433,5 +453,7 @@ FirstPersonMaze.prototype = {
   * Replace the canvas instead of having a separate canvas
   * Call the wait for animation method of the input dispatcher
   *  while the maze is animating.
-  * 
+  * Probably due to the changes i made in input dispatcher, there's now
+   sometimes something like a queued keystroke that gets executed on mapscreen after returning from battle screen.
+  * Make a way to load different map data into the firstperson maze.
 /* Jake says: Move camera back by a half or third of a square */
