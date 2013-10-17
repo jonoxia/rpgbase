@@ -176,6 +176,9 @@ ScriptedEvent.prototype = {
     // TODO maybe it's easier not to use dialoglog at all, but create
     // a new MenuSystem that does exactly what we want
 
+    // Set a flag to record that this event has completed:
+    this._plotMgr.setFlag(this._plotFlagName);
+
     this.currStep = 0;
     this._steps[this.currStep].call(this);
   },
@@ -188,9 +191,6 @@ ScriptedEvent.prototype = {
     this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
     // and resume player control.
-
-    // Set a flag to record that this event has completed:
-    this._plotMgr.setFlag(this._plotFlagName);
   }
 };
 
