@@ -10,6 +10,8 @@ function Map(id, data, spritesheet) {
   this._npcs = [];
   this._vehicles = [];
   this._id = id;
+  this._loadHandlers = [];
+  this._unloadHandlers = [];
 }
 Map.prototype = {
   getId: function() {
@@ -130,7 +132,9 @@ Map.prototype = {
 
   load: function() {
     // called when player enters this map
-    // TODO allow registering onLoad handlers
+    for (var i = 0; i < this._loadHandlers.length; i++) {
+      this._loadHandlers[i]();
+    }
     // wake up all npcs on this map:
     for (var i = 0; i < this._npcs.length; i++) {
       this._npcs[i].wake();
@@ -139,7 +143,9 @@ Map.prototype = {
 
   unload: function() {
     // called when player leaves this map
-    // TODO allow registering onUnload handlers
+    for (var i = 0; i < this._unloadHandlers.length; i++) {
+      this._unloadHandlers[i]();
+    }
     // sleep all npcs on this map:
     for (var i = 0; i < this._npcs.length; i++) {
       this._npcs[i].sleep();
@@ -152,6 +158,14 @@ Map.prototype = {
 
   setEncounterTable: function(table) {
     this.encounterTable = table;
+  },
+
+  onLoad: function(callback) {
+    this._loadHandlers.push(callback);
+  },
+
+  onUnload: function(callback) {
+    this._unloadHandlers.push(callback);
   }
 }
 
