@@ -1,14 +1,41 @@
 // When playing a scripted event, use dialoglog, but set the
 // freely exit flag to false so you have a non-cancelable dialog.
 
+
+function PlotManager() {
+  this._flags = [];
+}
+PlotManager.prototype = {
+  serializableClassName: "PlotManager",
+  serializableFields: ["_flags"],
+
+  setFlag: function(flagName) {
+    if (this._flags.indexOf(flagName) == -1) {
+      this._flags.push(flagName);
+    }
+  },
+  
+  getFlag: function(flagName) {
+    return (this._flags.indexOf(flagName) > -1);
+  },
+
+  makeEvent: function(flagName) {
+    return new ScriptedEvent(this, flagName);
+  }
+};
+SerializableMixin(PlotManager);
+
+
 // dialoglog needs to hold the input focus until scripted event
 // is done, so that you can't move your character while the event
 // is happening.
-function ScriptedEvent() {
+function ScriptedEvent(plotMgr, plotFlagName) {
   this._steps = [];
   this._player = null;
   this._dialoglog = null;
   this._mapScreen = null;
+  this._plotFlagName = plotFlagName;
+  this._plotMgr = plotMgr;
 }
 ScriptedEvent.prototype = {
   npcEnter: function(npc, x, y) {
@@ -161,6 +188,9 @@ ScriptedEvent.prototype = {
     this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
     // and resume player control.
+
+    // Set a flag to record that this event has completed:
+    this._plotMgr.setFlag(this._plotFlagName);
   }
 };
 

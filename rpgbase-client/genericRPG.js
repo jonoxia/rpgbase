@@ -99,6 +99,7 @@ GenericRPG.prototype = {
     }
   });
 
+    this.plotManager = new PlotManager();
   },
 
   _setupInputDispatch: function() {
@@ -504,6 +505,10 @@ GenericRPG.prototype = {
     jsonobj.mainMode = this._mainMode;
     // TODO save direction player is facing in maze!!
     // (TODO make serializable?)
+
+    // Save plot manager flags
+    jsonobj.plot = this.plotManager.serialize();
+    console.log("Saving plot flags: " + jsonobj.plot);
     return JSON.stringify(jsonobj);
   },
   
@@ -532,6 +537,8 @@ GenericRPG.prototype = {
                                    jsonobj.x,
                                    jsonobj.y);
     }
+    // load plot manager flags
+    this.plotManager.restore(jsonobj.plot);
     this.player.marchInOrder();
     console.log("Load game done");
   },
