@@ -95,6 +95,10 @@ Map.prototype = {
     }
   },
 
+  removeAllNPCs: function() {
+    this._npcs = [];
+  },
+
   addVehicle: function(vehicle, x, y) {
     this._vehicles.push(vehicle);
     vehicle.setPos(x, y);
