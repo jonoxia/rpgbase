@@ -89,12 +89,10 @@ GenericRPG.prototype = {
   /* When a battle ends, return to map-screen style input, and
    * redraw the map screen: */
   this.battleSystem.onClose(function(winLoseDraw) {
-    // TODO use this._mainMode instead of 
-    // battleSystem.originalMode
-    if (self.battleSystem.originalMode == "overworld") {
+    if (self._mainMode == "map") {
       self.mapScreen.start();
     } 
-    if (self.battleSystem.originalMode == "maze") {
+    if (self._mainMode == "maze") {
       self.mazeScreen.start();
     }
   });
@@ -410,7 +408,7 @@ GenericRPG.prototype = {
 	});
   },
 
-  startEncounter: function(encounter, originalMode, landType) {
+  startEncounter: function(encounter, landType) {
     var self = this;
 
     if (encounter.canHappen) {
@@ -422,13 +420,11 @@ GenericRPG.prototype = {
     }
 
     self.inputDispatcher.menuMode("battle");
-    if (originalMode == "maze") {
+    if (self._mainMode == "maze") {
       self.mazeScreen.stop();
-      self.battleSystem.originalMode = "maze";
     }
-    if (originalMode == "overworld") {
+    if (self._mainMode == "map") {
       self.mapScreen.stop();
-      self.battleSystem.originalMode = "overworld";
     }
 
     // TODO audio track choice should be up to userland
