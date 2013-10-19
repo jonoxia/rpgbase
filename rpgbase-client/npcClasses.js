@@ -63,7 +63,6 @@ NPC.prototype = {
       } else {
         chainAnimation(lastAnim, stepAnim);
       }
-      // TODO seems to get stuck after two steps?
       lastAnim = stepAnim;
     }
     lastAnim.onFinish(onFinished);

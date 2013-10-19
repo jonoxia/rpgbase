@@ -146,13 +146,13 @@ Map.prototype = {
   },
 
   unload: function() {
-    // called when player leaves this map
-    for (var i = 0; i < this._unloadHandlers.length; i++) {
-      this._unloadHandlers[i]();
-    }
     // sleep all npcs on this map:
     for (var i = 0; i < this._npcs.length; i++) {
       this._npcs[i].sleep();
+    }
+    // called when player leaves this map
+    for (var i = 0; i < this._unloadHandlers.length; i++) {
+      this._unloadHandlers[i]();
     }
   },
 
