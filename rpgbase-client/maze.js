@@ -214,10 +214,14 @@ FirstPersonMaze.prototype = {
   },
   
   loadMaze: function(mazeMap) {
+    if (this._currentMap) {
+      this._currentMap.unload();
+    }
     this._currentMap = mazeMap;
     this.faces = [];
     this.bgFaces = [];
     this.setupScene();
+    this._currentMap.load();
   },
 
   enterPlayer: function(player, startX, startZ, startDirection) {

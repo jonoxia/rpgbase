@@ -382,6 +382,8 @@ GenericRPG.prototype = {
       case "s": entryY ++; break;
       }
 
+    // TODO I don't think .unload() is getting called for the
+    // map when you move to a maze, or vice versa.
     this.overworld.onStep({x: overworldX, y: overworldY},
       function(pc, x, y, landType) {
         self._mainMode = "maze";
