@@ -270,7 +270,6 @@ GenericRPG.prototype = {
     if (wanders) {
       newNPC.wander();
     }
-    var self = this;
     newNPC.setSprite(spriteSliceX, spriteSliceY);
     newNPC.onTalk(function(dialog) {
       dialog.scrollText(dialogText);
@@ -302,12 +301,12 @@ GenericRPG.prototype = {
 		}
 	    }
 	    if (deadGuys.length == 0) {
-		dialog.scrollText("Nobody seems to be dead right now; see you later.");
+		dialog.scrollText("COME SEE ME IF YOU NEED THE DEAD RAISED.");
 	    } else {
 		dialog.showPartyResources(player, "~");
-		dialog.showMsg("Who needs reviving? It's " + price + " greppals.");
+		dialog.showMsg("WHO NEEDS REVIVING? IT'S " + price + " ~.");
 		var menu = dialog.makeMenu();
-		menu.setTitle("Deadites");
+		menu.setTitle("DEADITES");
 		for (var i = 0; i < deadGuys.length; i++) {
 		    (function(pc) {
 			menu.addCommand(pc.name,
@@ -320,7 +319,7 @@ GenericRPG.prototype = {
 				dialog.popMenu();
 				dialog.scrollText(pc.name + " is revived! Praise <Nintendo acceptable substitute for Jesus>!");
 			    } else {
-				dialog.scrollText("You can't afford that, sorry.");
+				dialog.scrollText("YOU CAN'T AFFORD THAT, SORRY.");
 			    }
 			  });
 		    })(deadGuys[i]);

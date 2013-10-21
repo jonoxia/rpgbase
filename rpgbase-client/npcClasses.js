@@ -159,13 +159,13 @@ TreasureChest.prototype = {
       var self = this;
       player.findRoomForAnItem(dialoglog, self._itemType._name,
                                function(receiver) {
-        dialoglog.scrollText(receiver.name + " obtained " + self._itemType._name + "!");
+        dialoglog.scrollText(receiver.name + " OBTAINED " + self._itemType._name + "!");
         self._taken = true;
         self.setSprite(1, 0);
         receiver.gainItem(self._itemType);
       });
     } else {
-      dialoglog.scrollText("It's empty. :-(");
+      dialoglog.scrollText("IT'S EMPTY.");
     }
   },
 
@@ -197,10 +197,10 @@ MoneyChest.prototype = {
       this._taken = true;
       this.setSprite(1, 0);
       dialoglog.showPartyResources(player, this._resource);
-      dialoglog.scrollText("You found " + this._amount + " "
+      dialoglog.scrollText("YOU FOUND " + this._amount + " "
                            + this._resource + "!");
     } else {
-      dialoglog.scrollText("It's empty. :-(");
+      dialoglog.scrollText("IT'S EMPTY.");
     }
   }
 };
@@ -250,19 +250,19 @@ function makeShop(spriteSheet, mapScreen, width, height,
     var itemType = entry.item;
     var price = entry.price;
     if (character.inventoryIsFull()) {
-      dialog.scrollText(character.name + "'s hands are full. Come back later.");
+      dialog.scrollText(character.name + "'S HANDS ARE FULL. COME BACK LATER.");
     } else {
       player.spendResource(denomination, price);
       character.gainItem(itemType);
       dialog.popMenu();
-      dialog.scrollText("Thank you, come again");
+      dialog.scrollText("THANK YOU, COME AGAIN.");
     }
   }
 
   function chooseItemToSell(dialog, player, character, item) {
     var salePrice = Math.floor(item.reference.getDefaultPrice() / 2);
-    dialog.showMsg("Sell " + item.name
-                   + " for " + 
+    dialog.showMsg("SELL " + item.name
+                   + " FOR " + 
                    salePrice + 
                    denomination + " ?");
     dialog.yesOrNo(function(choice) {
@@ -270,7 +270,7 @@ function makeShop(spriteSheet, mapScreen, width, height,
         character.loseItem(item.reference);
         player.gainResource(denomination,
                             salePrice);
-        dialog.showMsg("Thank you!");
+        dialog.showMsg("THANK YOU!");
       }
       dialog.popMenu();
       dialog.popMenu();
@@ -279,7 +279,7 @@ function makeShop(spriteSheet, mapScreen, width, height,
 
   function buyMenu(dialog, player) {
     var menu = dialog.makeMenu();
-    menu.setTitle("Buy");
+    menu.setTitle("BUY");
     for (var i = 0; i < inventory.length; i++) {
       var menuText = textRows[i];
       (function(entry) {
@@ -287,13 +287,13 @@ function makeShop(spriteSheet, mapScreen, width, height,
                         function() {
                           if (player.hasResource(denomination, 
                                                  entry.price)) {
-                          dialog.chooseCharacter("Who will hold it?",
+                          dialog.chooseCharacter("WHO WILL HOLD IT?",
                             function(character) {
                               doPurchase(dialog, player,
                                          character, entry);
                             });
                           } else {
-                            dialog.scrollText("You can't afford that, sorry.");
+                            dialog.scrollText("YOU CAN'T AFFORD THAT, SORRY.");
                           }
                         });
       })(inventory[i]);
@@ -302,9 +302,9 @@ function makeShop(spriteSheet, mapScreen, width, height,
   }
 
   function sellMenu(dialog, player) {
-    dialog.chooseCharacter("Who will sell?", function(seller) {
+    dialog.chooseCharacter("WHO WILL SELL?", function(seller) {
       var menu = dialog.makeMenu();
-      menu.setTitle("Sell what?");
+      menu.setTitle("SELL WHAT?");
       
       var itemCmds = seller.getInventoryCmds(false);
       for (var i = 0; i < itemCmds.length; i++) {
@@ -328,10 +328,10 @@ function makeShop(spriteSheet, mapScreen, width, height,
     dialog.showMsg(shopMessage);
 
     var menu = dialog.makeMenu();
-    menu.addCommand("buy", function() {
+    menu.addCommand("BUY", function() {
       buyMenu(dialog, player);
     });
-    menu.addCommand("sell", function() {
+    menu.addCommand("SELL", function() {
       sellMenu(dialog, player);
     });
     dialog.pushMenu(menu);

@@ -123,8 +123,8 @@ var CanvasTextUtils = {
       var asciiCode = text.charCodeAt(i); 
       var slice;
       if (asciiCode >= 97 && asciiCode <= 122) {
-        // lower case letters
-        slice = asciiCode - 87;
+        // lower case letters -- map to gibberish
+          slice = asciiCode - 40; // was 87;
       }
       else if (asciiCode >= 65 && asciiCode <= 90) {
         // capital letters
