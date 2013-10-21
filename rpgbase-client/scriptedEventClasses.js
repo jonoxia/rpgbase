@@ -220,6 +220,22 @@ ScriptedEvent.prototype = {
     return this; // for daisy-chaining
   },
 
+  showPicture: function(img, width, height) {
+    var self = this;
+    this._addStep(function() {
+      self._dialoglog._rootMenu.setImg(img, width, height);
+      self.nextStep();
+    });
+  },
+
+  hidePicture: function() {
+    var self = this;
+    this._addStep(function() {
+      self._dialoglog._rootMenu.clearImg();
+      self.nextStep();
+    });
+  },
+
   _addStep: function(stepFunction) {
     this._steps.push(stepFunction);
   },

@@ -982,6 +982,9 @@ FixedTextBox.prototype = {
 
 function InvisibleTextBox() {
   this.x = this.y = 0;
+  this._img = null;
+  this._width = 512/2; // TODO don't hardcode
+  this._height = 384/2; // TODO don't hardcode
 }
 InvisibleTextBox.prototype = {
   // Satisfies same interface as a CmdMenu, so it can go on
@@ -996,8 +999,24 @@ InvisibleTextBox.prototype = {
     return {x: this.x, y: this.y};
   },
   display: function(ctx) {
+    if (this._img != null) {
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, this._width, this._height);
+      ctx.drawImage(this._img,
+                    this._imgXOffset, this._imgYOffset);
+    }
   },
   close: function() {
+  },
+  setImg: function(img, width, height) {
+    this._img = img;
+    this._imgWidth = width;
+    this._imgHeight = height;
+    this._imgXOffset = (this._width - width)/2;
+    this._imgYOffset = (this._height - height)/2;
+  },
+  clearImg: function() {
+    this._img = null;
   }
 };
 
