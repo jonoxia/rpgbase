@@ -980,13 +980,13 @@ FixedTextBox.prototype = {
   }
 };
 
-function InvisibleTextBox() {
+function BackgroundImgBox(width, height) {
   this.x = this.y = 0;
   this._img = null;
-  this._width = 512/2; // TODO don't hardcode
-  this._height = 384/2; // TODO don't hardcode
+  this._width = width;
+  this._height = height;
 }
-InvisibleTextBox.prototype = {
+BackgroundImgBox.prototype = {
   // Satisfies same interface as a CmdMenu, so it can go on
   // the menu stack.
   onKey: function(key) {
@@ -999,14 +999,18 @@ InvisibleTextBox.prototype = {
     return {x: this.x, y: this.y};
   },
   display: function(ctx) {
-    if (this._img != null) {
+    if (this._black) {
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, this._width, this._height);
-      ctx.drawImage(this._img,
-                    this._imgXOffset, this._imgYOffset);
+      if (this._img != null) {
+          ctx.drawImage(this._img,
+                        this._imgXOffset, this._imgYOffset);
+      }
     }
   },
   close: function() {
+    // serves as root menu for scripted events' menu system,
+    // so it can't be closed.
   },
   setImg: function(img, width, height) {
     this._img = img;
@@ -1017,7 +1021,11 @@ InvisibleTextBox.prototype = {
   },
   clearImg: function() {
     this._img = null;
+  },
+  blacken: function(val) {
+    this._black = val;
   }
+  
 };
 
 

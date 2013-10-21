@@ -2,9 +2,12 @@
 // freely exit flag to false so you have a non-cancelable dialog.
 
 
-function PlotManager() {
+function PlotManager(width, height) {
   this._flags = [];
   this._miscStorage = {};
+  this._width = width;
+  this._height = height;
+  console.log("bgimg box width = " + this._width + " , " + this._height);
 }
 PlotManager.prototype = {
   serializableClassName: "PlotManager",
@@ -223,16 +226,26 @@ ScriptedEvent.prototype = {
   showPicture: function(img, width, height) {
     var self = this;
     this._addStep(function() {
-      self._dialoglog._rootMenu.setImg(img, width, height);
-      self.nextStep();
+      self._dialoglog._rootMenu.blacken(true);
+      window.setTimeout(function() {
+        self._dialoglog._rootMenu.setImg(img, width, height);
+        window.setTimeout(function() {
+                self.nextStep();
+            }, 500);
+      }, 250);
     });
   },
 
   hidePicture: function() {
     var self = this;
     this._addStep(function() {
-      self._dialoglog._rootMenu.clearImg();
-      self.nextStep();
+      window.setTimeout(function() {
+        self._dialoglog._rootMenu.clearImg();
+        window.setTimeout(function() {
+          self._dialoglog._rootMenu.blacken(false);
+                self.nextStep();
+            }, 500);
+          }, 250);
     });
   },
 
@@ -256,8 +269,9 @@ ScriptedEvent.prototype = {
     self._dialoglog = dialoglog;
     self._dialoglog._freelyExit = false; // can't leave
     // the scripted event until it's done.
-
-    self._dialoglog._rootMenu = new InvisibleTextBox();
+    self._dialoglog._rootMenu = new BackgroundImgBox(
+                           this._plotMgr._width,
+                           this._plotMgr._height);
     self._dialoglog.open(self._player);
     // TODO maybe it's easier not to use dialoglog at all, but create
     // a new MenuSystem that does exactly what we want
@@ -270,7 +284,6 @@ ScriptedEvent.prototype = {
   },
 
   _finish: function() {
-    console.log("Scripted event finished.");
     this._dialoglog._freelyExit = true;
     this._dialoglog._rootMenu = null;
     this._dialoglog.emptyMenuStack();

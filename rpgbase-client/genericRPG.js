@@ -97,7 +97,7 @@ GenericRPG.prototype = {
     }
   });
 
-    this.plotManager = new PlotManager();
+  this.plotManager = new PlotManager(512/2, 384/2);
   },
 
   _setupInputDispatch: function() {
