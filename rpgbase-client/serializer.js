@@ -61,7 +61,7 @@ function SerializableMixin(subclassConstructor) {
           }
           jsonobj[fieldName] = serializedArray;
         } else {
-	  jsonobj[fieldName] = value;
+          jsonobj[fieldName] = value;
         }
         // TODO what about dictionary of serializable subobjects?
         // what about a nest of arrays and dictionaries for many
@@ -90,10 +90,10 @@ function SerializableMixin(subclassConstructor) {
       };
 
       for (var i = 0; i < fields.length; i++) {
-	var fieldName = fields[i];
-	var value = jsonobj[fieldName];
-	// if any sub object is itself serializable, then
-	// restore its data recursively from the json
+        var fieldName = fields[i];
+        var value = jsonobj[fieldName];
+        // if any sub object is itself serializable, then
+        // restore its data recursively from the json
         
         if (value.serializedClass) {
           // look up constructor based on serialzied class name;
