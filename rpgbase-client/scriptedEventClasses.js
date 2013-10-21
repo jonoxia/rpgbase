@@ -4,10 +4,43 @@
 
 function PlotManager() {
   this._flags = [];
+  this._miscStorage = {};
 }
 PlotManager.prototype = {
   serializableClassName: "PlotManager",
   serializableFields: ["_flags"],
+
+  onSerialize: function(jsonobj) {
+    for (var key in this._miscStorage) {
+      var val = this._miscStorage[key];
+      if (!jsonobj["miscStorage"]) {
+        jsonobj["miscStorage"] = {};
+      }
+      var className = val.serializableClassName;
+      var subObjectJson = val.serialize();
+      jsonobj["miscStorage"][key] ={serializedClass: className,
+              json: subObjectJson};
+    }
+  },
+
+  onDeserialize: function(jsonobj) {
+    // TODO move this to serializer class as the
+    // default handler for a serializable dictionary?
+    if (jsonobj["miscStorage"]) {
+      for (var key in jsonobj["miscStorage"]) {
+        var value = jsonobj["miscStorage"][key];
+        if (value.serializedClass) {
+          var cons = Serializer.getConstructor(
+            value.serializedClass);
+          var newSubObj = new cons();
+          newSubObj.restore(value.json);
+          this._miscStorage[key] = newSubObj;
+        } else {
+            console.log("No serialized class provided.");
+        }
+      }
+    }
+  },
 
   setFlag: function(flagName) {
     if (this._flags.indexOf(flagName) == -1) {
@@ -21,6 +54,14 @@ PlotManager.prototype = {
 
   makeEvent: function(flagName) {
     return new ScriptedEvent(this, flagName);
+  },
+
+  setData: function(key, value) {
+    this._miscStorage[key] = value;
+  },
+
+  getData: function(key) {
+    return this._miscStorage[key];
   }
 };
 SerializableMixin(PlotManager);
@@ -47,12 +88,8 @@ ScriptedEvent.prototype = {
     return this; // for daisy-chaining
   },
 
-  // could make a new menu system just for holding the keyboard
-  // focus during scripted events...
-  npcSpeak: function(npc, text) {
-    var self = this;
-    this._addStep(function() {
-      var dlg = self._dialoglog;
+  scrollText: function(text, callback) {
+      var dlg = this._dialoglog;
       // This code is duplicated from Dialoglog.scrollText()
       dlg.clearMsg();
       var textBox = new ScrollingTextBox(text, dlg);
@@ -60,8 +97,18 @@ ScriptedEvent.prototype = {
       textBox.setPos(dlg._positioning.msgLeft,
                      dlg._positioning.msgTop);
       textBox.onClose(function() {
-        self.nextStep();
+        callback();
       });
+  },
+
+  // could make a new menu system just for holding the keyboard
+  // focus during scripted events...
+  npcSpeak: function(npc, text) {
+    var self = this;
+    this._addStep(function() {
+            self.scrollText(text, function() {
+                    self.nextStep();
+                });
     });
     return this; // for daisy-chaining
   },
@@ -95,6 +142,23 @@ ScriptedEvent.prototype = {
       self.nextStep();
     });
     return this; // for daisy-chaining
+  },
+
+  getItem: function(itemType) {
+    var self = this;
+    this._addStep(function() {
+      self._player.findRoomForAnItem(
+        self._dialoglog,
+        itemType._name,
+        function(receiver) {
+          receiver.gainItem(itemType);
+          self.scrollText(receiver.name + " OBTAINED " + itemType._name + "!", function() {
+            self.nextStep();
+          });
+        });
+      });
+      // TODO what do we do with the progression of the plot
+      // point if player doesn't accept the item?
   },
 
   pcSpeak: function(pc, text) {
@@ -132,6 +196,12 @@ ScriptedEvent.prototype = {
     var self = this;
     this._addStep(function() {
       self._mapScreen.setNewDomain(mapDomain);
+      if (typeof x == 'undefined')  {
+          // if x, y not specified, scroll to player location
+          var mainChar = self._player.aliveParty[0];
+          var pos = mainChar.getPos();
+          x = pos.x; y = pos.y;
+      }
       self._mapScreen.scrollToShow(x, y);
       // TODO animate map screen...
       self.nextStep();
