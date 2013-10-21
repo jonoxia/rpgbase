@@ -713,6 +713,12 @@ PlayerCharacter.prototype = {
     }
   },
 
+  unEquipAll: function() {
+    for (var slot in this._equippedItems) {
+      this._equippedItems[slot] = null;
+    }
+  },
+
   getEquippedType: function(slot) {
     if (this._equippedItems[slot]) {
       return this._equippedItems[slot].getEquipType();
