@@ -432,34 +432,53 @@ FirstPersonMaze.prototype = {
     }
   },
 
+  _getFacingRect: function() {
+    var theta = this.cameraOrientation.y;    
+    if (fuzzyMatch(theta, 2 * Math.PI) || fuzzyMatch(theta, 0)) {
+        return {dx: 0, dz: 1};
+    }
+    else if (fuzzyMatch(theta, Math.PI)) {
+        return {dx: 0, dz: -1};
+    }
+    else if (fuzzyMatch(theta, Math.PI/2)) {
+        return {dx: 1, dz: 0};
+    }
+    else if (fuzzyMatch(theta, 3*Math.PI/2)) {
+        return {dx: -1, dz: 0};
+    } else {
+        return null;
+    }
+  },
+
+  openSpaceInFrontOfMe: function() {
+    var myPos = this.playerPosVector();
+    var x, z;
+
+    var facing = this._getFacingRect();
+    if (facing == null) {
+        return false;
+    }
+    x = myPos.x + facing.dx;
+    z = myPos.z + facing.dz;
+    return this.isOpenSpace(x, z);
+  },
+
   npcInFrontOfMe: function() {
     // follow the line of the player's vision until
     // we hit a wall or run out of light; return any
     // NPC found in those squares and the distance to it.
-    var theta = this.cameraOrientation.y;
+
     var myPos = this.playerPosVector();
     var dx, dz;
-    
-    if (fuzzyMatch(theta, 2 * Math.PI) || fuzzyMatch(theta, 0)) {
-        dx = 0;
-        dz = 1;
-    }
-    else if (fuzzyMatch(theta, Math.PI)) {
-        dx = 0;
-        dz = -1;
-    }
-    else if (fuzzyMatch(theta, Math.PI/2)) {
-        dx = 1;
-        dz = 0;
-    }
-    else if (fuzzyMatch(theta, 3*Math.PI/2)) {
-        dx = -1;
-        dz = 0;
-    } else {
+
+    var facing = this._getFacingRect();
+    if (facing == null) {
         // for simplicity sake, you can't see NPCs when looking
         // diagonally (i.e. mid-turn)
         return null;
     }
+    dx = facing.dx;
+    dz = facing.dz;
 
     for (var i = 0; i < this.getLightLevel(); i++) {
         // beyond lightLevel squares away, it's too dark to see
