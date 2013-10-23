@@ -198,6 +198,7 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this._animator = new Animator(frameRate,
                                 function() { self.render(); });
   this._audioPlayer = null;
+  this._SFX = null;
 }
 MapScreen.prototype = {
   getCurrentMapId: function() {
@@ -351,6 +352,10 @@ MapScreen.prototype = {
       mapSprites[i].plot(this, this.scrollAdjustment);
     }
 
+    // draw any special fx:
+    if (this._SFX) {
+        this._SFX.draw(this._ctx);
+    }
     // TODO if a canvas-based fieldMenu or dialogMenu is open,
     // have to draw that here! Probably do it as yet another callback
     if (this._afterRenderCallback) {
@@ -475,5 +480,23 @@ MapScreen.prototype = {
       return this._currentDomain.encounterTable;
     }
     return null;
+  },
+
+  flash: function(color, numFrames) {
+    // flashes the map screen the given color over the given number of frames
+    var self = this;
+    self._SFX = new Animation(numFrames,
+                              function(frame) {
+                              },
+                              function() {
+                                  self._SFX= null;
+                              });
+    self._SFX.onDraw(function(ctx, frame) {
+            console.log("flash animation draw callback");
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, 512/2, 384/2);
+        });
+
+    self.animate(self._SFX);
   }
 };
