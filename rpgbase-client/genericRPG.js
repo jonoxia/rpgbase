@@ -218,7 +218,7 @@ GenericRPG.prototype = {
     this._setupCallbacks.push(callback);
   },
 
-  start: function() {
+  start: function(introCutscene) {
     for (var i = 0; i < this._setupCallbacks; i++) {
       this._setupCallbacks[i](this);
     }
@@ -233,6 +233,12 @@ GenericRPG.prototype = {
         self.inputDispatcher.mapMode("overworld");
         self.mapScreen.start();
       }
+
+      if (introCutscene) {
+          self.inputDispatcher.menuMode("dialog");
+          introCutscene.play(self.player, self.mapScreen, self.dialoglog);
+      }
+
     });
 
   },
@@ -317,7 +323,7 @@ GenericRPG.prototype = {
 				pc.setStat("hp", 1);
 				player.marchInOrder();
 				dialog.popMenu();
-				dialog.scrollText(pc.name + " is revived! Praise <Nintendo acceptable substitute for Jesus>!");
+				dialog.scrollText(pc.name + " IS REVIVED! PRAISE NINTENDO ACCEPTABLE SUBSTITUTE FOR JESUS!");
 			    } else {
 				dialog.scrollText("YOU CAN'T AFFORD THAT, SORRY.");
 			    }
@@ -444,11 +450,11 @@ GenericRPG.prototype = {
     var player = this.player;
 
     if (party.length < 2) {
-      this.fieldMenu.showMsg("There's only one of you!");
+      this.fieldMenu.showMsg("THERE'S ONLY ONE OF YOU!");
       return;
     }
     var newOrder = [];
-    var labels = ["1st?", "2nd?", "3rd?"]; // todo more labels
+    var labels = ["1ST?", "2ND?", "3RD?"]; // todo more labels
   
     // this is maybe a useful utility function...
     var without = function(array, elem) {

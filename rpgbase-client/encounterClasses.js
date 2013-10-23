@@ -164,7 +164,7 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.defaultMsg) {
     this.defaultMsg = options.defaultMsg;
   } else {
-    this.defaultMsg = "Monsters appeared!";
+    this.defaultMsg = "MONSTERS APPEARED!";
   }
 
   if (options.defaultMonsterCmd) {
@@ -173,7 +173,7 @@ function BattleSystem(htmlElem, canvas, options) {
     this._defaultMonsterCmd = new BatCmd({
       target: "random_enemy",
       effect: function(battle, user, target) {
-        battle.showMsg(user.name + " uses PLACEHOLDER ATTACK on "
+        battle.showMsg(user.name + " USES PLACEHOLDER ATTACK ON "
                        + target.name + "!");
       }
     });
@@ -210,7 +210,7 @@ function BattleSystem(htmlElem, canvas, options) {
     frameDelay = options.frameDelay;
   }
   if (options.metaCmdSet) {
-    this._rootMenu = this.menuFromCmdSet("Party", options.metaCmdSet);
+    this._rootMenu = this.menuFromCmdSet("PARTY", options.metaCmdSet);
   } else {
     this._rootMenu = null;
   }
@@ -768,7 +768,7 @@ BattleSystem.prototype = {
       }
       break;
     case "lose":
-      endBattleMessage = "You lost! It is very sad. There should probably be a button here to reload a save or whatever.";
+      endBattleMessage = "YOU LOST! IT IS VERY SAD. THERE SHOULD PROBABLY BE A BUTTON HERE TO RELOAD A SAVE OR WHATEVER.";
       if (this.encounter.lose) {
         // special encounter lose results
         this.encounter.lose(this, this.player);
@@ -776,7 +776,7 @@ BattleSystem.prototype = {
       break;
     case "run":
       this._freelyExit = true;
-      endBattleMessage = "You bravely ran away, away!";
+      endBattleMessage = "YOU BRAVELY RAN AWAY, AWAY!";
       break;
     }
     var endBattleText = new ScrollingTextBox(endBattleMessage, this);

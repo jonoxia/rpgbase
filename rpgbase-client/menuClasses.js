@@ -619,10 +619,10 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.yesOrNo = function(callback) {
     var yesOrNoMenu = this.makeMenu();
-    yesOrNoMenu.addCommand("Yes", function() {
+    yesOrNoMenu.addCommand("YES", function() {
       callback(true);
     });
-    yesOrNoMenu.addCommand("No", function() {
+    yesOrNoMenu.addCommand("NO", function() {
       callback(false);
     });
     this.pushMenu(yesOrNoMenu);
@@ -766,11 +766,11 @@ FieldMenu.prototype = {
     // do what with this item?
     var self = this;
     var subMenu = this.makeMenu();
-    subMenu.setTitle("Do what?");
-    subMenu.addCommand("Use", function() {
+    subMenu.setTitle("DO WHAT?");
+    subMenu.addCommand("USE", function() {
       if (item.target == "ally") {
         // If using it requires selecting a target...
-        self.chooseCharacter("Use on?", function(target) {
+        self.chooseCharacter("USE ON?", function(target) {
           item.effect(self, character, target);
           self.returnToRoot();
         });
@@ -781,29 +781,29 @@ FieldMenu.prototype = {
       }
     });
 
-    subMenu.addCommand("Equip", function() {
+    subMenu.addCommand("EQUIP", function() {
       if (character.canEquipItem(item.reference)) {
-        self.showMsg(character.name + " equips "
+        self.showMsg(character.name + " EQUIPS "
                      + item.name);
         character.equipItem(item.reference);
       } else {
-        self.showMsg(character.name + " can't equip "
+        self.showMsg(character.name + " CAN'T EQUIP "
                      + item.name);
       }
       self.returnToRoot();
     });
 
-    subMenu.addCommand("Give", function() {
-      self.chooseCharacter("Give to?", function(target) {
-        self.showMsg(character.name + " gives the " + item.name
-                    + " to " + target.name);
+    subMenu.addCommand("GIVE", function() {
+      self.chooseCharacter("GIVE TO?", function(target) {
+        self.showMsg(character.name + " GIVES THE " + item.name
+                    + " TO " + target.name);
         target.receiveItemFrom(item.reference, character);
         self.returnToRoot();
       });
     });
 
-    subMenu.addCommand("Drop", function() {
-      self.showMsg(character.name + " drops the " + item.name);
+    subMenu.addCommand("DROP", function() {
+      self.showMsg(character.name + " DROPS THE " + item.name);
       character.loseItem(item.reference);
       self.returnToRoot();
     });
@@ -816,7 +816,7 @@ FieldMenu.prototype = {
     // outside of battle.
     var self = this;
     var menu = this.makeMenu();
-    menu.setTitle("Items:");
+    menu.setTitle("ITEMS:");
 
     // After selecting an item, give options of
     // Use, Equip, Give, or Drop.
@@ -840,17 +840,17 @@ FieldMenu.prototype = {
   showSpellMenu: function(character) {
     var self = this;
     var menu = this.makeMenu();
-    menu.setTitle("Spells:");
+    menu.setTitle("SPELLS:");
     var fieldSpells = character._fieldSpells;
     for (i = 0; i < fieldSpells.length; i++) {
       (function(spell) {
         if (!spell.canUse(character)) {
           menu.addCommand(spell.name, function() {
-            self.showMsg("Not enough MP"); // TODO maybe other reason?
+            self.showMsg("NOT ENOUGH MP."); // TODO maybe other reason?
           });
         } else if (spell.target == "ally") {
           menu.addCommand(spell.name, function() {
-            self.chooseCharacter("On who?", function(target) {
+            self.chooseCharacter("ON WHO?", function(target) {
               spell.effect(self, character, target);
               self.popMenu();
               self.popMenu();
