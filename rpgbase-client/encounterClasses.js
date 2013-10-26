@@ -562,7 +562,7 @@ BattleSystem.prototype = {
     if (everyoneHasCommands) {
       this.fightOneRound();
     } else {
-      this.showMsg("You haven't entered commands yet, so there's nothing to REPEAT.");
+      this.showMsg("YOU HAVEN'T ENTERED ANY COMMANDS YET TO REPEAT.");
     }
   },
 
