@@ -587,16 +587,11 @@ FirstPersonMaze.prototype = {
     d.y = sin(theta.x)*(cos(theta.y)*(a.z -c.z) + sin(theta.y) * (sin(theta.z)*(a.y - c.y) + cos(theta.z) *(a.x - c.x))) + cos(theta.x) * (cos(theta.z) *(a.y - c.y) - sin(theta.z) * (a.x - c.x));
     d.z = cos(theta.x) * (cos(theta.y) * (a.z - c.z) + sin(theta.y) * (sin(theta.z) * ( a.y - c.y) + cos(theta.z) * ( a.x - c.x))) - sin(theta.x)*(cos(theta.z) * (a.y - c.y ) - sin(theta.z)*(a.x-c.x));
     var b = {};
-
     // don't divide by d.z if it's 0 or very close to 0!!
-    var dividend = (d.z < 1e-9)? 0.001 : d.z;
+    var dividend = (d.z < 0.01) ? 0.01 : d.z;
     b.x = (e.z * d.x / dividend) - e.x;
     b.y = (e.z * d.y / dividend) - e.y;
     b.z = d.z;
-
-   /* if (Math.abs(b.x) > 100000 || Math.abs(b.y) > 10000) {
-        console.log("x = " + b.x + ", y = " + b.y + ", z = " + b.z);
-    }*/
     return b;
   },
 
