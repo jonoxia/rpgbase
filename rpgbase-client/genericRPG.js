@@ -71,6 +71,8 @@ GenericRPG.prototype = {
 
   this.dialoglog.setMenuPositions({msgLeft: 20,
 	      msgTop: 128});
+  this.plotManager = new PlotManager($("#battle-system"),
+                                       512/2, 384/2);
 
   this._setupInputDispatch();
 
@@ -80,10 +82,12 @@ GenericRPG.prototype = {
   this.mapScreen.afterRender(function(ctx) {
     self.fieldMenu.drawCanvasMenus(ctx);
     self.dialoglog.drawCanvasMenus(ctx);
+    self.plotManager.dlog.drawCanvasMenus(ctx);
   });
   this.mazeScreen.afterRender(function(ctx) {
     self.fieldMenu.drawCanvasMenus(ctx);
     self.dialoglog.drawCanvasMenus(ctx);
+    self.plotManager.dlog.drawCanvasMenus(ctx);
   });
 
   /* When a battle ends, return to map-screen style input, and
@@ -97,7 +101,7 @@ GenericRPG.prototype = {
     }
   });
 
-  this.plotManager = new PlotManager(512/2, 384/2);
+
   },
 
   _setupInputDispatch: function() {
@@ -185,6 +189,7 @@ GenericRPG.prototype = {
     dispatcher.addMenuMode("menu", self.fieldMenu);
     dispatcher.addMenuMode("battle", self.battleSystem);
     dispatcher.addMenuMode("dialog", self.dialoglog);
+    dispatcher.addMenuMode("plot", self.plotManager.dlog);
 
     this.inputDispatcher = dispatcher;
   },
@@ -218,7 +223,7 @@ GenericRPG.prototype = {
     this._setupCallbacks.push(callback);
   },
 
-  start: function(introCutscene) {
+  start: function(callback) {
     for (var i = 0; i < this._setupCallbacks; i++) {
       this._setupCallbacks[i](this);
     }
@@ -234,9 +239,8 @@ GenericRPG.prototype = {
         self.mapScreen.start();
       }
 
-      if (introCutscene) {
-          self.inputDispatcher.menuMode("dialog");
-          introCutscene.play(self.player, self.mapScreen, self.dialoglog);
+      if (callback) {
+          callback();
       }
 
     });
@@ -548,5 +552,10 @@ GenericRPG.prototype = {
 
   inMaze: function() {
     return (this._mainMode == "maze");
+  },
+
+  startPlotEvent: function(event) {
+    this.inputDispatcher.menuMode("plot");
+    event.play(this.player, this.mapScreen);
   }
 };

@@ -1012,6 +1012,10 @@ BackgroundImgBox.prototype = {
     // serves as root menu for scripted events' menu system,
     // so it can't be closed.
   },
+  reset: function() {
+    this._black= false;
+    this._img = null;
+  },
   setImg: function(img, width, height) {
     this._img = img;
     this._imgWidth = width;

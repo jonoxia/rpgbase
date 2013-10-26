@@ -2,12 +2,10 @@
 // freely exit flag to false so you have a non-cancelable dialog.
 
 
-function PlotManager(width, height) {
+function PlotManager(htmlElem, width, height) {
   this._flags = [];
   this._miscStorage = {};
-  this._width = width;
-  this._height = height;
-  console.log("bgimg box width = " + this._width + " , " + this._height);
+  this.dlog = new PlotDialogSystem(htmlElem, width, height);
 }
 PlotManager.prototype = {
   serializableClassName: "PlotManager",
@@ -69,6 +67,34 @@ PlotManager.prototype = {
 };
 SerializableMixin(PlotManager);
 
+function PlotDialogSystem(htmlElem, width, height) {
+  this._init(htmlElem);
+  this._rootMenu = new BackgroundImgBox(width, height);
+  this._freelyExit = false;
+}
+PlotDialogSystem.prototype = {
+  scrollText: function(dialogText) {
+    // Turn into a scrolling message box and push onto stack
+    this.clearMsg();
+    var textBox = new ScrollingTextBox(dialogText, this);
+    this.pushMenu(textBox);
+    textBox.setPos(this._positioning.msgLeft,
+                   this._positioning.msgTop);
+  }
+};
+MenuSystemMixin(PlotDialogSystem.prototype);
+PlotDialogSystem.prototype.handleKey = function(keyCode) {
+    if (keyCode == CANCEL_BUTTON) {
+        // Ignore cancel button - plot points cannot be canceled.
+        return;
+    }
+    if (this.menuStack.length > 0) {
+        var topMenu = this.menuStack[ this.menuStack.length - 1];
+        topMenu.onKey(keyCode);
+    }
+
+};
+
 
 // dialoglog needs to hold the input focus until scripted event
 // is done, so that you can't move your character while the event
@@ -76,10 +102,10 @@ SerializableMixin(PlotManager);
 function ScriptedEvent(plotMgr, plotFlagName) {
   this._steps = [];
   this._player = null;
-  this._dialoglog = null;
   this._mapScreen = null;
   this._plotFlagName = plotFlagName;
   this._plotMgr = plotMgr;
+  this._dialoglog = plotMgr.dlog;
 }
 ScriptedEvent.prototype = {
   npcEnter: function(npc, x, y) {
@@ -262,21 +288,11 @@ ScriptedEvent.prototype = {
     }
   },
 
-  play: function(player, mapScreen, dialoglog) {
+  play: function(player, mapScreen) {
     var self = this;
     self._player = player;
     self._mapScreen = mapScreen;
-    self._dialoglog = dialoglog;
-    self._dialoglog._freelyExit = false; // can't leave
-    // the scripted event until it's done.
-    self._dialoglog._rootMenu = new BackgroundImgBox(
-                           this._plotMgr._width,
-                           this._plotMgr._height);
     self._dialoglog.open(self._player);
-    // TODO maybe it's easier not to use dialoglog at all, but create
-    // a new MenuSystem that does exactly what we want
-
-    // Set a flag to record that this event has completed:
     this._plotMgr.setFlag(this._plotFlagName);
 
     this.currStep = 0;
@@ -284,8 +300,6 @@ ScriptedEvent.prototype = {
   },
 
   _finish: function() {
-    this._dialoglog._freelyExit = true;
-    this._dialoglog._rootMenu = null;
     this._dialoglog.emptyMenuStack();
     this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
