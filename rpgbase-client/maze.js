@@ -363,18 +363,14 @@ FirstPersonMaze.prototype = {
     // sort z-distance highest to lowest -- draw closest last
     
     // Very backest background -- goes behind all polygons, will show
-    // through where polygons are missing. Black in the middle
-    // (= darkness of distance); floor-color around edges (so missing
-    // floor pieces will not be as obvious)
+    // through where polygons are missing. All black, usually:
     var lightLevel = this.getLightLevel();
-    this.ctx.fillStyle = darkenColor(this.bgColor, 1.1 * 20 * lightLevel);
-    this.ctx.fillRect(0, 0, this.width, this.height);
     this.ctx.save();
     this.ctx.translate(this.width/2, this.height/2);
 
     this.ctx.fillStyle = "black";
-    this.ctx.fillRect((-0.2) * this.width, (-0.2) * this.height,
-                      this.width * 0.4, this.height * 0.4);
+    this.ctx.fillRect((-0.5) * this.width, (-0.5)*this.height,
+                      this.width, this.height);
 
     var theta = this.cameraOrientation.y;
 
@@ -607,6 +603,66 @@ FirstPersonMaze.prototype = {
     this._afterRenderCallback = callback;
   },
 
+  makeStairsUp: function(x, z, side, downth) {
+        // asending to the east (make other versions later)
+        var stepX1, stepX2, stepZ1, stepZ2;
+        var stepY = -0.25;
+        var dX, dZ;
+        var dY = downth? (-0.1) : 0.1;
+
+        switch (side) {
+        case "w":
+            stepX1 = stepX2 = x-0.5;
+            stepZ1 = z-0.2;
+            stepZ2 = z+0.2;
+            dX = 0.2;
+            dZ = 0;
+            break;
+        case "e":
+            stepX1 = stepX2 = x+0.5;
+            stepZ1 = z-0.2;
+            stepZ2 = z+0.2;
+            dX = -0.2;
+            dZ = 0;
+            break;
+        case "n":
+            stepZ1 = stepZ2 = z-0.5;
+            stepX1 = x-0.2;
+            stepX2 = x+0.2;
+            dZ = 0.2;
+            dX = 0;
+            break;
+        case "s":
+            stepZ1 = stepZ2 = z+0.5;
+            stepX1 = x-0.2;
+            stepX2 = x+0.2;
+            dZ = -0.2;
+            dX = 0;
+            break;
+        }
+        for (var i = 0; i < 5; i++) {
+            var step = new Face(new Vector(stepX1, stepY, stepZ1),
+                                new Vector(stepX1+dX, stepY, stepZ1+dZ),
+                                new Vector(stepX2+dX, stepY, stepZ2+dZ),
+                                new Vector(stepX2, stepY, stepZ2));
+            stepX1 += dX;
+            stepX2 += dX;
+            stepZ1 += dZ;
+            stepZ2 += dZ;
+            var riser = new Face(new Vector(stepX1, stepY, stepZ1),
+                                new Vector(stepX1, stepY+dY, stepZ1),
+                                new Vector(stepX2, stepY+dY, stepZ2),
+                                new Vector(stepX2, stepY, stepZ2));
+            this.faces.push(step);
+            this.faces.push(riser);
+            stepY += dY;
+        }
+  },
+
+  makeStairsDown: function(x, z, side){
+        
+    },
+
   makeACube: function(x, z, terrainType) {
     var corner1 = new Vector(x - 0.5, -0.25, z -0.5);
     var corner2 = new Vector(x - 0.5, -0.25, z + 0.5);
@@ -626,53 +682,53 @@ FirstPersonMaze.prototype = {
     // it will never get drawn so no point!!
     if (this.isOpenSpace(x - 1, z)) {
       // left side
-      var wFace = new Face(corner1, corner2, corner6, corner5);
-      wFace.setColor(this.wallColor);
-      wFace.setLineColor(this.hardLineColor);
-      wFace.addDecorations(this.makeBricks(x, z, "w"));
       if (terrainType == 3) {
-        //wFace.addDecorations();
+          this.makeStairsUp(x, z, "w", false);
           this.makeDoor(x, z, "w");
       } else {
-          this.faces.push(wFace);
+        var wFace = new Face(corner1, corner2, corner6, corner5);
+        wFace.setColor(this.wallColor);
+        wFace.setLineColor(this.hardLineColor);
+        wFace.addDecorations(this.makeBricks(x, z, "w"));
+        this.faces.push(wFace);
       }
     }
     if (this.isOpenSpace(x + 1, z)) {
       // right side
-      var eFace = new Face(corner3, corner4, corner8, corner7);
-      eFace.setColor(this.wallColor);
-      eFace.setLineColor(this.hardLineColor);
-      eFace.addDecorations(this.makeBricks(x, z, "e"));
       if (terrainType == 3) {
-          //eFace.addDecorations();
+          this.makeStairsUp(x, z, "e", false);
           this.makeDoor(x, z, "e");
       } else {
-          this.faces.push(eFace);
+        var eFace = new Face(corner3, corner4, corner8, corner7);
+        eFace.setColor(this.wallColor);
+        eFace.setLineColor(this.hardLineColor);
+        eFace.addDecorations(this.makeBricks(x, z, "e"));
+        this.faces.push(eFace);
       }
     }
     if (this.isOpenSpace(x, z-1)) {
       // front
-      var nFace = new Face(corner1, corner4, corner8, corner5 );
-      nFace.setColor(this.wallColor);
-      nFace.addDecorations(this.makeBricks(x, z, "n"));
-      nFace.setLineColor(this.hardLineColor);
       if (terrainType == 3) {
-        //nFace.addDecorations();
+          this.makeStairsUp(x, z, "n", false);
           this.makeDoor(x, z, "n");
       } else {
-          this.faces.push(nFace);
+        var nFace = new Face(corner1, corner4, corner8, corner5 );
+        nFace.setColor(this.wallColor);
+        nFace.addDecorations(this.makeBricks(x, z, "n"));
+        nFace.setLineColor(this.hardLineColor);
+        this.faces.push(nFace);
       }
     }
     if (this.isOpenSpace(x, z +1)) {
       // back
-      var sFace = new Face(corner2, corner3, corner7, corner6 );
-      sFace.setColor(this.wallColor);
-      sFace.addDecorations(this.makeBricks(x, z, "s"));
-      sFace.setLineColor(this.hardLineColor);
       if (terrainType == 3) {
-          // sFace.addDecorations();
+          this.makeStairsUp(x, z, "s", false);
           this.makeDoor(x, z, "s");
       } else {
+        var sFace = new Face(corner2, corner3, corner7, corner6 );
+        sFace.setColor(this.wallColor);
+        sFace.addDecorations(this.makeBricks(x, z, "s"));
+        sFace.setLineColor(this.hardLineColor);
         this.faces.push(sFace);
       }
     }
