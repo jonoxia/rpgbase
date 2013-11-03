@@ -603,12 +603,11 @@ FirstPersonMaze.prototype = {
     this._afterRenderCallback = callback;
   },
 
-  makeStairsUp: function(x, z, side, downth) {
-        // asending to the east (make other versions later)
+  makeStairsUp: function(x, z, side) {
         var stepX1, stepX2, stepZ1, stepZ2;
         var stepY = -0.25;
         var dX, dZ;
-        var dY = downth? (-0.1) : 0.1;
+        var dY = 0.1;
 
         switch (side) {
         case "w":
@@ -660,8 +659,47 @@ FirstPersonMaze.prototype = {
   },
 
   makeStairsDown: function(x, z, side){
-        
-    },
+        var stepX1, stepX2, stepZ1, stepZ2;
+        var stepY = -0.25;
+        var dX, dZ;
+        var dY = -0.1;
+
+        switch (side) {
+        case "w":
+            stepX1 = stepX2 = x-0.5;
+            stepZ1 = z-0.2;
+            stepZ2 = z+0.2;
+            dX = 0.2;
+            dZ = 0;
+            break;
+        case "e":
+            stepX1 = stepX2 = x+0.5;
+            stepZ1 = z-0.2;
+            stepZ2 = z+0.2;
+            dX = -0.2;
+            dZ = 0;
+            break;
+        case "n":
+            stepZ1 = stepZ2 = z-0.5;
+            stepX1 = x-0.2;
+            stepX2 = x+0.2;
+            dZ = 0.2;
+            dX = 0;
+            break;
+        case "s":
+            stepZ1 = stepZ2 = z+0.5;
+            stepX1 = x-0.2;
+            stepX2 = x+0.2;
+            dZ = -0.2;
+            dX = 0;
+            break;
+        }
+        var step = new Face(new Vector(stepX1, stepY, stepZ1),
+                            new Vector(stepX1+dX, stepY, stepZ1+dZ),
+                            new Vector(stepX2+dX, stepY, stepZ2+dZ),
+                            new Vector(stepX2, stepY, stepZ2));
+        this.faces.push(step);
+  },
 
   makeACube: function(x, z, terrainType) {
     var corner1 = new Vector(x - 0.5, -0.25, z -0.5);
@@ -681,9 +719,13 @@ FirstPersonMaze.prototype = {
     // Add ONLY the faces of cube touching open space - otherwise
     // it will never get drawn so no point!!
     if (this.isOpenSpace(x - 1, z)) {
+        
       // left side
       if (terrainType == 3) {
-          this.makeStairsUp(x, z, "w", false);
+          this.makeStairsUp(x, z, "w");
+          this.makeDoor(x, z, "w");
+      } else if (terrainType == 2) {
+          this.makeStairsDown(x, z, "w");
           this.makeDoor(x, z, "w");
       } else {
         var wFace = new Face(corner1, corner2, corner6, corner5);
@@ -696,7 +738,10 @@ FirstPersonMaze.prototype = {
     if (this.isOpenSpace(x + 1, z)) {
       // right side
       if (terrainType == 3) {
-          this.makeStairsUp(x, z, "e", false);
+          this.makeStairsUp(x, z, "e");
+          this.makeDoor(x, z, "e");
+      } else if (terrainType == 2) {
+          this.makeStairsDown(x, z, "e");
           this.makeDoor(x, z, "e");
       } else {
         var eFace = new Face(corner3, corner4, corner8, corner7);
@@ -709,7 +754,10 @@ FirstPersonMaze.prototype = {
     if (this.isOpenSpace(x, z-1)) {
       // front
       if (terrainType == 3) {
-          this.makeStairsUp(x, z, "n", false);
+          this.makeStairsUp(x, z, "n");
+          this.makeDoor(x, z, "n");
+      } else if (terrainType == 2) {
+          this.makeStairsDown(x, z, "n");
           this.makeDoor(x, z, "n");
       } else {
         var nFace = new Face(corner1, corner4, corner8, corner5 );
@@ -722,7 +770,10 @@ FirstPersonMaze.prototype = {
     if (this.isOpenSpace(x, z +1)) {
       // back
       if (terrainType == 3) {
-          this.makeStairsUp(x, z, "s", false);
+          this.makeStairsUp(x, z, "s");
+          this.makeDoor(x, z, "s");
+      } else if (terrainType == 2) {
+          this.makeStairsDown(x, z, "s");
           this.makeDoor(x, z, "s");
       } else {
         var sFace = new Face(corner2, corner3, corner7, corner6 );
