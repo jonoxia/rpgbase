@@ -346,7 +346,7 @@ GenericRPG.prototype = {
 	    dialog.open(player);
 	    dialog.showPartyResources(player, "~");
 	    var totalPrice = pricePer * player.getAliveParty().length;
-	    dialog.showMsg("For you to stay the night will be " + totalPrice + "~.");
+	    dialog.showMsg("FOR YOU TO STAY THE NIGHT WILL BE " + totalPrice + "~.");
 
 	    dialog.yesOrNo(function(answer) {
 		    if (answer) {
@@ -359,14 +359,14 @@ GenericRPG.prototype = {
 			    // TODO black out screen and play lullaby
 			    player.spendResource("~", totalPrice);
 			    dialog.popMenu();
-			    dialog.scrollText("Thank you, come again.");
+			    dialog.scrollText("THANK YOU, COME AGAIN.");
 			} else {
 			    dialog.popMenu();
-			    dialog.scrollText("You can't afford that, sorry.");
+			    dialog.scrollText("YOU CAN'T AFFORD THAT, SORRY.");
 			}
 		    } else {
 			dialog.popMenu();
-			dialog.scrollText("Hope to see you again!");
+			dialog.scrollText("HOPE TO SEE YOU AGAIN!");
 		    }
 		});
 	});
@@ -391,12 +391,16 @@ GenericRPG.prototype = {
 
     // TODO I don't think .unload() is getting called for the
     // map when you move to a maze, or vice versa.
+
+    // TODO maze needs to start its own music when you enter (and when
+    // a fight ends!) neither of which is happening currently
     this.overworld.onStep({x: overworldX, y: overworldY},
       function(pc, x, y, landType) {
         self._mainMode = "maze";
         self.inputDispatcher.mapMode("maze");
         self.mapScreen.stop();
         self.mazeScreen.loadMaze(maze);
+        maze.lightLevel = 0; // TODO this should be set in MoonSerpentCave.
         self.mazeScreen.enterPlayer(self.player,
 				    entryX,
 				    entryY,

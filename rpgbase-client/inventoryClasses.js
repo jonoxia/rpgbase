@@ -265,9 +265,9 @@ ItemInstance.prototype = {
       }
     } else {
       system.showMsg(user.name 
-                     + " tries to use the "
+                     + " TRIES TO USE THE "
                      + this._name
-                     + "... but nothing happens.");
+                     + "... BUT NOTHING HAPPENS.");
     }
   },
 
@@ -279,9 +279,9 @@ ItemInstance.prototype = {
       }
     } else {
       system.showMsg(user.name 
-                     + " tries to use the "
+                     + " TRIES TO USE THE "
                      + this._name
-                     + "... but nothing happens.");
+                     + "... BUT NOTHING HAPPENS.");
     }
   },
 
