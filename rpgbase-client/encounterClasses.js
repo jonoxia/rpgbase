@@ -153,7 +153,7 @@ EncounterTableSet.prototype = {
 
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
-  this._init(htmlElem);
+  this._init(htmlElem, options.cursorImg);
   this._ctx = canvas.getContext("2d");
   this.hide();
   // this.endBattleCallbacks = []; // deprecated

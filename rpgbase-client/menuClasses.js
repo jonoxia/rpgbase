@@ -201,12 +201,13 @@ var CanvasTextUtils = {
 };
 
 
-function CanvasCmdMenu() {
+function CanvasCmdMenu(cursorImg) {
   this._init();
   this.x = 0; 
   this.y = 0;
   this.width = 50;
   this.height = 150;
+  this._cursorImg = cursorImg;
 }
 CanvasCmdMenu.prototype = {
   showArrowAtIndex: function(index) {
@@ -251,14 +252,19 @@ CanvasCmdMenu.prototype = {
     CanvasTextUtils.drawTextBox(ctx, x, y,
                                 this.width, this.height, textLines);
 
-    // Draw the triangular indicator:
-    ctx.beginPath();
+    // If cursorImg is defined, draw that; otherwise,
+    // draw the triangular indicator:
     var yBase = y + styles.lineHeight * this.selectedIndex;
-    ctx.moveTo(x + 4, yBase + 5);
-    ctx.lineTo(x + 8, yBase + 9);
-    ctx.lineTo(x + 4, yBase + 13);
-    ctx.lineTo(x + 4, yBase + 5);;
-    ctx.fill();
+    if (this._cursorImg) {
+      ctx.drawImage(this._cursorImg, x + 1, yBase + 2);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x + 4, yBase + 5);
+      ctx.lineTo(x + 8, yBase + 9);
+      ctx.lineTo(x + 4, yBase + 13);
+      ctx.lineTo(x + 4, yBase + 5);;
+      ctx.fill();
+    }
   },
   close: function() {
     // TODO anything to do here? Just stop drawing it right?
@@ -391,11 +397,8 @@ CssCmdMenu.prototype = {
 };
 CmdMenuMixin(CssCmdMenu.prototype);
 
-/* TODO:  modify MenuSystemMixin to allow substituting a
- * canvas-based menu for a CSS-based menu. */
-
 function MenuSystemMixin(subClassPrototype) {
-  subClassPrototype._init = function(htmlElem) {
+  subClassPrototype._init = function(htmlElem, cursorImg) {
 
     // TODO make an interface for setting this to either "canvas" 
     // or "css" but for now we're testing canvas impl
@@ -412,6 +415,9 @@ function MenuSystemMixin(subClassPrototype) {
     this._statDisplayType = "short";
 
     this._savedStackDepth = 0;
+
+    // cursor image is optional
+    this._cursorImg = cursorImg;
 
     this._positioning = {
       statsLeft: 0,
@@ -498,9 +504,9 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.makeMenu = function() {
     if (this.menuImpl == "canvas") {
-      return new CanvasCmdMenu();
+      return new CanvasCmdMenu(this._cursorImg);
     } else {
-      return new CssCmdMenu(this._htmlElem);
+      return new CssCmdMenu(this._htmlElem, this._cursorImg);
     }
   };
 
@@ -754,8 +760,8 @@ function MenuSystemMixin(subClassPrototype) {
 
 }
 
-function FieldMenu(htmlElem, commandSet) {
-  this._init(htmlElem);
+function FieldMenu(htmlElem, cursorImg, commandSet) {
+  this._init(htmlElem, cursorImg);
   this._rootMenu = this.menuFromCmdSet("", commandSet);
   this._freelyExit = true;
   // field menu can always be exited with cancel button,
@@ -1033,8 +1039,8 @@ BackgroundImgBox.prototype = {
 };
 
 
-function Dialoglog(htmlElem) {
-  this._init(htmlElem);
+function Dialoglog(htmlElem, cursorImg) {
+  this._init(htmlElem, cursorImg);
   this._rootMenu = null;
   this._freelyExit = true;
   this._occupiedNPC = null;  

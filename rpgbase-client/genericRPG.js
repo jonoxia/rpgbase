@@ -30,7 +30,7 @@ GenericRPG.prototype = {
     this.mapScreen.useAudioPlayer(this.audioPlayer);
   },
 
-  _initEverything: function() {
+  _initEverything: function(options) {
   // Get the canvas from the HTML document:
   this.canvas = document.getElementById(this._canvasTagId);
   var ctx = this.canvas.getContext("2d");
@@ -43,6 +43,9 @@ GenericRPG.prototype = {
 
   // Create the loader (to load all images)
   this.loader = new AssetLoader();
+  if (options.cursorImg) {
+    this._cursorImg = this.loader.add(options.cursorImg);
+  }
   // Create the main game components (see the various setUp functions)
     // TODO 512/2 and 384/2 should be decided by userland
   this.mazeScreen = new FirstPersonMaze(ctx, 512/2, 384/2);
@@ -58,20 +61,22 @@ GenericRPG.prototype = {
   this._setUpMapScreen();
   this.battleSystem = setUpBattleSystem(this.canvas,
                                         this.loader,
-                                        this.mazeScreen);
+                                        this.mazeScreen,
+				        this._cursorImg);
   this.manuel = setUpMonstrousManuel(this.loader); // monster dictionary
   this.overworld = setUpOverworldMap(this);
 
   this._maps[this.overworld.getId()] = this.overworld;
 
-  this.fieldMenu = setUpFieldMenu(this);
-    // TODO the root html tag should be decided by userland
-  this.dialoglog = new Dialoglog($("#battle-system"));
+  this.fieldMenu = setUpFieldMenu(this, this._cursorImg);
+  // TODO the root html tag should be decided by userland
+  this.dialoglog = new Dialoglog($("#battle-system"), this._cursorImg);
   //var boat = makeBoat(loader, overworld);
 
   this.dialoglog.setMenuPositions({msgLeft: 20,
 	      msgTop: 128});
   this.plotManager = new PlotManager($("#battle-system"),
+				     this._cursorImg,
                                        512/2, 384/2);
 
   this._setupInputDispatch();
@@ -561,5 +566,9 @@ GenericRPG.prototype = {
   startPlotEvent: function(event) {
     this.inputDispatcher.menuMode("plot");
     event.play(this.player, this.mapScreen);
+  },
+   
+  setCursorImg: function(cursorImg) {
+    this._cursorImg = cursorImg;
   }
 };
