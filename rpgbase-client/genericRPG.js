@@ -30,78 +30,95 @@ GenericRPG.prototype = {
     this.mapScreen.useAudioPlayer(this.audioPlayer);
   },
 
-  _initEverything: function() {
-  // Get the canvas from the HTML document:
-  this.canvas = document.getElementById(this._canvasTagId);
-  var ctx = this.canvas.getContext("2d");
+  _initEverything: function(options) {
+    // Get the canvas from the HTML document:
+    this.canvas = document.getElementById(this._canvasTagId);
+    var ctx = this.canvas.getContext("2d");
 
-  // Zoom in the canvas to 2x, without anti-aliasing:
-  ctx.scale(2, 2);
-  ctx.mozImageSmoothingEnabled = false;
-  ctx.webkitImageSmoothingEnabled = false;
-  ctx.imageSmoothingEnabled = false;
+    if (options.scaleFactor && options.scaleFactor != 1) {
+      // Zoom in the canvas to given factor, without anti-aliasing:
+      ctx.scale(options.scaleFactor, options.scaleFactor);
+      ctx.mozImageSmoothingEnabled = false;
+      ctx.webkitImageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = false;
+    }
 
-  // Create the loader (to load all images)
-  this.loader = new AssetLoader();
-  // Create the main game components (see the various setUp functions)
-    // TODO 512/2 and 384/2 should be decided by userland
-  this.mazeScreen = new FirstPersonMaze(ctx, 512/2, 384/2);
+    // Create the loader (to load all images)
+    this.loader = new AssetLoader();
+    if (options.cursorImg) {
+      this._cursorImg = this.loader.add(options.cursorImg);
+    }
 
+    this._canvasWidth = options.canvasWidth; // required
+    this._canvasHeight = options.canvasHeight; // required
+
+    if (options._menuBaseHtmlElem) {
+      this._menuBaseHtmlElem = options._menuBaseHtmlElem;
+      // TODO use this to set whether menus are canvas style or css style
+    }
+
+    // Create the main game components (see the various setUp functions)
+    this.mazeScreen = new FirstPersonMaze(ctx, this._canvasWidth,
+                                               this._canvasHeight);
 
     // TODO setUpParty, setUpBattleSystem,
     // setUpMonstrousManuel, setUpOverworldMap, and setUpFieldMenu
     // are all defined in userland -- they should not be referenced
     // here by name; instead they should be set as callbacks or they
     // should override methods of this class.
-  this.player = setUpParty(this.loader);
-  this._setUpAudioPlayer();
-  this._setUpMapScreen();
-  this.battleSystem = setUpBattleSystem(this.canvas,
-                                        this.loader,
-                                        this.mazeScreen);
-  this.manuel = setUpMonstrousManuel(this.loader); // monster dictionary
-  this.overworld = setUpOverworldMap(this);
+    this.player = setUpParty(this.loader);
+    this._setUpAudioPlayer();
+    this._setUpMapScreen();
+    this.battleSystem = setUpBattleSystem(this.canvas,
+                                          this.loader,
+                                          this.mazeScreen,
+                                          this._cursorImg);
 
-  this._maps[this.overworld.getId()] = this.overworld;
+    this.manuel = setUpMonstrousManuel(this.loader); // monster dictionary
 
-  this.fieldMenu = setUpFieldMenu(this);
-    // TODO the root html tag should be decided by userland
-  this.dialoglog = new Dialoglog($("#battle-system"));
-  //var boat = makeBoat(loader, overworld);
+    this.overworld = setUpOverworldMap(this);
+    this.registerMap(this.overworld);
 
-  this.dialoglog.setMenuPositions({msgLeft: 20,
-	      msgTop: 128});
-  this.plotManager = new PlotManager($("#battle-system"),
-                                       512/2, 384/2);
+    this.fieldMenu = setUpFieldMenu(this, this._cursorImg);
 
-  this._setupInputDispatch();
+    this.dialoglog = new Dialoglog(this._menuBaseHtmlElem,
+				   this._cursorImg,
+				   this._canvasWidth,
+				   this._canvasHeight);
+    this.dialoglog.setMenuPositions({msgLeft: 20,
+                                     msgTop: 128});
 
-  var self = this;
+    this.plotManager = new PlotManager(this._menuBaseHtmlElem,
+                                       this._cursorImg,
+                                       this._canvasWidth,
+                                       this._canvasHeight);
 
-  // TODO this only needs to happen if menus are canvas mode:
-  this.mapScreen.afterRender(function(ctx) {
-    self.fieldMenu.drawCanvasMenus(ctx);
-    self.dialoglog.drawCanvasMenus(ctx);
-    self.plotManager.dlog.drawCanvasMenus(ctx);
-  });
-  this.mazeScreen.afterRender(function(ctx) {
-    self.fieldMenu.drawCanvasMenus(ctx);
-    self.dialoglog.drawCanvasMenus(ctx);
-    self.plotManager.dlog.drawCanvasMenus(ctx);
-  });
+    this._setupInputDispatch();
 
-  /* When a battle ends, return to map-screen style input, and
-   * redraw the map screen: */
-  this.battleSystem.onClose(function(winLoseDraw) {
-    if (self._mainMode == "map") {
-      self.mapScreen.start();
-    } 
-    if (self._mainMode == "maze") {
-      self.mazeScreen.start();
-    }
-  });
+    var self = this;
 
+    // TODO this only needs to happen if menus are canvas mode:
+    this.mapScreen.afterRender(function(ctx) {
+      self.fieldMenu.drawCanvasMenus(ctx);
+      self.dialoglog.drawCanvasMenus(ctx);
+      self.plotManager.dlog.drawCanvasMenus(ctx);
+    });
+    this.mazeScreen.afterRender(function(ctx) {
+      self.fieldMenu.drawCanvasMenus(ctx);
+      self.dialoglog.drawCanvasMenus(ctx);
+      self.plotManager.dlog.drawCanvasMenus(ctx);
+    });
 
+    /* When a battle ends, return to map-screen style input, and
+     * redraw the map screen: */
+    this.battleSystem.onClose(function(winLoseDraw) {
+      if (self._mainMode == "map") {
+        self.mapScreen.start();
+      } 
+      if (self._mainMode == "maze") {
+        self.mazeScreen.start();
+      }
+    });
   },
 
   _setupInputDispatch: function() {
@@ -561,5 +578,9 @@ GenericRPG.prototype = {
   startPlotEvent: function(event) {
     this.inputDispatcher.menuMode("plot");
     event.play(this.player, this.mapScreen);
+  },
+   
+  setCursorImg: function(cursorImg) {
+    this._cursorImg = cursorImg;
   }
 };

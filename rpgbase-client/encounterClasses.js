@@ -153,7 +153,7 @@ EncounterTableSet.prototype = {
 
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
-  this._init(htmlElem);
+  this._init(htmlElem, options.cursorImg, options.width, options.height);
   this._ctx = canvas.getContext("2d");
   this.hide();
   // this.endBattleCallbacks = []; // deprecated
@@ -161,10 +161,10 @@ function BattleSystem(htmlElem, canvas, options) {
   this._attackSFX = null;
   this._statDisplayType = "battle";
 
-  if (options.defaultMsg) {
-    this.defaultMsg = options.defaultMsg;
+  if (options.startBattleMsg) {
+    this.startBattleMsg = options.startBattleMsg;
   } else {
-    this.defaultMsg = "MONSTERS APPEARED!";
+    this.startBattleMsg = "";
   }
 
   if (options.defaultMonsterCmd) {
@@ -210,7 +210,8 @@ function BattleSystem(htmlElem, canvas, options) {
     frameDelay = options.frameDelay;
   }
   if (options.metaCmdSet) {
-    this._rootMenu = this.menuFromCmdSet("PARTY", options.metaCmdSet);
+    this._rootMenu = this.menuFromCmdSet(options.metaCmdSetName,
+					 options.metaCmdSet);
   } else {
     this._rootMenu = null;
   }
@@ -267,7 +268,7 @@ BattleSystem.prototype = {
     // pop off any sub menus:
     this.restoreStackDepth();
     // show stats so player can see what's locked in:
-    this.showPartyStats();
+    this.updateStats();
 
     var nextPC = this.getNextActingPC(pc);
     if (nextPC == null) {
@@ -319,7 +320,8 @@ BattleSystem.prototype = {
       // if this command has a submenu, then choosing it
       // just opens the submenu:
       if (cmd.isContainer) {
-        cmdMenu.setTitle(pc.name);
+        //cmdMenu.setTitle(pc.name); // TODO title maybe 
+        // desired by some games but not moonserpent.
         cmdMenu.addCommand(name, function() {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
@@ -328,7 +330,7 @@ BattleSystem.prototype = {
         // whether you can use it right now...
         if (!cmd.canUse(pc)) {
           cmdMenu.addCommand(name, function() {
-            self.showMsg("Not enough MP!");
+            self.showMsg("NOT ENOUGH MP!");
             // TODO what if this isn't the reason
           });
           return;
@@ -389,13 +391,25 @@ BattleSystem.prototype = {
     this.deadMonsters = [];
     this.player = player;
     this._party = player.getParty();
-    this._htmlElem.show();
+    if (this._menuImpl == "css") {
+      this._htmlElem.show();
+    }
     this.clearMsg();
     this.landType = landType;
     this._attackSFX = null;
     this._whoseTurn = null; // currently only used to target counters
     this.encounter = encounter;
+    this._fixedDisplayBoxes = [];
 
+    // TODO the position of the monster name in the upper right should
+    // be specified in userland
+    this._monsterNameBox = new FixedTextBox([encounter.type.name], this);
+    // TODO create right-align option?
+    this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.width, 0);
+    this._fixedDisplayBoxes.push(this._monsterNameBox);
+
+    // Give each monster a letter for a name:
+    var monsterStatLines = [];
     this.monsters = [];
     if (encounter.number) {
       for (var i = 0; i < encounter.number; i++) {
@@ -404,10 +418,18 @@ BattleSystem.prototype = {
         var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         monster.setName(encounter.type.name + " " + letters[i]);
         this.monsters.push(monster);
+        monsterStatLines.push("   ");
       }
     } // else? can that happen?
 
-    this.showMsg(this.defaultMsg);
+    // Monster HP display:
+    this._monsterHitPoints = new FixedTextBox(monsterStatLines, this);
+    this._monsterHitPoints.setPos(this._screenWidth - this._monsterHitPoints.width, 14);
+    this._fixedDisplayBoxes.push(this._monsterHitPoints);
+
+    if (this.startBattleMsg && this.startBattleMsg != "") {
+      this.showMsg(this.startBattleMsg);
+    }
     this.emptyMenuStack();
     this.pcMenus = [];
     for (var i = 0; i < this._party.length; i++) {
@@ -421,7 +443,7 @@ BattleSystem.prototype = {
       this.pcMenus.push(this.makeMenuForPC(this._party[i],
                                            customCmds));
     }
-    this.showPartyStats();
+    this.updateStats();
     this._animator.start();
 
     // startBattleCallback needs to itself take a callback!
@@ -442,38 +464,38 @@ BattleSystem.prototype = {
     }
   },
 
+  updateStats: function() {
+    this.showPartyStats();
+    // update monster stats (hit points) display:
+    if (this.menuImpl == "canvas" && this.monsters.length > 0) {
+      var monsterStatLines = [];
+      for (var i = 0; i < this.monsters.length; i++) {
+	  var hp = this.monsters[i].getStat("hp");
+	  if (hp >= 100) {
+              monsterStatLines.push(hp);
+	  } else if (hp >= 10) {
+              monsterStatLines.push(" " + hp);
+	  } else {
+	      monsterStatLines.push("  " + hp);
+	  }
+      }
+      this._monsterHitPoints.setText(monsterStatLines);
+    }
+  },
+
   draw: function() {
     if (this._drawCallback) {
       this._drawCallback(this._ctx, this.monsters, this.landType);
     } else {
       this._ctx.fillStyle = "black";
-      this._ctx.fillRect(0, 0, 512, 384); // TODO no hardcode
-
+      this._ctx.fillRect(0, 0, this._screenWidth, this._screenHeight);
+      // draw monsters:
       for (var i = 0; i < this.monsters.length; i++) {
         this.monsters[i].setPos(25 + 50 * i, 25);
         this.monsters[i].plot(this._ctx);
       }
     }
-
-    if (this.menuImpl == "canvas" && this.monsters.length > 0) {
-      // draw monster stats 
-      // TODO make this FixedTextBox once, and give it a way to
-      // update the text inside when needed. Then make it a special
-      // case of menu system info window.
-      // TODO position of this info window (and its existince)
-      // should be set in userland.
-      var monsterStatLines = [];
-      monsterStatLines.push(this.monsters[0].name);
-      for (var i = 0; i < this.monsters.length; i++) {
-        var monsterName = this.monsters[i].name;
-        var monsterLetter = monsterName[monsterName.length -1 ];
-        monsterStatLines.push(monsterLetter + " " + this.monsters[i].getStat("hp"));
-      }
-      var box = new FixedTextBox(monsterStatLines, this);
-      box.setPos(180, 0);
-      box.display(this._ctx);
-    }
-
+    // draw menus
     if (this.menuImpl == "canvas") {
       this.drawCanvasMenus(this._ctx);
     }
@@ -689,7 +711,7 @@ BattleSystem.prototype = {
       this.showMsg(fighter.name + " has no idea what to do!");
     }
     // update stats display so we can see effects of action
-    this.showPartyStats();
+    this.updateStats();
 
     // run animation for this action, then go on to execute next action.
     if (cmd.animate) {
@@ -724,7 +746,7 @@ BattleSystem.prototype = {
       }
     }
     this.clearMsg();
-    this.showPartyStats(); // in case end of round effects changed 
+    this.updateStats(); // in case end of round effects changed 
     // anything
     if (!this._freelyExit) {
       // Unless fight has ended already, show menu for next round
@@ -739,6 +761,7 @@ BattleSystem.prototype = {
     this._animator.cancelAllCallbacks();
     this.emptyMenuStack();
     this.pcMenus = [];
+    this._fixedDisplayBoxes = [];
     this._attackSFX = null;
     this.clearMsg();
 
@@ -781,6 +804,7 @@ BattleSystem.prototype = {
     }
     var endBattleText = new ScrollingTextBox(endBattleMessage, this);
     this.pushMenu(endBattleText);
+    endBattleText.setPos(16, 16);
   },
 
   sendEffect: function(target, effectName, data) {
