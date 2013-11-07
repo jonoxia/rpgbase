@@ -153,7 +153,7 @@ EncounterTableSet.prototype = {
 
 function BattleSystem(htmlElem, canvas, options) {
   var self = this;
-  this._init(htmlElem, options.cursorImg);
+  this._init(htmlElem, options.cursorImg, options.width, options.height);
   this._ctx = canvas.getContext("2d");
   this.hide();
   // this.endBattleCallbacks = []; // deprecated
@@ -391,7 +391,9 @@ BattleSystem.prototype = {
     this.deadMonsters = [];
     this.player = player;
     this._party = player.getParty();
-    this._htmlElem.show();
+    if (this._menuImpl == "css") {
+      this._htmlElem.show();
+    }
     this.clearMsg();
     this.landType = landType;
     this._attackSFX = null;
@@ -402,8 +404,8 @@ BattleSystem.prototype = {
     // TODO the position of the monster name in the upper right should
     // be specified in userland
     this._monsterNameBox = new FixedTextBox([encounter.type.name], this);
-    // TODO create right-align option?  Don't hardcode 256!
-    this._monsterNameBox.setPos(256 - this._monsterNameBox.width, 0);
+    // TODO create right-align option?
+    this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.width, 0);
     this._fixedDisplayBoxes.push(this._monsterNameBox);
 
     // Give each monster a letter for a name:
@@ -422,8 +424,7 @@ BattleSystem.prototype = {
 
     // Monster HP display:
     this._monsterHitPoints = new FixedTextBox(monsterStatLines, this);
-    // TODO don't hardcode 256:
-    this._monsterHitPoints.setPos(256 - this._monsterHitPoints.width, 14);
+    this._monsterHitPoints.setPos(this._screenWidth - this._monsterHitPoints.width, 14);
     this._fixedDisplayBoxes.push(this._monsterHitPoints);
 
     if (this.startBattleMsg && this.startBattleMsg != "") {
@@ -487,7 +488,7 @@ BattleSystem.prototype = {
       this._drawCallback(this._ctx, this.monsters, this.landType);
     } else {
       this._ctx.fillStyle = "black";
-      this._ctx.fillRect(0, 0, 512, 384); // TODO no hardcode
+      this._ctx.fillRect(0, 0, this._screenWidth, this._screenHeight);
       // draw monsters:
       for (var i = 0; i < this.monsters.length; i++) {
         this.monsters[i].setPos(25 + 50 * i, 25);

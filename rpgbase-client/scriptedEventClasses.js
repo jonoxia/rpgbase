@@ -68,7 +68,7 @@ PlotManager.prototype = {
 SerializableMixin(PlotManager);
 
 function PlotDialogSystem(htmlElem, cursorImg, width, height) {
-  this._init(htmlElem, cursorImg);
+  this._init(htmlElem, cursorImg, width, height);
   this._rootMenu = new BackgroundImgBox(width, height);
   this._freelyExit = false;
 }

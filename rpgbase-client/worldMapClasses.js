@@ -189,8 +189,9 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this.margins = {left: 3, top: 3, right: 3, bottom: 3};
   this.pixelOffset = {x: 0, y: 0};
   this.scrollAdjustment = {x: 0, y: 0};
-  // TODO set width and height of canvas element to
-  // numTilesX * tilePixelsX, etc.
+  this._screenWidth = numTilesX * tilePixelsX;
+  this._screenHeight = numTilesY * tilePixelsY;
+  // TODO set width and height of canvas element based on this?
 
   var self = this;
   // mapscreen has an animator that renders map screen after
@@ -494,7 +495,7 @@ MapScreen.prototype = {
     self._SFX.onDraw(function(ctx, frame) {
             console.log("flash animation draw callback");
             ctx.fillStyle = color;
-            ctx.fillRect(0, 0, 512/2, 384/2);
+            ctx.fillRect(0, 0, self._screenWidth, self._screenHeight);
         });
 
     self.animate(self._SFX);
