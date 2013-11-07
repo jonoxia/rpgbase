@@ -216,17 +216,17 @@ GenericRPG.prototype = {
     this.inputDispatcher = dispatcher;
   },
 
+  loadMusicFiles: function(dictionary) {
+      this._musicTracks = dictionary;
+      for (var key in dictionary) {
+	  this.audioPlayer.preload(dictionary[key]);
+      }
+  },
+
   _setUpAudioPlayer: function() {
     // The check box for turning audio on and off:
     var audioPlayer = new AudioPlayer();
     // For best results preload music files here:
-
-    // TODO track names belong in userland
-    audioPlayer.preload("music/overworld");
-    audioPlayer.preload("music/battle");
-    audioPlayer.preload("music/cave");
-    audioPlayer.preload("music/boss");
-    audioPlayer.preload("music/town");
 
     // TODO this toggle elem should be set in userland
     var checkAudioState = function() {
@@ -284,8 +284,8 @@ GenericRPG.prototype = {
       self.mapScreen.render();
     });
 
-    // TODO these two should go in userland:
-    theTownMap.setMusicTrack("music/town");
+    theTownMap.setMusicTrack(this._musicTracks["town"]);
+    // TODO this should go in userland:
     theTownMap.getTileForCode = function(mapCode) {
 	return {x:mapCode, y:DayNight};
     };
@@ -462,8 +462,7 @@ GenericRPG.prototype = {
       self.mapScreen.stop();
     }
 
-    // TODO audio track choice should be up to userland
-    self.audioPlayer.changeTrack("music/boss", true);
+    self.audioPlayer.changeTrack(this._musicTracks["battle"], true);
     self.battleSystem.startBattle(self.player, encounter, landType);
   },
 
