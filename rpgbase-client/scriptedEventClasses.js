@@ -2,10 +2,10 @@
 // freely exit flag to false so you have a non-cancelable dialog.
 
 
-function PlotManager(htmlElem, width, height) {
+function PlotManager(htmlElem, cursorImg, width, height) {
   this._flags = [];
   this._miscStorage = {};
-  this.dlog = new PlotDialogSystem(htmlElem, width, height);
+  this.dlog = new PlotDialogSystem(htmlElem, cursorImg, width, height);
 }
 PlotManager.prototype = {
   serializableClassName: "PlotManager",

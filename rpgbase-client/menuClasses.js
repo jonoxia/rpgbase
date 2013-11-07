@@ -413,7 +413,7 @@ function MenuSystemMixin(subClassPrototype) {
     this._openCallbacks = [];
     this._resourceVisible = false;
     this._statDisplayType = "short";
-
+    this._fixedDisplayBoxes = [];
     this._savedStackDepth = 0;
 
     // cursor image is optional
@@ -649,9 +649,12 @@ function MenuSystemMixin(subClassPrototype) {
           this.drawCanvasPartyStats(ctx, this._party);
       }
       if (this._resourceVisible) {
+        // TODO turn this into a special case of fixedDisplayBoxes?
         this.drawCanvasPartyResources(ctx);
       }
-
+      for (var i = 0; i < this._fixedDisplayBoxes.length; i++) {
+        this._fixedDisplayBoxes[i].display(ctx);
+      }
     }
   };
 
@@ -677,7 +680,8 @@ function MenuSystemMixin(subClassPrototype) {
     var width = this._positioning.statsWidth;
     var height = this._positioning.statsHeight;
     for (var i = 0; i < party.length; i++) {
-      party[i].displayStats(ctx, x, y, width, height);
+      party[i].displayStats(ctx, x, y, width, height,
+			    this._statDisplayType);
       x += this._positioning.statsXOffset;
       y += this._positioning.statsYOffset;
     }
@@ -731,14 +735,14 @@ function MenuSystemMixin(subClassPrototype) {
     if (this.menuImpl == "canvas") {
       this._resourceVisible = true;
     }
-    // TODO implement me for canvas menus too
+    // TODO implement me for css menus too
   };
 
   subClassPrototype.hidePartyResources = function() {
     if (this.menuImpl == "canvas") {
       this._resourceVisible = null;
     }
-    // TODO implement me for canvas menus too
+    // TODO implement me for css menus too
   },
 
   subClassPrototype.drawCanvasPartyResources = function(ctx) {
@@ -983,6 +987,9 @@ FixedTextBox.prototype = {
   },
   close: function() {
     // not used
+  },
+  setText: function(newTextLines) {
+    this.textLines = newTextLines;
   }
 };
 
