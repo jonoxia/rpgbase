@@ -17,14 +17,14 @@ GenericRPG.prototype = {
                           pixelsY: pixelsY};
   },
   
-  _setUpMapScreen: function() {
+  _setUpMapScreen: function(animFrameTime) {
     var dim = this._mapScreenDim;
     this.mapScreen = new MapScreen(this.canvas,
                                    dim.squaresX,
                                    dim.squaresY,
                                    dim.pixelsX,
-                                   dim.pixelsY, 40);
-    // TODO don't hard code 
+                                   dim.pixelsY,
+                                   animFrameTime);
     // 40 is milliseconds per frame
     this.mapScreen.setTileOffset({x: -0.5, y: -0.5});
     this.mapScreen.useAudioPlayer(this.audioPlayer);
@@ -49,37 +49,41 @@ GenericRPG.prototype = {
       this._cursorImg = this.loader.add(options.cursorImg);
     }
 
+    // Set the font image, if specified:
+    if (options.fontImg) {
+      CanvasTextUtils.setFontImg(this.loader.add("font.png"));
+    }
     this._canvasWidth = options.canvasWidth; // required
     this._canvasHeight = options.canvasHeight; // required
 
     if (options._menuBaseHtmlElem) {
       this._menuBaseHtmlElem = options._menuBaseHtmlElem;
-      // TODO use this to set whether menus are canvas style or css style
+      this._menuStyle = "css";
+    } else {
+      this._menuStyle = "canvas";
     }
 
     // Create the main game components (see the various setUp functions)
     this.mazeScreen = new FirstPersonMaze(ctx, this._canvasWidth,
                                                this._canvasHeight);
 
-    // TODO setUpParty, setUpBattleSystem,
-    // setUpMonstrousManuel, setUpOverworldMap, and setUpFieldMenu
-    // are all defined in userland -- they should not be referenced
-    // here by name; instead they should be set as callbacks or they
-    // should override methods of this class.
-    this.player = setUpParty(this.loader);
+    if (options.animationFrameTime) {
+      var animFrameTime = options.animationFrameTime;
+    } else {
+      var animFrameTime = 40; // ms
+    }
     this._setUpAudioPlayer();
-    this._setUpMapScreen();
-    this.battleSystem = setUpBattleSystem(this.canvas,
-                                          this.loader,
-                                          this.mazeScreen,
-                                          this._cursorImg);
+    this._setUpMapScreen(animFrameTime);
 
-    this.manuel = setUpMonstrousManuel(this.loader); // monster dictionary
-
-    this.overworld = setUpOverworldMap(this);
+    this.player = options.partyInit(this.loader);
+    this.battleSystem = options.battleInit(this.canvas,
+                                           this.loader,
+                                           this.mazeScreen,
+                                           this._cursorImg);
+    this.manuel = options.monsterInit(this.loader); // monster dictionary
+    this.fieldMenu = options.fieldMenuInit(this, this._cursorImg);
+    this.overworld = options.overworldInit(this);
     this.registerMap(this.overworld);
-
-    this.fieldMenu = setUpFieldMenu(this, this._cursorImg);
 
     this.dialoglog = new Dialoglog(this._menuBaseHtmlElem,
 				   this._cursorImg,
@@ -97,17 +101,19 @@ GenericRPG.prototype = {
 
     var self = this;
 
-    // TODO this only needs to happen if menus are canvas mode:
-    this.mapScreen.afterRender(function(ctx) {
-      self.fieldMenu.drawCanvasMenus(ctx);
-      self.dialoglog.drawCanvasMenus(ctx);
-      self.plotManager.dlog.drawCanvasMenus(ctx);
-    });
-    this.mazeScreen.afterRender(function(ctx) {
-      self.fieldMenu.drawCanvasMenus(ctx);
-      self.dialoglog.drawCanvasMenus(ctx);
-      self.plotManager.dlog.drawCanvasMenus(ctx);
-    });
+    if (this._menuStyle == "canvas") {
+      // Draw any open canvas menus on top of map or maze screen
+      this.mapScreen.afterRender(function(ctx) {
+        self.fieldMenu.drawCanvasMenus(ctx);
+        self.dialoglog.drawCanvasMenus(ctx);
+        self.plotManager.dlog.drawCanvasMenus(ctx);
+      });
+      this.mazeScreen.afterRender(function(ctx) {
+        self.fieldMenu.drawCanvasMenus(ctx);
+        self.dialoglog.drawCanvasMenus(ctx);
+        self.plotManager.dlog.drawCanvasMenus(ctx);
+      });
+    }
 
     /* When a battle ends, return to map-screen style input, and
      * redraw the map screen: */
@@ -193,9 +199,8 @@ GenericRPG.prototype = {
       }
 
       if (delX != 0 || delY != 0) {
-        // Animate the player moving over the course of 8 frames
-        // TODO inject this 8 from userland, don't hard-code it.
-        var anim = self.player.move(delX, delY, 8);
+        // Animate the player moving, wait for animation to finish:
+        var anim = self.player.move(delX, delY);
         dispatcher.waitForAnimation(anim);
         self.mapScreen.animate(anim);
       }

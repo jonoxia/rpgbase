@@ -16,12 +16,10 @@ NPC.prototype = {
     var canMove = this.canMove(this._mapScreen, deltaX, deltaY);
     this.setFacing(deltaX, deltaY);
 
-    var numAnimFrames = 5; // TODO don't hardcode
-
     if (canMove) {
       var self = this;
       var stepAnim = this.makeStepAnimation(this._mapScreen,
-                                            numAnimFrames,
+                                            this.walkAnimationFrames,
                                             deltaX, deltaY);
       this._mapScreen.animate(stepAnim);
     } else {
@@ -31,8 +29,6 @@ NPC.prototype = {
   },
 
   walkPath: function(directionList, onFinished) {
-
-    var numAnimFrames = 5; // TODO don't hardcode
     var deltaX, deltaY;
     var firstAnim = null, lastAnim = null;
     var mapScreen = this._mapScreen;
@@ -56,7 +52,7 @@ NPC.prototype = {
       }
       // TODO make this into an animation.chain function?
       var stepAnim = this.makeStepAnimation(mapScreen,
-                                            numAnimFrames,
+                                            this.walkAnimationFrames,
                                             deltaX, deltaY);
       if (firstAnim == null) {
         firstAnim = stepAnim;

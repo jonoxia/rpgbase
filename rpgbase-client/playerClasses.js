@@ -68,9 +68,10 @@ Player.prototype = {
     }
   },
 
-  move: function(dx, dy, numAnimFrames) {
+  move: function(dx, dy) {
     var self = this;
     var mainChar = this.aliveParty[0];
+    var numAnimFrames = mainChar.walkAnimationFrames;
     // set facing of main character even if we can't move:
     mainChar.setFacing(dx, dy);
 
