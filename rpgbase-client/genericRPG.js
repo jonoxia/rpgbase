@@ -400,7 +400,7 @@ GenericRPG.prototype = {
         self.inputDispatcher.mapMode("maze");
         self.mapScreen.stop();
         self.mazeScreen.loadMaze(maze);
-        maze.lightLevel = 0; // TODO this should be set in MoonSerpentCave.
+        self.mazeScreen.setLightLevel(0); // TODO this should be set in MoonSerpentCave.
         self.mazeScreen.enterPlayer(self.player,
 				    entryX,
 				    entryY,
@@ -416,9 +416,9 @@ GenericRPG.prototype = {
 	  self.mazeScreen.stop();
 	  self.mapScreen.start();
 	  self.player.enterMapScreen(self.mapScreen,
-                                     overworldX,
-				     overworldY);
-	});
+                               overworldX,
+                               overworldY);
+        });
   },
 
   startEncounter: function(encounter, landType) {

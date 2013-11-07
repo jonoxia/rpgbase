@@ -46,7 +46,7 @@ Line.prototype = {
     ctx.moveTo(scale * a.x, scale * a.y);
     ctx.lineTo(scale * b.x, scale * b.y);
     // Scale lineColor by distance
-    var brightness = light * 12;
+    var brightness = light * 24;
     var z = (a.z + b.z )/2;
     if (z < 1) {
       brightness = Math.round(brightness * 1.1);
@@ -120,7 +120,7 @@ Face.prototype = {
     ctx.lineTo(scale * a.x, scale * a.y);
 
     // Darken fill color when farther away
-    var brightness = light * 20;
+    var brightness = light * 40;
     var z = this.getAvgZ();
     if (z < 1) {
       brightness = Math.round(brightness * 1.1);
@@ -386,7 +386,7 @@ FirstPersonMaze.prototype = {
       this.faces[i].calc(this);
       var z = this.faces[i].getAvgZ();
       // z < 0 is behind me; z > 5 is outside my light radius.
-      if (z > 0 && z <= lightLevel) {
+      if (z > 0 && z <= lightLevel + 1) {
         visibleFaces.push(this.faces[i]);
       }
     }
@@ -395,7 +395,7 @@ FirstPersonMaze.prototype = {
       this.bgFaces[i].calc(this);
       var z = this.bgFaces[i].getAvgZ();
       // z < 0 is behind me; z > 5 is outside my light radius.
-      if (z > 0 && z <= lightLevel) {
+      if (z > 0 && z <= lightLevel + 1) {
         visibleBGFaces.push(this.bgFaces[i]);
       }
     }
@@ -476,7 +476,7 @@ FirstPersonMaze.prototype = {
     dx = facing.dx;
     dz = facing.dz;
 
-    for (var i = 0; i < this.getLightLevel(); i++) {
+    for (var i = 0; i <= this.getLightLevel(); i++) {
         // beyond lightLevel squares away, it's too dark to see
         var pos = {x: Math.floor(myPos.x + i * dx),
                    y: 0,
