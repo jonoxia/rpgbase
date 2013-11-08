@@ -26,9 +26,31 @@ Map.prototype = {
     // Trigger can be:
     // {x:x, y:y}
     // {landType}
+
+    // if priority is not specified, the default is for
+    // more specific triggers (specific x-y point) to take
+    // priority over more general triggers.
+    if (!trigger.hasOwnProperty('priority')) {
+	if (trigger.hasOwnProperty('x') ||
+	    trigger.hasOwnProperty('edge')) {
+	    trigger.priority = 1;
+	    trigger.passThrough = false;
+	} else {
+	    trigger.priority = 2;
+	    trigger.passThrough = true;
+	}
+    }
     this._stepHandlers.push({
-      trigger: trigger,
-      result: result});
+        trigger: trigger,
+        result: result});
+    // sort step handlers in increasing priority order
+    // so the P1s come first
+    this._stepHandlers.sort(function(a, b) {
+      return a.trigger.priority - b.trigger.priority;
+    });
+    // this is sorting after every call to onStep, which is
+    // not optimal - but the number of handlers is likely to be
+    // small so it's probably not a problem (yet)
   },
 
   processStep: function(x, y, player) {
@@ -42,7 +64,6 @@ Map.prototype = {
 
     // check all the step handlers:
     for (var i = 0; i < this._stepHandlers.length; i++) {
-
       var trigger = this._stepHandlers[i].trigger;
       var result = this._stepHandlers[i].result;
       var landType = this._mapData[y][x];
@@ -79,6 +100,11 @@ Map.prototype = {
       
       if (triggered) {
         result(player, x, y, landType);
+        /* Handlers with passThrough = false (the default)
+	 * end the handler chain when triggered. */ 
+        if (!trigger.passThrough) {
+	  break;
+	}
       }
     }
   },
