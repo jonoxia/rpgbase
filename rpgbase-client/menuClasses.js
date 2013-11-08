@@ -701,9 +701,11 @@ function MenuSystemMixin(subClassPrototype) {
     if (keyCode == CANCEL_BUTTON) {
       // cancel -> pop top menu off menu stack, go back to previous one
       if (!this._freelyExit) {
-        if (this.menuStack.length == 1) {
-          // But if freelyExit is false, then don't let us exit the
-          // root menu!
+        // If this is not a freely-exitable menu system, then ignore
+        // cancel buttons when we're on the root menu of the stack.
+        if (this.menuStack.length <= 1) {
+          // Yes, this can be zero -- e.g. when a battle is starting before
+          // the menus appear
           return;
         }
       }
