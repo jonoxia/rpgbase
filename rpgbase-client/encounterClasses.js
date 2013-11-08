@@ -670,7 +670,9 @@ BattleSystem.prototype = {
       this.finishRound();
       return;
     }
-    this.displayElem.empty();// clear the message
+    if (this.menuImpl == "css") {
+      this.displayElem.empty();// clear the message
+    }
     // Skip any dead or otherwise incapacitated people
     // (they may have died, fled, etc. during the round before their
     // turn came up)
