@@ -189,19 +189,19 @@ Face.prototype = {
   },
 */
 
-function FirstPersonMaze(ctx, width, height) {
+function FirstPersonMaze(ctx, width, height, frameTime) {
   this.width = width;
   this.height = height;
   this._currentMap = null;
   this._afterRenderCallback = null;
-  this.init(ctx);
+  this.init(ctx, frameTime);
   this.bgColor = {r: 0.5, g: 0.5, b: 0.8}; // for ceiling and floor
   this.softLineColor = {r: 0.3, g: 0.3, b: 0.5}; // for texture
   this.hardLineColor = {r: 0, g: 0, b: 0}; // for edges
   this.wallColor = {r: 1.2, g: 1.2, b: 1.5};
 }
 FirstPersonMaze.prototype = {
-  init: function(ctx) {
+  init: function(ctx, frameTime) {
     this.ctx = ctx;
     this.faces = [];
     this.bgFaces = [];
@@ -209,7 +209,7 @@ FirstPersonMaze.prototype = {
     this.cameraPoint = new Vector(0, -0.1, 0);
     this.viewerPos = new Vector(0, 0, -5); // determined by experiment
     var self = this;
-    this.animator = new Animator(100,
+    this.animator = new Animator(frameTime,
                                  function() { self.render(); });
   },
   

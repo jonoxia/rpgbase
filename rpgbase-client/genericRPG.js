@@ -25,7 +25,6 @@ GenericRPG.prototype = {
                                    dim.pixelsX,
                                    dim.pixelsY,
                                    animFrameTime);
-    // 40 is milliseconds per frame
     this.mapScreen.setTileOffset({x: -0.5, y: -0.5});
     this.mapScreen.useAudioPlayer(this.audioPlayer);
   },
@@ -62,18 +61,16 @@ GenericRPG.prototype = {
     } else {
       this._menuStyle = "canvas";
     }
+    var mapFrameRate = options.mapFrameRate ? options.mapFrameRate: 40; // ms
+    var mazeFrameRate = options.mazeFrameRate ? options.mazeFrameRate: 100; // ms
 
     // Create the main game components (see the various setUp functions)
     this.mazeScreen = new FirstPersonMaze(ctx, this._canvasWidth,
-                                               this._canvasHeight);
+                                          this._canvasHeight,
+					  mazeFrameRate);
 
-    if (options.animationFrameTime) {
-      var animFrameTime = options.animationFrameTime;
-    } else {
-      var animFrameTime = 40; // ms
-    }
     this._setUpAudioPlayer();
-    this._setUpMapScreen(animFrameTime);
+    this._setUpMapScreen(mapFrameRate);
 
     this.player = options.partyInit(this.loader);
     this.battleSystem = options.battleInit(this.canvas,
