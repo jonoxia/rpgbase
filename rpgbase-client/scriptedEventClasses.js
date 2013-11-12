@@ -72,16 +72,6 @@ function PlotDialogSystem(htmlElem, cursorImg, width, height) {
   this._rootMenu = new BackgroundImgBox(width, height);
   this._freelyExit = false;
 }
-PlotDialogSystem.prototype = {
-  scrollText: function(dialogText) {
-    // Turn into a scrolling message box and push onto stack
-    this.clearMsg();
-    var textBox = new ScrollingTextBox(dialogText, this);
-    this.pushMenu(textBox);
-    textBox.setPos(this._positioning.msgLeft,
-                   this._positioning.msgTop);
-  }
-};
 MenuSystemMixin(PlotDialogSystem.prototype);
 PlotDialogSystem.prototype.handleKey = function(keyCode) {
     if (keyCode == CANCEL_BUTTON) {

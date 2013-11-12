@@ -590,6 +590,16 @@ function MenuSystemMixin(subClassPrototype) {
     }
   };
 
+  subClassPrototype.scrollText = function(dialogText) {
+      console.log("ScrollText called with " + dialogText);
+    // Turn into a scrolling message box and push onto stack
+    this.clearMsg();
+    var textBox = new ScrollingTextBox(dialogText, this);
+    this.pushMenu(textBox);
+    textBox.setPos(this._positioning.msgLeft,
+                   this._positioning.msgTop);
+  },
+
   subClassPrototype.chooseOne = function(title, set, callback) {
     var charMenu = this.makeMenu();
     charMenu.setTitle(title);
@@ -782,27 +792,39 @@ function FieldMenu(htmlElem, cursorImg, width, height, commandSet) {
   this._freelyExit = true;
   // field menu can always be exited with cancel button,
   // unlike battle menu.
+  this._itemSubMenuCmdNames = ["USE", "EQUIP", "GIVE", "DROP"];
 }
 FieldMenu.prototype = {
+  customizeItemSubMenu: function(cmds) {
+      this._itemSubMenuCmdNames = cmds;
+  },
+
   showItemSubMenu: function(item, character) {
     // do what with this item?
     var self = this;
     var subMenu = this.makeMenu();
     subMenu.setTitle("DO WHAT?");
+
+    for (var i = 0; i < this._itemSubMenuCmdNames.length; i++) {
+	switch (this._itemSubMenuCmdNames[i]) {
+	case "USE":
     subMenu.addCommand("USE", function() {
       if (item.target == "ally") {
         // If using it requires selecting a target...
         self.chooseCharacter("USE ON?", function(target) {
-          item.effect(self, character, target);
           self.returnToRoot();
+          item.effect(self, character, target);
         });
       } else {
         // TODO are there other target types?
-        item.effect(self, character, null);
+        // e.g. target type "environment" means that
+        // item.effect should be passed the map/maze screen
         self.returnToRoot();
+        item.effect(self, character, null);
       }
     });
-
+	    break;
+	case "EQUIP":
     subMenu.addCommand("EQUIP", function() {
       if (character.canEquipItem(item.reference)) {
         self.showMsg(character.name + " EQUIPS "
@@ -814,7 +836,8 @@ FieldMenu.prototype = {
       }
       self.returnToRoot();
     });
-
+	    break;
+	case "GIVE":
     subMenu.addCommand("GIVE", function() {
       self.chooseCharacter("GIVE TO?", function(target) {
         self.showMsg(character.name + " GIVES THE " + item.name
@@ -823,13 +846,16 @@ FieldMenu.prototype = {
         self.returnToRoot();
       });
     });
-
+	    break;
+	case "DROP":
     subMenu.addCommand("DROP", function() {
       self.showMsg(character.name + " DROPS THE " + item.name);
       character.loseItem(item.reference);
       self.returnToRoot();
     });
-
+	    break;
+	}
+    }
     this.pushMenu(subMenu);
   },
 
@@ -1074,15 +1100,6 @@ Dialoglog.prototype = {
     // don't let this NPC wander away while player is talking to them:
     npc.sleep();
     this._occupiedNPC = npc;
-  },
-
-  scrollText: function(dialogText) {
-    // Turn into a scrolling message box and push onto stack
-    this.clearMsg();
-    var textBox = new ScrollingTextBox(dialogText, this);
-    this.pushMenu(textBox);
-    textBox.setPos(this._positioning.msgLeft,
-                   this._positioning.msgTop);
   },
 
   releaseNPC: function() {

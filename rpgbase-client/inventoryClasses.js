@@ -136,7 +136,7 @@ function ItemType(name, numUses, defaultPrice) {
     this._defaultPrice = 0;
   }
   this._battleEffect = null;
-  this._fieldEffect = null;
+  //this._fieldEffect = null;
   this._equipSlot = null;
   this._equipStats = null;
 
@@ -241,9 +241,12 @@ ItemInstance.prototype = {
   },
 
   consume: function() {
+      console.log(this._name + " is consumed");
     if (this._numUses != null) {
+      console.log(this._name + " is limited use");
       this._numUses -= 1;
       if (this._numUses <= 0) {
+	  console.log(this._name + " is out of uses.");
         this.inventory.removeItem(this);
       }
     }
@@ -272,7 +275,9 @@ ItemInstance.prototype = {
   },
 
   useInField: function(system, user, target) {
+      console.log("Use in field: " + this._name);
     if (this._fieldEffect) {
+	console.log("This item has a field effect...");
       var used = this._fieldEffect(system, user, target);
       if (used) {
           this.consume();
