@@ -114,6 +114,7 @@ GenericRPG.prototype = {
 
     /* When a battle ends, return to map-screen style input, and
      * redraw the map screen: */
+      // TODO CONSOLIDATE MODE SWITCHES
     this.battleSystem.onClose(function(winLoseDraw) {
       if (self._mainMode == "map") {
         self.mapScreen.start();
@@ -127,7 +128,7 @@ GenericRPG.prototype = {
   _setupInputDispatch: function() {
 
     var self = this;
-    var dispatcher = makeInputDispatcher(40);
+    var dispatcher = makeInputDispatcher(40); // TODO NO HARDCODE KEY REPEAT RATE
     
     var mazeKeyCallback = function(key) {
       var anim;
@@ -148,12 +149,14 @@ GenericRPG.prototype = {
         // If you're facing an NPC, talk to them!
         var npc = self.mazeScreen.getNPC();
         if (npc) {
+	    // TODO CONSOLIDATE MODE SWITCHES
           npc.talk(dispatcher.menuMode("dialog"), self.player);
         }
         break;
 
       case CANCEL_BUTTON:
         // Pop open the field menu system
+	  // TODO CONSOLIDATE MODE SWITCHES
         console.log("Opening field menu from maze");
         dispatcher.menuMode("menu").open(self.player);
         break;
@@ -186,11 +189,13 @@ GenericRPG.prototype = {
         var npc = self.mapScreen.getNPCAt(facingSpace.x, 
                                           facingSpace.y);
         if (npc) {
+	    // TODO CONSOLIDATE MODE SWITCHES
           npc.talk(dispatcher.menuMode("dialog"), self.player);
         }
         break;
       case CANCEL_BUTTON:
         // Pop open the field menu system
+	  // TODO CONSOLIDATE MODE SWITCHES
         dispatcher.menuMode("menu").open(self.player);
         break;
       }
@@ -249,7 +254,7 @@ GenericRPG.prototype = {
 
     var self = this;
     this.loader.loadThemAll(function() {
-
+	// TODO CONSOLIDATE MODE SWITCHES
       if (this._mainMode == "maze") {
         self.inputDispatcher.mapMode("maze");
         self.mazeScreen.start();
@@ -415,6 +420,7 @@ GenericRPG.prototype = {
     // a fight ends!) neither of which is happening currently
     this.overworld.onStep({x: overworldX, y: overworldY},
       function(pc, x, y, landType) {
+	  // TODO CONSOLIDATE MODE SWITCHES
         self._mainMode = "maze";
         self.inputDispatcher.mapMode("maze");
         self.mapScreen.stop();
@@ -428,6 +434,7 @@ GenericRPG.prototype = {
       });
 
     maze.onStep({x: mazeX, y: mazeY},
+		// TODO CONSOLIDATE MODE SWITCHES
         function(pc, x, y) {
 	  // TODO pc argument is bogus, don't use it
         self._mainMode = "map";
@@ -450,7 +457,7 @@ GenericRPG.prototype = {
         return; 
       }
     }
-
+    // TODO CONSOLIDATE MODE SWITCHES
     self.inputDispatcher.menuMode("battle");
     if (self._mainMode == "maze") {
       self.mazeScreen.stop();
@@ -577,6 +584,7 @@ GenericRPG.prototype = {
   },
 
   startPlotEvent: function(event) {
+      // TODO CONSOLIDATE MODE SWITCHES
     this.inputDispatcher.menuMode("plot");
     event.play(this.player, this.mapScreen);
   },
