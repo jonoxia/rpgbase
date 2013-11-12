@@ -511,7 +511,7 @@ MapScreen.prototype = {
   flash: function(color, numFrames) {
     // flashes the map screen the given color over the given number of frames
     var self = this;
-    this.animator.playSfx(numFrames, function(ctx, frame) {
+    this._animator.playSfx(numFrames, function(ctx, frame) {
             ctx.fillStyle = color;
             ctx.fillRect(0, 0, self._screenWidth,
                          self._screenHeight);
