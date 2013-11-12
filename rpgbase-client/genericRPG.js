@@ -583,5 +583,26 @@ GenericRPG.prototype = {
    
   setCursorImg: function(cursorImg) {
     this._cursorImg = cursorImg;
+  },
+
+  nonBattleDamage: function(pc, dmgAmount) {
+    // taking damage outside of battle, e.g. traps, poison
+    pc.modifyStat("hp", (-1) * dmgAmount);
+    // Flash screen red:
+    if (this._mainMode == "maze") {
+        this.mazeScreen.flash("red", 3); //TODO not implemented
+    } else {
+        this.mapScreen.flash("red", 3);
+    }
+    // TODO if multiple pcs are taking damage this flashes once
+    // for each -- detect this case and combine.
+    if (pc.getStat("hp") <= 0) {
+      pc.die();
+      this.player.marchInOrder();
+      this.inputDispatcher.menuMode("dialog").open(this.player);
+      this.dialoglog.scrollText(pc.name + " HAS DIED.");
+      // TODO check for TPK and do game-over screen!
+    }
   }
+
 };

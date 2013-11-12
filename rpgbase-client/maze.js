@@ -97,7 +97,17 @@ Face.prototype = {
                     this._screenD.z);
   },
 
+  getPos: function() {
+        var x = (this.a.x + this.b.x + this.c.x + this.d.x) /4;
+        var y = (this.a.y + this.b.y + this.c.y + this.d.y) /4;
+        var z = (this.a.z + this.b.z + this.c.z + this.d.z) /4;
+        return {x: x, y: y, z: z};
+    },
+
   render: function(ctx, light) {
+        if (this.hidden) {
+            return;
+        }
     var a = this._screenA;
     var b = this._screenB;
     var c = this._screenC;
@@ -163,6 +173,14 @@ Face.prototype = {
              top: Math.min(a.y, b.y, c.y, d.y),
              right: Math.max(a.x, b.x, c.x, d.x),
              bottom: Math.max(a.y, b.y, c.y, d.y) };
+    },
+
+  hide: function() {
+        this.hidden = true;
+  },
+
+  show: function() {
+        this.hidden = false;
   }
 };
 
@@ -269,6 +287,10 @@ FirstPersonMaze.prototype = {
 
   stop: function() {
     this.animator.stop();
+  },
+
+  animate: function(animation) {
+    this.animator.runAnimation(animation);
   },
 
   canPass: function(dir) {
@@ -418,6 +440,11 @@ FirstPersonMaze.prototype = {
     var record = this.npcInFrontOfMe();
     if (record != null) {
       this.drawNPC(record.npc, record.dist);
+    }
+    
+    // any special fx (copied from map screen):
+    if (this.animator.SFX) {
+        this.animator.SFX.draw(this.ctx);
     }
 
     this.ctx.restore();
@@ -1006,6 +1033,29 @@ FirstPersonMaze.prototype = {
   setLightLevel: function(newLevel) {
     // TODO make this a method on MazeMap class or something?
     this._currentMap.lightLevel = newLevel;
-  }
+  },
 
+  flash: function(color, numFrames) {
+    // flashes the maze screen the given color over the given number of frames
+    var self = this;
+    this.animator.playSfx(numFrames, function(ctx, frame) {
+            ctx.fillStyle = color;
+            ctx.fillRect((-0.5) * self.width,
+                         (-0.5) * self.height,
+                         self.width, self.height);
+
+        });
+  },
+
+  showHole: function(x, y, z) {
+    for (var i = 0; i < this.bgFaces.length; i++) {
+
+        var pos = this.bgFaces[i].getPos();
+        if ((pos.z == z + 0.25 || pos.z == z - 0.25) &&
+            pos.y == y &&
+            (pos.x == x - 0.25 || pos.x == x + 0.25 )) {
+            this.bgFaces[i].hide();
+        }
+    }
+  }
 };

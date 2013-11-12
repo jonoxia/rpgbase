@@ -175,6 +175,7 @@ function Animator(frameLength, afterFrame) {
     // remove finished animations:
     self._currentAnimations = stillGoingAnims;
   };
+  this.SFX = null;
 }
 Animator.prototype = {
   start: function() {
@@ -204,7 +205,22 @@ Animator.prototype = {
       var anim = this._currentAnimations[i];
       anim.cancelFinishCallback();
     }
+  },
+
+  playSfx: function(numFrames, callback) {
+    var self = this;
+    this.SFX = new Animation(numFrames,
+                              function(frame) {
+                              },
+                              function() {
+                                  self.SFX= null;
+                              });
+    this.SFX.onDraw(function(ctx, frame) {
+            callback(ctx, frame);
+        });
+    this.runAnimation(this.SFX);
   }
+
 };
 
 function Animation(numFrames, frameCallback, finishCallback) {
