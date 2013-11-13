@@ -591,7 +591,6 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.scrollText = function(dialogText) {
-      console.log("ScrollText called with " + dialogText);
     // Turn into a scrolling message box and push onto stack
     this.clearMsg();
     var textBox = new ScrollingTextBox(dialogText, this);
@@ -899,9 +898,9 @@ FieldMenu.prototype = {
         } else if (spell.target == "ally") {
           menu.addCommand(spell.name, function() {
             self.chooseCharacter("ON WHO?", function(target) {
+              self.popMenu();
+              self.popMenu();
               spell.effect(self, character, target);
-              self.popMenu();
-              self.popMenu();
 	      // update stats display to show effect of heal:
 	      self.showPartyStats();
             });
@@ -909,15 +908,15 @@ FieldMenu.prototype = {
         } else if (spell.target == "all_allies") {
           menu.addCommand(spell.name, function() {
             var party = self._player.getAliveParty();
-            spell.effect(self, character, party);
             self.popMenu();
+            spell.effect(self, character, party);
             self.showPartyStats();
           });
         } else {
           // non-target spells:
           menu.addCommand(spell.name, function() {
-            spell.effect(self, character); // TODO pass party?
             self.popMenu();
+            spell.effect(self, character); // TODO pass party?
 	    // update stats display to show effect of heal:
 	    self.showPartyStats();
           });
@@ -934,6 +933,11 @@ FieldMenu.prototype = {
   }
 };
 MenuSystemMixin(FieldMenu.prototype);
+FieldMenu.prototype.showMsg = function(text) {
+  // field menu always uses scrolling text box for text, never the
+  // stack-independent status display
+  this.scrollText(text);
+};
 
 function ScrollingTextBox(text, menuSystem) {
   this.lines = CanvasTextUtils.splitLines(text);

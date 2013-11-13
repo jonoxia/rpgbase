@@ -611,6 +611,9 @@ GenericRPG.prototype = {
       this.dialoglog.scrollText(pc.name + " HAS DIED.");
       // TODO check for TPK and do game-over screen!
     }
-  }
+  },
 
+  scrollFieldMessage: function(text) {
+      this.inputDispatcher.menuMode("dialog").scrollText(text);
+  }
 };
