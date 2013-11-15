@@ -774,7 +774,12 @@ function MenuSystemMixin(subClassPrototype) {
     var width = this._positioning.resourceWidth;
     var height = this._positioning.resourceHeight;
     var textLines = [];
-    var resources = this._player.listResources();
+    var resources;
+    if (this._resourceNames) {
+        resources = this._resourceNames;
+    } else {
+        resources = this._player.listResources();
+    }
     for (var i = 0; i < resources.length; i++) {
       textLines.push(this._player.getResource(resources[i])
 		     + resources[i]);
@@ -792,10 +797,15 @@ function FieldMenu(htmlElem, cursorImg, width, height, commandSet) {
   // field menu can always be exited with cancel button,
   // unlike battle menu.
   this._itemSubMenuCmdNames = ["USE", "EQUIP", "GIVE", "DROP"];
+  this._resourceNames = [];
 }
 FieldMenu.prototype = {
   customizeItemSubMenu: function(cmds) {
-      this._itemSubMenuCmdNames = cmds;
+    this._itemSubMenuCmdNames = cmds;
+  },
+
+  customizeResourceDisplay: function(resources) {
+    this._resourceNames = resources;
   },
 
   showItemSubMenu: function(item, character) {
