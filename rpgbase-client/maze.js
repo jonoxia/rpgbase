@@ -221,6 +221,7 @@ function FirstPersonMaze(ctx, width, height, frameTime) {
   this.softLineColor = {r: 0.3, g: 0.3, b: 0.5}; // for texture
   this.hardLineColor = {r: 0, g: 0, b: 0}; // for edges
   this.wallColor = {r: 1.2, g: 1.2, b: 1.5};
+  this.stairColor = {r: 1.0, g: 1.0, b: 1.0};
 }
 FirstPersonMaze.prototype = {
   init: function(ctx, frameTime) {
@@ -240,6 +241,26 @@ FirstPersonMaze.prototype = {
       this._currentMap.unload();
     }
     this._currentMap = mazeMap;
+    if (mazeMap.colorPalette) {
+	// mazeMap is a Map instance, but it may have a colorPalette property
+	// dynamically added to it, which is not used for MapScreen but can be
+	// used by MazeScreen as follows:
+	if (mazeMap.colorPalette.floor) {
+	    this.bgColor = mazeMap.colorPalette.floor;
+	}
+	if (mazeMap.colorPalette.softLine) {
+	    this.softLineColor = mazeMap.colorPalette.softLine;
+	}
+	if (mazeMap.colorPalette.hardLine) {
+	    this.hardLineColor = mazeMap.colorPalette.hardLine;
+	}
+	if (mazeMap.colorPalette.wall) {
+	    this.wallColor = mazeMap.colorPalette.wall;
+	}
+	if (mazeMap.colorPalette.stair) {
+	    this.stairColor = mazeMap.colorPalette.stair;
+	}
+    }
     this.faces = [];
     this.bgFaces = [];
     this.setupScene();
@@ -702,6 +723,8 @@ FirstPersonMaze.prototype = {
 					 new Vector(-1.5, -0.25, 0.2)]);
       leftWall.setColor(this.bgColor);
       rightWall.setColor(this.bgColor);
+      rightWall.setLineColor(this.softLineColor);
+      leftWall.setLineColor(this.softLineColor);
       this.faces.push(leftWall);
       this.faces.push(rightWall);
 
@@ -723,6 +746,10 @@ FirstPersonMaze.prototype = {
 					   new Vector(stepX, stepY+dY, -0.2),
 					   new Vector(stepX, stepY+dY, 0.2),
 					   new Vector(stepX, stepY, 0.2)]);
+	    step.setColor(this.stairColor);
+	    riser.setColor(this.stairColor);
+	    step.setLineColor(this.hardLineColor);
+	    riser.setLineColor(this.hardLineColor);
             this.faces.push(step);
             this.faces.push(riser);
             stepY += dY;
@@ -787,6 +814,9 @@ FirstPersonMaze.prototype = {
       ceiling.setColor(this.bgColor);
       rightWall.setColor(this.bgColor);
       leftWall.setColor(this.bgColor);
+      ceiling.setLineColor(this.softLineColor);
+      rightWall.setLineColor(this.softLineColor);
+      leftWall.setLineColor(this.softLineColor);
       this.faces.push(ceiling);
       this.faces.push(leftWall);
       this.faces.push(rightWall);
@@ -796,6 +826,8 @@ FirstPersonMaze.prototype = {
 				    new Vector(0.3, -0.25, -0.2),
 				    new Vector(0.3, -0.25, 0.2),
 				    new Vector(0.5, -0.25, 0.2)]);
+      step.setColor(this.stairColor);
+      step.setLineColor(this.hardLineColor);
       this.faces.push(step);
   },
 
@@ -1018,11 +1050,11 @@ FirstPersonMaze.prototype = {
 					  new Vector(0.5, -0.25, 0.2)]
 					);
       lintel.setColor(this.wallColor);
-      //lintel.setLineColor(null);
+      lintel.setLineColor(this.softLineColor);
       leftFrame.setColor(this.wallColor);
-      //leftFrame.setLineColor(null);
+      leftFrame.setLineColor(this.softLineColor);
       rightFrame.setColor(this.wallColor);
-      //rightFrame.setLineColor(null);
+      rightFrame.setLineColor(this.softLineColor);
       this.faces.push(lintel);
       this.faces.push(leftFrame);
       this.faces.push(rightFrame);
