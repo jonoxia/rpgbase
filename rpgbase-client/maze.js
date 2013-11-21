@@ -138,10 +138,14 @@ Face.prototype = {
       brightness = Math.round(brightness/ z);
     }
     ctx.fillStyle = darkenColor(this._fillColor, brightness);
-    var lineBrightness = Math.floor(0.5*brightness);
-    ctx.strokeStyle = darkenColor(this._lineColor, brightness);
     ctx.fill();
-    ctx.stroke();
+
+    if (this._lineColor != null) {
+	// can call .setLineColor(null) to not draw edges
+      var lineBrightness = Math.floor(0.5*brightness);
+      ctx.strokeStyle = darkenColor(this._lineColor, brightness);
+      ctx.stroke();
+    }
 
     for (var i =0; i < this._decorations.length; i++) {
       this._decorations[i].render(ctx, light);
@@ -269,15 +273,19 @@ FirstPersonMaze.prototype = {
     // TODO make cameraOrientation a function of character facing?
   },
 
-  isOpenSpace: function(x, y) {
+  getTerrainTypeAt: function(x, z) {
     // TODO move this to Map class?
     if (x < 0 || x >= this._currentMap._dimX) {
-      return false;
+      return null;
     }
-    if (y < 0 || y >= this._currentMap._dimY) {
-      return false;
+    if (z < 0 || z >= this._currentMap._dimY) {
+      return null;
     }
-    return (this._currentMap._mapData[y][x] == 0);
+    return this._currentMap._mapData[z][x];
+  },
+
+  isOpenSpace: function(x, z) {
+    return (this.getTerrainTypeAt(x, z) == 0);
   },
 
   start: function() {
@@ -382,49 +390,59 @@ FirstPersonMaze.prototype = {
   },
 
   render: function() {
-    // sort z-distance highest to lowest -- draw closest last
-    
-    // Very backest background -- goes behind all polygons, will show
-    // through where polygons are missing. All black, usually:
+    // Main drawing function - draw everything!
     var lightLevel = this.getLightLevel();
-    this.ctx.save();
-    this.ctx.translate(this.width/2, this.height/2);
-
-    this.ctx.fillStyle = "black";
-    this.ctx.fillRect((-0.5) * this.width, (-0.5)*this.height,
-                      this.width, this.height);
-
     var theta = this.cameraOrientation.y;
-
     var playerPos = this.playerPosVector();
     this.cameraPoint = new Vector(playerPos.x - 0.3*Math.sin(theta),
                                   -0.05,
                                   playerPos.z - 0.3*Math.cos(theta));
-      /*new Vector(this.playerPos.X - 0.4 * Math.sin(theta),
-        -0.05,
-        this.playerPos.z - 0.4 * Math.cos(theta));*/
+
+    var drawOutside = this.doorToOutsideInFrontOfMe();
+    // causes all sorta special-cases
+    var maxZ = lightLevel + 1;
+    if (drawOutside && maxZ < 5) {
+      maxZ = 5;
+    }
+
     var visibleFaces = [];
     for (var i = 0; i < this.faces.length; i++) {
       this.faces[i].calc(this);
       var z = this.faces[i].getAvgZ();
-      // z < 0 is behind me; z > 5 is outside my light radius.
-      if (z > 0 && z <= lightLevel + 1) {
+      // z < 0 is behind me; z > maxZ is outside my light radius.
+     if (z > 0 && z <= maxZ) {
         visibleFaces.push(this.faces[i]);
       }
     }
+    // sort z-distance highest to lowest -- draw closest last
+    visibleFaces.sort(function(a, b) {
+      return b.getAvgZ() - a.getAvgZ();
+    });
+
+      // ceiling and floor polygons:
     var visibleBGFaces = [];
     for (var i = 0; i < this.bgFaces.length; i++) {
       this.bgFaces[i].calc(this);
       var z = this.bgFaces[i].getAvgZ();
-      // z < 0 is behind me; z > 5 is outside my light radius.
-      if (z > 0 && z <= lightLevel + 1) {
+      // z < 0 is behind me; z > lightLevel+1 is outside my light radius.
+      if (z > 0 && z <= maxZ) {
         visibleBGFaces.push(this.bgFaces[i]);
       }
     }
 
-    visibleFaces.sort(function(a, b) {
-      return b.getAvgZ() - a.getAvgZ();
-    });
+    // Very backest background -- goes behind all polygons, will show
+    // through where polygons are missing. All black, usually:
+    this.ctx.save();
+
+    if (drawOutside) {
+      this._drawOutside(this.ctx);
+    } else {
+      this.ctx.fillStyle = "black";
+      this.ctx.fillRect(0, 0, this.width, this.height);
+    }
+
+    // put origin at center of screen for drawing maze polygons:
+    this.ctx.translate(this.width/2, this.height/2);
 
     // render all ceiling/floor faces
     for (var i = 0; i < visibleBGFaces.length; i++) {
@@ -484,6 +502,44 @@ FirstPersonMaze.prototype = {
     x = myPos.x + facing.dx;
     z = myPos.z + facing.dz;
     return this.isOpenSpace(x, z);
+  },
+
+  doorToOutsideInFrontOfMe: function() {
+      // Looks very weird if the door is outside my torch radius because the occluding
+      // polygons aren't getting drawn.
+    // am I looking at a door? This loop could be combined with the loop in
+    // npcInFrontOfMe().
+    if (!this._drawOutside) {
+      return false;
+    }
+    var myPos = this.playerPosVector();
+    var dx, dz;
+
+    var facing = this._getFacingRect();
+    if (facing == null) {
+      // for simplicity sake, you can't see NPCs when looking
+      // diagonally (i.e. mid-turn)
+      return null;
+    }
+    dx = facing.dx;
+    dz = facing.dz;
+
+    for (var i = 0; i < 5; i++) {
+      // not light level - the outside door produces its own light
+      var pos = {x: Math.floor(myPos.x + i * dx),
+                 y: 0,
+                 z: Math.floor(myPos.z + i * dz)};
+      
+      var terrainType = this.getTerrainTypeAt(pos.x, pos.z);
+ 
+      if (terrainType == 4) { // 4 is the door code
+        return true;
+      } else if (terrainType != 0) {
+        // anything else blocks our view:
+        return false;
+      }
+    }
+    return false;
   },
 
   npcInFrontOfMe: function() {
@@ -631,101 +687,136 @@ FirstPersonMaze.prototype = {
   },
 
   makeStairsUp: function(x, z, side) {
-        var stepX1, stepX2, stepZ1, stepZ2;
-        var stepY = -0.25;
-        var dX, dZ;
-        var dY = 0.1;
 
-        switch (side) {
-        case "w":
-            stepX1 = stepX2 = x-0.5;
-            stepZ1 = z-0.2;
-            stepZ2 = z+0.2;
-            dX = 0.2;
-            dZ = 0;
-            break;
-        case "e":
-            stepX1 = stepX2 = x+0.5;
-            stepZ1 = z-0.2;
-            stepZ2 = z+0.2;
-            dX = -0.2;
-            dZ = 0;
-            break;
-        case "n":
-            stepZ1 = stepZ2 = z-0.5;
-            stepX1 = x-0.2;
-            stepX2 = x+0.2;
-            dZ = 0.2;
-            dX = 0;
-            break;
-        case "s":
-            stepZ1 = stepZ2 = z+0.5;
-            stepX1 = x-0.2;
-            stepX2 = x+0.2;
-            dZ = -0.2;
-            dX = 0;
-            break;
-        }
+      // bounding box:
+      var leftWall = this.relativeFace(x, z, side,
+				       [new Vector(0.5, -0.25, -0.2),
+					new Vector(0.5, 0.25, -0.2),
+					new Vector(-1.5, 0.25, -0.2),
+					new Vector(-1.5, -0.25, -0.2)]);
+      // extends back into the square bheind the stairs.
+      var rightWall = this.relativeFace(x, z, side,
+					[new Vector(0.5, -0.25, 0.2),
+					 new Vector(0.5, 0.25, 0.2),
+					 new Vector(-1.5, 0.25, 0.2),
+					 new Vector(-1.5, -0.25, 0.2)]);
+      leftWall.setColor(this.bgColor);
+      rightWall.setColor(this.bgColor);
+      this.faces.push(leftWall);
+      this.faces.push(rightWall);
+
+
+      // steps and risers:
+      var stepX = 0.5;
+      var dX = -0.2;
+      var stepY = -0.25;
+      var dY = 0.1;
         for (var i = 0; i < 5; i++) {
-            var step = new Face(new Vector(stepX1, stepY, stepZ1),
-                                new Vector(stepX1+dX, stepY, stepZ1+dZ),
-                                new Vector(stepX2+dX, stepY, stepZ2+dZ),
-                                new Vector(stepX2, stepY, stepZ2));
-            stepX1 += dX;
-            stepX2 += dX;
-            stepZ1 += dZ;
-            stepZ2 += dZ;
-            var riser = new Face(new Vector(stepX1, stepY, stepZ1),
-                                new Vector(stepX1, stepY+dY, stepZ1),
-                                new Vector(stepX2, stepY+dY, stepZ2),
-                                new Vector(stepX2, stepY, stepZ2));
+            var step = this.relativeFace(x, z, side,
+					 [new Vector(stepX, stepY, -0.2),
+					  new Vector(stepX+dX, stepY, -0.2),
+					  new Vector(stepX+dX, stepY, 0.2),
+					  new Vector(stepX, stepY, 0.2)]);
+            stepX += dX;
+            var riser = this.relativeFace(x, z, side,
+					  [new Vector(stepX, stepY, -0.2),
+					   new Vector(stepX, stepY+dY, -0.2),
+					   new Vector(stepX, stepY+dY, 0.2),
+					   new Vector(stepX, stepY, 0.2)]);
             this.faces.push(step);
             this.faces.push(riser);
             stepY += dY;
         }
   },
 
-  makeStairsDown: function(x, z, side){
-        var stepX1, stepX2, stepZ1, stepZ2;
-        var stepY = -0.25;
-        var dX, dZ;
-        var dY = -0.1;
+  relativeFace: function(x, z, side, vertices) {
+      // specify vectors with x+1 as the "forward" side, e.g. east-facing
+      // is the default.
 
-        switch (side) {
-        case "w":
-            stepX1 = stepX2 = x-0.5;
-            stepZ1 = z-0.2;
-            stepZ2 = z+0.2;
-            dX = 0.2;
-            dZ = 0;
-            break;
-        case "e":
-            stepX1 = stepX2 = x+0.5;
-            stepZ1 = z-0.2;
-            stepZ2 = z+0.2;
-            dX = -0.2;
-            dZ = 0;
-            break;
-        case "n":
-            stepZ1 = stepZ2 = z-0.5;
-            stepX1 = x-0.2;
-            stepX2 = x+0.2;
-            dZ = 0.2;
-            dX = 0;
-            break;
-        case "s":
-            stepZ1 = stepZ2 = z+0.5;
-            stepX1 = x-0.2;
-            stepX2 = x+0.2;
-            dZ = -0.2;
-            dX = 0;
-            break;
-        }
-        var step = new Face(new Vector(stepX1, stepY, stepZ1),
-                            new Vector(stepX1+dX, stepY, stepZ1+dZ),
-                            new Vector(stepX2+dX, stepY, stepZ2+dZ),
-                            new Vector(stepX2, stepY, stepZ2));
-        this.faces.push(step);
+      var transformedVectors = [];
+
+      for (var i = 0; i < vertices.length; i++) {
+	  // note uses reflection, not rotation. doesn't matter if geometry
+	  // is symmetrical.
+	  var dx, dz;
+	  switch (side) {
+	  case "e":
+	      dx = vertices[i].x;
+	      dz = vertices[i].z;
+	      break;
+	  case "w":
+	      dx = (-1) * vertices[i].x;
+	      dz = (-1) * vertices[i].z;
+	      break;
+	  case "n":
+	      dx = (-1) * vertices[i].z;
+	      dz = (-1) * vertices[i].x;
+	      break;
+	  case "s":
+	      dx = vertices[i].z;
+	      dz = vertices[i].x;
+	      break;
+	  }
+	  transformedVectors.push(new Vector(x + dx, vertices[i].y, z + dz));
+      }
+      return new Face(transformedVectors[0],
+		      transformedVectors[1],
+		      transformedVectors[2],
+		      transformedVectors[3]);
+  },
+
+  makeStairsDown: function(x, z, side){
+      // bounding box:
+      // our first diagonal polygon. I'm so proud.
+
+      var ceiling = this.relativeFace(x, z, side,
+				      [new Vector(0.5,  0.25, 0.2),
+				       new Vector(0.5, 0.25, -0.2),
+				       new Vector(-0.5, -0.2, -0.2),
+				       new Vector(-0.5, -0.2, 0.2)]);
+      var leftWall = this.relativeFace(x, z, side,
+				       [new Vector(0.5, 0.25, -0.2),
+					new Vector(-0.5, -0.2, -0.2),
+					new Vector(-0.5, -0.4, -0.2),
+					new Vector(0.5, -0.25, -0.2)]);
+      var rightWall = this.relativeFace(x, z, side,
+					[new Vector(0.5, 0.25, 0.2),
+					 new Vector(-0.5, -0.2, 0.2),
+					 new Vector(-0.5, -0.4, 0.2),
+					 new Vector(0.5, -0.25, 0.2)]);
+      ceiling.setColor(this.bgColor);
+      rightWall.setColor(this.bgColor);
+      leftWall.setColor(this.bgColor);
+      this.faces.push(ceiling);
+      this.faces.push(leftWall);
+      this.faces.push(rightWall);
+
+      var step = this.relativeFace(x, z, side, 
+				   [new Vector(0.5, -0.25, -0.2),
+				    new Vector(0.3, -0.25, -0.2),
+				    new Vector(0.3, -0.25, 0.2),
+				    new Vector(0.5, -0.25, 0.2)]);
+      this.faces.push(step);
+  },
+
+  makeSpecialWall: function(x, z, side, terrainType) {
+    // left side
+      switch (terrainType) {
+      case 3: // Stairs Up
+	  console.log("Making stairs up");
+      this.makeStairsUp(x, z, side);
+      this.makeDoor(x, z, side);
+	  break;
+      case 2: // Stairs Down
+      this.makeStairsDown(x, z, side);
+      this.makeDoor(x, z, side);
+	  break;
+      case 4: // Open Door
+	  this.makeDoor(x, z, side);
+	  // through this door is visible the outside world; see
+	  // doorToOutsideInFrontOfMe, onDrawOutside, and render().
+	  break;
+      }
   },
 
   makeACube: function(x, z, terrainType) {
@@ -746,68 +837,51 @@ FirstPersonMaze.prototype = {
     // Add ONLY the faces of cube touching open space - otherwise
     // it will never get drawn so no point!!
     if (this.isOpenSpace(x - 1, z)) {
-        
-      // left side
-      if (terrainType == 3) {
-          this.makeStairsUp(x, z, "w");
-          this.makeDoor(x, z, "w");
-      } else if (terrainType == 2) {
-          this.makeStairsDown(x, z, "w");
-          this.makeDoor(x, z, "w");
-      } else {
-        var wFace = new Face(corner1, corner2, corner6, corner5);
-        wFace.setColor(this.wallColor);
-        wFace.setLineColor(this.hardLineColor);
-        wFace.addDecorations(this.makeBricks(x, z, "w"));
-        this.faces.push(wFace);
-      }
+	if (terrainType == 1) {
+	    // normal wall
+            var wFace = new Face(corner1, corner2, corner6, corner5);
+            wFace.setColor(this.wallColor);
+            wFace.setLineColor(this.hardLineColor);
+            wFace.addDecorations(this.makeBricks(x, z, "w"));
+            this.faces.push(wFace);
+	} else {
+	    this.makeSpecialWall(x, z, "w", terrainType);
+	}
     }
     if (this.isOpenSpace(x + 1, z)) {
       // right side
-      if (terrainType == 3) {
-          this.makeStairsUp(x, z, "e");
-          this.makeDoor(x, z, "e");
-      } else if (terrainType == 2) {
-          this.makeStairsDown(x, z, "e");
-          this.makeDoor(x, z, "e");
-      } else {
+      if (terrainType == 1) {
         var eFace = new Face(corner3, corner4, corner8, corner7);
         eFace.setColor(this.wallColor);
         eFace.setLineColor(this.hardLineColor);
         eFace.addDecorations(this.makeBricks(x, z, "e"));
         this.faces.push(eFace);
+      } else {
+        this.makeSpecialWall(x, z, "e", terrainType);
       }
     }
     if (this.isOpenSpace(x, z-1)) {
       // front
-      if (terrainType == 3) {
-          this.makeStairsUp(x, z, "n");
-          this.makeDoor(x, z, "n");
-      } else if (terrainType == 2) {
-          this.makeStairsDown(x, z, "n");
-          this.makeDoor(x, z, "n");
-      } else {
+      if (terrainType == 1) {
         var nFace = new Face(corner1, corner4, corner8, corner5 );
         nFace.setColor(this.wallColor);
         nFace.addDecorations(this.makeBricks(x, z, "n"));
         nFace.setLineColor(this.hardLineColor);
         this.faces.push(nFace);
+      } else {
+	  this.makeSpecialWall(x, z, "n", terrainType);
       }
     }
     if (this.isOpenSpace(x, z +1)) {
       // back
-      if (terrainType == 3) {
-          this.makeStairsUp(x, z, "s");
-          this.makeDoor(x, z, "s");
-      } else if (terrainType == 2) {
-          this.makeStairsDown(x, z, "s");
-          this.makeDoor(x, z, "s");
-      } else {
+      if (terrainType == 1) {
         var sFace = new Face(corner2, corner3, corner7, corner6 );
         sFace.setColor(this.wallColor);
         sFace.addDecorations(this.makeBricks(x, z, "s"));
         sFace.setLineColor(this.hardLineColor);
         this.faces.push(sFace);
+      } else {
+	  this.makeSpecialWall(x, z, "s", terrainType);
       }
     }
     /* TODO don't use hard line color on edges where it's continuous
@@ -925,49 +999,30 @@ FirstPersonMaze.prototype = {
   },
 
   makeDoor: function(x, z, side) {
-      // what if we try putting solid polygons everywhere the
-      // door isn't??
-    switch (side) {
-    case "e": case "w":
-        var xMod = side == "e"? 0.5 : -0.5;
-        var lintel = new Face(new Vector(x + xMod, 0.25, z + 0.5),
-                              new Vector(x + xMod, 0.15, z + 0.5),
-                              new Vector(x + xMod, 0.15, z - 0.5),
-                              new Vector(x + xMod, 0.25, z - 0.5));
-
-        var leftFrame = new Face(new Vector(x + xMod, -0.25, z - 0.5),
-                              new Vector(x + xMod, 0.15, z - 0.5),
-                              new Vector(x + xMod, 0.15, z - 0.2),
-                              new Vector(x + xMod, -0.25, z - 0.2)
-                                );
-        var rightFrame = new Face(new Vector(x + xMod, -0.25, z + 0.5),
-                              new Vector(x + xMod, 0.15, z + 0.5),
-                              new Vector(x + xMod, 0.15, z + 0.2),
-                              new Vector(x + xMod, -0.25, z + 0.2)
-                                );
-      break;
-      case "n":case "s":
-        var zMod = side == "s"? 0.5 : -0.5;
-        var lintel = new Face(new Vector(x + 0.5, 0.25, z + zMod),
-                              new Vector(x + 0.5, 0.15, z + zMod),
-                              new Vector(x - 0.5, 0.15, z + zMod),
-                              new Vector(x - 0.5, 0.25, z + zMod));
-
-        var leftFrame = new Face(new Vector(x - 0.5, -0.25, z + zMod),
-                              new Vector(x - 0.5, 0.15, z + zMod),
-                              new Vector(x - 0.2, 0.15, z + zMod),
-                              new Vector(x - 0.2, -0.25, z + zMod)
-                                );
-        var rightFrame = new Face(new Vector(x + 0.5, -0.25, z + zMod),
-                              new Vector(x + 0.5, 0.15, z + zMod),
-                              new Vector(x + 0.2, 0.15, z + zMod),
-                              new Vector(x + 0.2, -0.25, z + zMod)
-                                );
-      break;
-    }
+    // Put solid polygons everywhere the door isn't:
+      
+      var lintel = this.relativeFace(x, z, side, 
+				     [new Vector(0.5, 0.25, 0.2),
+				      new Vector(0.5, 0.15, 0.2),
+				      new Vector(0.5, 0.15, -0.2),
+				      new Vector(0.5, 0.25, -0.2)]);
+      var leftFrame = this.relativeFace(x, z, side,
+					[new Vector(0.5, -0.25, -0.5),
+					 new Vector(0.5, 0.25, -0.5),
+					 new Vector(0.5, 0.25, -0.2),
+					 new Vector(0.5, -0.25, -0.2)]);
+      var rightFrame = this.relativeFace(x, z, side,
+					 [new Vector(0.5, -0.25, 0.5),
+					  new Vector(0.5, 0.25, 0.5),
+					  new Vector(0.5, 0.25, 0.2),
+					  new Vector(0.5, -0.25, 0.2)]
+					);
       lintel.setColor(this.wallColor);
+      //lintel.setLineColor(null);
       leftFrame.setColor(this.wallColor);
+      //leftFrame.setLineColor(null);
       rightFrame.setColor(this.wallColor);
+      //rightFrame.setLineColor(null);
       this.faces.push(lintel);
       this.faces.push(leftFrame);
       this.faces.push(rightFrame);
@@ -1048,6 +1103,7 @@ FirstPersonMaze.prototype = {
   },
 
   showHole: function(x, y, z) {
+    // remove tiles from ceiling or floor to make hole for pit trap
     for (var i = 0; i < this.bgFaces.length; i++) {
 
         var pos = this.bgFaces[i].getPos();
@@ -1057,5 +1113,11 @@ FirstPersonMaze.prototype = {
             this.bgFaces[i].hide();
         }
     }
-  }
+  },
+
+  onDrawOutside: function(callback) {
+      this._drawOutside = callback;
+  },
+
+    
 };
