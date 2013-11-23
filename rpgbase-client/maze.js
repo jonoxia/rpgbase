@@ -227,7 +227,6 @@ FirstPersonMaze.prototype = {
   init: function(ctx, frameTime) {
     this.ctx = ctx;
     this.faces = [];
-    this.bgFaces = [];
     this.cameraOrientation = new Vector(0, 0, 0);
     this.cameraPoint = new Vector(0, -0.1, 0);
     this.viewerPos = new Vector(0, 0, -5); // determined by experiment
@@ -262,7 +261,6 @@ FirstPersonMaze.prototype = {
 	}
     }
     this.faces = [];
-    this.bgFaces = [];
     this.setupScene();
     this._currentMap.load();
   },
@@ -440,17 +438,6 @@ FirstPersonMaze.prototype = {
       return b.getAvgZ() - a.getAvgZ();
     });
 
-      // ceiling and floor polygons:
-    var visibleBGFaces = [];
-    for (var i = 0; i < this.bgFaces.length; i++) {
-      this.bgFaces[i].calc(this);
-      var z = this.bgFaces[i].getAvgZ();
-      // z < 0 is behind me; z > lightLevel+1 is outside my light radius.
-      if (z > 0 && z <= maxZ) {
-        visibleBGFaces.push(this.bgFaces[i]);
-      }
-    }
-
     // Very backest background -- goes behind all polygons, will show
     // through where polygons are missing. All black, usually:
     this.ctx.save();
@@ -464,11 +451,6 @@ FirstPersonMaze.prototype = {
 
     // put origin at center of screen for drawing maze polygons:
     this.ctx.translate(this.width/2, this.height/2);
-
-    // render all ceiling/floor faces
-    for (var i = 0; i < visibleBGFaces.length; i++) {
-      visibleBGFaces[i].render(this.ctx, lightLevel);
-    }
 
     // then after that render all wall faces
     for (var i = 0; i < visibleFaces.length; i++) {
@@ -799,17 +781,17 @@ FirstPersonMaze.prototype = {
       var ceiling = this.relativeFace(x, z, side,
 				      [new Vector(0.5,  0.25, 0.2),
 				       new Vector(0.5, 0.25, -0.2),
-				       new Vector(-0.5, -0.2, -0.2),
-				       new Vector(-0.5, -0.2, 0.2)]);
+				       new Vector(-1.5, -0.2, -0.2),
+				       new Vector(-1.5, -0.2, 0.2)]);
       var leftWall = this.relativeFace(x, z, side,
 				       [new Vector(0.5, 0.25, -0.2),
-					new Vector(-0.5, -0.2, -0.2),
-					new Vector(-0.5, -0.4, -0.2),
+					new Vector(-1.5, -0.2, -0.2),
+					new Vector(-1.5, -0.6, -0.2),
 					new Vector(0.5, -0.25, -0.2)]);
       var rightWall = this.relativeFace(x, z, side,
 					[new Vector(0.5, 0.25, 0.2),
-					 new Vector(-0.5, -0.2, 0.2),
-					 new Vector(-0.5, -0.4, 0.2),
+					 new Vector(-1.5, -0.2, 0.2),
+					 new Vector(-1.5, -0.6, 0.2),
 					 new Vector(0.5, -0.25, 0.2)]);
       ceiling.setColor(this.bgColor);
       rightWall.setColor(this.bgColor);
@@ -821,14 +803,31 @@ FirstPersonMaze.prototype = {
       this.faces.push(leftWall);
       this.faces.push(rightWall);
 
-      var step = this.relativeFace(x, z, side, 
-				   [new Vector(0.5, -0.25, -0.2),
-				    new Vector(0.3, -0.25, -0.2),
-				    new Vector(0.3, -0.25, 0.2),
-				    new Vector(0.5, -0.25, 0.2)]);
-      step.setColor(this.stairColor);
-      step.setLineColor(this.hardLineColor);
-      this.faces.push(step);
+      // TODO copied from stairsUp, only difference is dY.
+      var stepX = 0.5;
+      var dX = -0.2;
+      var stepY = -0.25;
+      var dY = -0.1;
+        for (var i = 0; i < 5; i++) {
+            var step = this.relativeFace(x, z, side,
+					 [new Vector(stepX, stepY, -0.2),
+					  new Vector(stepX+dX, stepY, -0.2),
+					  new Vector(stepX+dX, stepY, 0.2),
+					  new Vector(stepX, stepY, 0.2)]);
+            stepX += dX;
+            var riser = this.relativeFace(x, z, side,
+					  [new Vector(stepX, stepY, -0.2),
+					   new Vector(stepX, stepY+dY, -0.2),
+					   new Vector(stepX, stepY+dY, 0.2),
+					   new Vector(stepX, stepY, 0.2)]);
+	    step.setColor(this.stairColor);
+	    riser.setColor(this.stairColor);
+	    step.setLineColor(this.hardLineColor);
+	    riser.setLineColor(this.hardLineColor);
+            this.faces.push(step);
+            this.faces.push(riser);
+            stepY += dY;
+        }
   },
 
   makeSpecialWall: function(x, z, side, terrainType) {
@@ -1068,7 +1067,7 @@ FirstPersonMaze.prototype = {
                             );
     floorTile.setColor(this.bgColor);
     floorTile.setLineColor(this.softLineColor);
-    this.bgFaces.push(floorTile);
+    this.faces.push(floorTile); 
     
     // ceiling
     var ceilTile = new Face(new Vector(x , 0.25, z),
@@ -1078,7 +1077,7 @@ FirstPersonMaze.prototype = {
                            );
     ceilTile.setColor(this.bgColor);
     ceilTile.setLineColor(this.softLineColor);
-    this.bgFaces.push(ceilTile);
+    this.faces.push(ceilTile);
   },
 
   setupScene: function(map) {
@@ -1136,13 +1135,13 @@ FirstPersonMaze.prototype = {
 
   showHole: function(x, y, z) {
     // remove tiles from ceiling or floor to make hole for pit trap
-    for (var i = 0; i < this.bgFaces.length; i++) {
+    for (var i = 0; i < this.faces.length; i++) {
 
-        var pos = this.bgFaces[i].getPos();
+        var pos = this.faces[i].getPos();
         if ((pos.z == z + 0.25 || pos.z == z - 0.25) &&
             pos.y == y &&
             (pos.x == x - 0.25 || pos.x == x + 0.25 )) {
-            this.bgFaces[i].hide();
+            this.faces[i].hide();
         }
     }
   },
