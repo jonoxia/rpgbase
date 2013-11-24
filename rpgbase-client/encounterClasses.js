@@ -400,6 +400,7 @@ BattleSystem.prototype = {
     this._whoseTurn = null; // currently only used to target counters
     this.encounter = encounter;
     this._fixedDisplayBoxes = [];
+    this.peacefulResolutionText = null;
 
     // TODO the position of the monster name in the upper right should
     // be specified in userland
@@ -803,6 +804,10 @@ BattleSystem.prototype = {
       this._freelyExit = true;
       endBattleMessage = "YOU BRAVELY RAN AWAY, AWAY!";
       break;
+    case "peace":
+      this._freelyExit = true;
+      endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
+      break;
     }
     var endBattleText = new ScrollingTextBox(endBattleMessage, this);
     this.pushMenu(endBattleText);
@@ -824,9 +829,13 @@ BattleSystem.prototype = {
     }
 
     // 2. if not, if i have a default handler, call the default handler
+    var result;
     if (this._effectHandlers[effectName]) {
       var result = this._effectHandlers[effectName](target, data);
     }
+
+    return result;
+    // TODO can this return stuff??
   },
 
   removeFromBattle: function(target) {
@@ -885,6 +894,19 @@ BattleSystem.prototype = {
     if (this.monsters.length == 0) {
       // if all monsters die, you win!
       this.endBattle("win");
+      return true;
+    }
+
+    // if all monsters are peaceful, it's a peaceful resolution:
+    var peacefulResolution = true;
+    for (var i = 0; i < this.monsters.length; i++) {
+      if (this.monsters[i].isAlive() &&
+	!this.monsters[i].hasStatus("peaceful")) {
+	 peacefulResolution = false;
+      }
+    }
+    if (peacefulResolution) {
+      this.endBattle("peace");
       return true;
     }
     
