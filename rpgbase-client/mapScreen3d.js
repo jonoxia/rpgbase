@@ -183,7 +183,28 @@ Face.prototype = {
 
   show: function() {
         this.hidden = false;
+  },
+
+  outline: function(ctx, scale, color) {
+    var a = this._screenA;
+    var b = this._screenB;
+    var c = this._screenC;
+    var d = this._screenD;
+
+    ctx.beginPath();
+
+    ctx.moveTo(scale * a.x, scale * a.y);
+    ctx.lineTo(scale * b.x, scale * b.y);
+    ctx.lineTo(scale * c.x, scale * c.y);
+    ctx.lineTo(scale * d.x, scale * d.y);
+    ctx.lineTo(scale * a.x, scale * a.y);
+
+      ctx.lineWidth = 3.0;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+      ctx.lineWidth = 1.0;
   }
+
 };
 
 function ThreeDMapScreen(ctx, width, height, frameTime) {
@@ -202,6 +223,7 @@ ThreeDMapScreen.prototype = {
   init: function(ctx, frameTime) {
     this.ctx = ctx;
     this.faces = [];
+    this.faceIndex = [];
     this.cameraOrientation = new Vector(3*Math.PI/8, Math.PI, 0); // looking down slighty
     this.cameraPoint = new Vector(4, 6, 4); // up above 4, 4
     this.viewerPos = new Vector(0, 0, -15); // determined by experiment
@@ -236,6 +258,7 @@ ThreeDMapScreen.prototype = {
 	}
     }
     this.faces = [];
+    this.faceIndex = [];
     this.setupScene();
     this._currentMap.load();
   },
@@ -357,9 +380,17 @@ ThreeDMapScreen.prototype = {
     // put origin at center of screen for drawing maze polygons:
     this.ctx.translate(this.width/2, this.height/2);
 
+
+    if (this.selectedSquare) {
+      var selectedFace = this.faceIndex[this.selectedSquare.z][this.selectedSquare.x];
+    }
+
     // then after that render all wall faces
     for (var i = 0; i < visibleFaces.length; i++) {
       visibleFaces[i].render(this.ctx, lightLevel, scale);
+      if (selectedFace && visibleFaces[i] === selectedFace) {
+        visibleFaces[i].outline(this.ctx, 35, "yellow");
+      }
     }
 
     // draw NPCs/chests/ etc as sprites in maze:
@@ -367,6 +398,7 @@ ThreeDMapScreen.prototype = {
     if (record != null) {
       this.drawNPC(record.npc, record.dist);
     }*/
+
     
     // any special fx (copied from map screen):
     if (this.animator.SFX) {
@@ -433,56 +465,6 @@ ThreeDMapScreen.prototype = {
     // Copied from map screen:
     this._afterRenderCallback = callback;
   },
-
-  makeStairsUp: function(x, z, side) {
-
-      // bounding box:
-      var leftWall = this.relativeFace(x, z, side,
-				       [new Vector(0.5, -0.25, -0.2),
-					new Vector(0.5, 0.25, -0.2),
-					new Vector(-1.5, 0.25, -0.2),
-					new Vector(-1.5, -0.25, -0.2)]);
-      // extends back into the square bheind the stairs.
-      var rightWall = this.relativeFace(x, z, side,
-					[new Vector(0.5, -0.25, 0.2),
-					 new Vector(0.5, 0.25, 0.2),
-					 new Vector(-1.5, 0.25, 0.2),
-					 new Vector(-1.5, -0.25, 0.2)]);
-      leftWall.setColor(this.bgColor);
-      rightWall.setColor(this.bgColor);
-      rightWall.setLineColor(this.softLineColor);
-      leftWall.setLineColor(this.softLineColor);
-      this.faces.push(leftWall);
-      this.faces.push(rightWall);
-
-
-      // steps and risers:
-      var stepX = 0.5;
-      var dX = -0.2;
-      var stepY = -0.25;
-      var dY = 0.1;
-        for (var i = 0; i < 5; i++) {
-            var step = this.relativeFace(x, z, side,
-					 [new Vector(stepX, stepY, -0.2),
-					  new Vector(stepX+dX, stepY, -0.2),
-					  new Vector(stepX+dX, stepY, 0.2),
-					  new Vector(stepX, stepY, 0.2)]);
-            stepX += dX;
-            var riser = this.relativeFace(x, z, side,
-					  [new Vector(stepX, stepY, -0.2),
-					   new Vector(stepX, stepY+dY, -0.2),
-					   new Vector(stepX, stepY+dY, 0.2),
-					   new Vector(stepX, stepY, 0.2)]);
-	    step.setColor(this.stairColor);
-	    riser.setColor(this.stairColor);
-	    step.setLineColor(this.hardLineColor);
-	    riser.setLineColor(this.hardLineColor);
-            this.faces.push(step);
-            this.faces.push(riser);
-            stepY += dY;
-        }
-  },
-
   relativeFace: function(x, z, side, vertices) {
       // specify vectors with x+1 as the "forward" side, e.g. east-facing
       // is the default.
@@ -517,82 +499,6 @@ ThreeDMapScreen.prototype = {
 		      transformedVectors[1],
 		      transformedVectors[2],
 		      transformedVectors[3]);
-  },
-
-  makeStairsDown: function(x, z, side){
-      // bounding box:
-      // our first diagonal polygon. I'm so proud.
-
-      var ceiling = this.relativeFace(x, z, side,
-				      [new Vector(0.5,  0.25, 0.2),
-				       new Vector(0.5, 0.25, -0.2),
-				       new Vector(-1.5, -0.2, -0.2),
-				       new Vector(-1.5, -0.2, 0.2)]);
-      var leftWall = this.relativeFace(x, z, side,
-				       [new Vector(0.5, 0.25, -0.2),
-					new Vector(-1.5, -0.2, -0.2),
-					new Vector(-1.5, -0.6, -0.2),
-					new Vector(0.5, -0.25, -0.2)]);
-      var rightWall = this.relativeFace(x, z, side,
-					[new Vector(0.5, 0.25, 0.2),
-					 new Vector(-1.5, -0.2, 0.2),
-					 new Vector(-1.5, -0.6, 0.2),
-					 new Vector(0.5, -0.25, 0.2)]);
-      ceiling.setColor(this.bgColor);
-      rightWall.setColor(this.bgColor);
-      leftWall.setColor(this.bgColor);
-      ceiling.setLineColor(this.softLineColor);
-      rightWall.setLineColor(this.softLineColor);
-      leftWall.setLineColor(this.softLineColor);
-      this.faces.push(ceiling);
-      this.faces.push(leftWall);
-      this.faces.push(rightWall);
-
-      // TODO copied from stairsUp, only difference is dY.
-      var stepX = 0.5;
-      var dX = -0.2;
-      var stepY = -0.25;
-      var dY = -0.1;
-        for (var i = 0; i < 5; i++) {
-            var step = this.relativeFace(x, z, side,
-					 [new Vector(stepX, stepY, -0.2),
-					  new Vector(stepX+dX, stepY, -0.2),
-					  new Vector(stepX+dX, stepY, 0.2),
-					  new Vector(stepX, stepY, 0.2)]);
-            stepX += dX;
-            var riser = this.relativeFace(x, z, side,
-					  [new Vector(stepX, stepY, -0.2),
-					   new Vector(stepX, stepY+dY, -0.2),
-					   new Vector(stepX, stepY+dY, 0.2),
-					   new Vector(stepX, stepY, 0.2)]);
-	    step.setColor(this.stairColor);
-	    riser.setColor(this.stairColor);
-	    step.setLineColor(this.hardLineColor);
-	    riser.setLineColor(this.hardLineColor);
-            this.faces.push(step);
-            this.faces.push(riser);
-            stepY += dY;
-        }
-  },
-
-  makeSpecialWall: function(x, z, side, terrainType) {
-    // left side
-      switch (terrainType) {
-      case 3: // Stairs Up
-	  console.log("Making stairs up");
-      this.makeStairsUp(x, z, side);
-      this.makeDoor(x, z, side);
-	  break;
-      case 2: // Stairs Down
-      this.makeStairsDown(x, z, side);
-      this.makeDoor(x, z, side);
-	  break;
-      case 4: // Open Door
-	  this.makeDoor(x, z, side);
-	  // through this door is visible the outside world; see
-	  // doorToOutsideInFrontOfMe, onDrawOutside, and render().
-	  break;
-      }
   },
     
   getHeightAt: function(x, z) {
@@ -658,6 +564,10 @@ ThreeDMapScreen.prototype = {
                             );
     floorTile.setColor(this.bgColor);
     floorTile.setLineColor(this.softLineColor);
+    if (!this.faceIndex[z]) {
+      this.faceIndex[z] = {};
+    }
+    this.faceIndex[z][x] = floorTile;
     this.faces.push(floorTile); 
   },
 
@@ -702,22 +612,31 @@ ThreeDMapScreen.prototype = {
         });
   },
 
-  showHole: function(x, y, z) {
-    // remove tiles from ceiling or floor to make hole for pit trap
-    for (var i = 0; i < this.faces.length; i++) {
-
-        var pos = this.faces[i].getPos();
-        if ((pos.z == z + 0.25 || pos.z == z - 0.25) &&
-            pos.y == y &&
-            (pos.x == x - 0.25 || pos.x == x + 0.25 )) {
-            this.faces[i].hide();
-        }
+  reverseTransform: function(screenX, screenY) {
+    var map = this._currentMap;
+    for (var z = 0; z < map._dimY; z++) {
+      for (var x = 0; x < map._dimX; x++) {
+        var face = this.faceIndex[z][x];
+	  // TODO duplicates some code from Face.getScreenRect
+	  var minScreenX = Math.min(face._screenA.x, face._screenB.x,
+				    face._screenC.x, face._screenD.x)*35 + this.width/2;
+	  // TODO don't hardcode scale factor here
+	  var maxScreenX = Math.max(face._screenA.x, face._screenB.x,
+				    face._screenC.x, face._screenD.x)*35 + this.width/2;
+	  var minScreenY = Math.min(face._screenA.y, face._screenB.y,
+				    face._screenC.y, face._screenD.y)*35 + this.height/2;
+	  var maxScreenY = Math.max(face._screenA.y, face._screenB.y,
+				    face._screenC.y, face._screenD.y)*35 + this.height/2;
+	  if (screenX > minScreenX && screenX < maxScreenX &&
+	      screenY > minScreenY && screenY < maxScreenY) {
+	      return {x: x, z: z};
+	  }
+      }
     }
+    return null;
   },
 
-  onDrawOutside: function(callback) {
-      this._drawOutside = callback;
+  setSelectedSquare: function(selectedSquare) {
+      this.selectedSquare = selectedSquare;
   }
-   
- 
 };
