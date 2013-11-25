@@ -207,6 +207,8 @@ Face.prototype = {
 
 };
 
+
+
 function ThreeDMapScreen(ctx, width, height, frameTime) {
   this.width = width;
   this.height = height;
@@ -224,9 +226,10 @@ ThreeDMapScreen.prototype = {
     this.ctx = ctx;
     this.faces = [];
     this.faceIndex = [];
-    this.cameraOrientation = new Vector(3*Math.PI/8, Math.PI, 0); // looking down slighty
+    this.zoomLevel = -15;
+    this.cameraOrientation = new Vector(Math.PI/2, Math.PI, 0); // looking down slighty
     this.cameraPoint = new Vector(4, 6, 4); // up above 4, 4
-    this.viewerPos = new Vector(0, 0, -15); // determined by experiment
+      this.viewerPos = new Vector(0, 0, this.zoomLevel);
     var self = this;
     this.animator = new Animator(frameTime,
                                  function() { self.render(); });
@@ -284,9 +287,9 @@ ThreeDMapScreen.prototype = {
         self.cameraOrientation.y -= Math.PI * 2;
       }
 	// move camera point as well....
-	self.cameraPoint = new Vector(4 - 6*Math.sin(self.cameraOrientation.y),
+	/*self.cameraPoint = new Vector(4 - 6*Math.sin(self.cameraOrientation.y),
 				      3,
-				      4 - 6*Math.cos(self.cameraOrientation.y));
+				      4 - 6*Math.cos(self.cameraOrientation.y));*/
     });
   },
 
@@ -298,12 +301,43 @@ ThreeDMapScreen.prototype = {
         self.cameraOrientation.y += Math.PI * 2;
       }
 	// move camera point as well.... // close but not right. fix this.
-	self.cameraPoint = new Vector(4 - 6*Math.sin(self.cameraOrientation.y),
+	/*self.cameraPoint = new Vector(4 - 6*Math.sin(self.cameraOrientation.y),
 				      3,
-				      4 - 6*Math.cos(self.cameraOrientation.y));
+				      4 - 6*Math.cos(self.cameraOrientation.y));*/
 
     });
   },
+
+  rotateUp: function() {
+    var self = this;
+    return new Animation(5, function() {
+      self.cameraOrientation.x -= Math.PI / 100;
+      if (self.cameraOrientation.x < 0) {
+        self.cameraOrientation.x += Math.PI * 2;
+      }
+    });
+	
+  },
+  rotateDown: function() {
+    var self = this;
+    return new Animation(5, function() {
+      self.cameraOrientation.x += Math.PI / 100;
+      if (self.cameraOrientation.x < 0) {
+        self.cameraOrientation.x += Math.PI * 2;
+      }
+    });
+	
+  },
+
+    zoomIn: function() {
+	this.zoomLevel += 1;
+	this.viewerPos = new Vector(0, 0, this.zoomLevel); // determined by experiment
+    },
+
+    zoomOut: function() {
+	this.zoomLevel -= 1;
+	this.viewerPos = new Vector(0, 0, this.zoomLevel);
+    },
 
   panLeft: function() {
     var self = this;
