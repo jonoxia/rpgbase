@@ -174,8 +174,8 @@ Face.prototype = {
     return { left: Math.min(a.x, b.x, c.x, d.x),
              top: Math.min(a.y, b.y, c.y, d.y),
              right: Math.max(a.x, b.x, c.x, d.x),
-             bottom: Math.max(a.y, b.y, c.y, d.y) };
-    },
+             bottom: Math.max(a.y, b.y, c.y, d.y)};
+  },
 
   hide: function() {
         this.hidden = true;
@@ -208,6 +208,38 @@ Face.prototype = {
 };
 
 
+function MapDude(spriteSheet, spriteX, spriteY) {
+    this.defineSprite(spriteSheet, 16, 24, 0, -8);
+    this.x = 0;
+    this.y = 0;
+    this.z = 0;
+    this.setSprite(spriteX, spriteY);
+}
+MapDude.prototype = {
+    enterMap3d: function(mapScreen, x, z) {
+	this._screen = mapScreen;
+	this.x = x;
+	this.z = z;
+	this.y = mapScreen.getHeightAt(x, z);
+    },
+    plot3d: function(ctx) {
+	var myTile = this._screen.getFaceAt(this.x, this.z);
+	var screenQuad = this._screen.getScaledScreenQuad(myTile);
+	
+	var scaleWidth = Math.abs(screenQuad.c.x - screenQuad.d.x);
+	var scaleHeight = Math.floor(this._height * scaleWidth/ this._width); 
+	var top = (screenQuad.c.y + screenQuad.d.y)/2 - scaleHeight;
+	var left = Math.min(screenQuad.c.x, screenQuad.d.x);
+        /*ctx.drawImage(this._img,
+                        screenRect.left,
+                        screenRect.bottom - myHeight);*/
+	//console.log("will plot width = " + scaleWidth + ", height = " + scaleHeight + 
+		//    ", left = " + left + ", top = " + top);
+        this.scalePlot(ctx, scaleWidth, scaleHeight, left, top);
+    }
+};
+MapSpriteMixin(MapDude.prototype);
+
 
 function ThreeDMapScreen(ctx, width, height, frameTime) {
   this.width = width;
@@ -226,6 +258,7 @@ ThreeDMapScreen.prototype = {
     this.ctx = ctx;
     this.faces = [];
     this.faceIndex = [];
+      this.scale = 35;
     this.zoomLevel = -15;
     this.cameraOrientation = new Vector(Math.PI/2, Math.PI, 0); // looking down slighty
     this.cameraPoint = new Vector(4, 6, 4); // up above 4, 4
@@ -371,7 +404,6 @@ ThreeDMapScreen.prototype = {
     // Main drawing function - draw everything!
     var lightLevel = this.getLightLevel();
     var theta = this.cameraOrientation.y;
-    var scale = 35;
 
     /*var playerPos = {x: 2, y: 0, z: 3};
     this.cameraPoint = new Vector(playerPos.x - 0.3*Math.sin(theta),
@@ -421,9 +453,9 @@ ThreeDMapScreen.prototype = {
 
     // then after that render all wall faces
     for (var i = 0; i < visibleFaces.length; i++) {
-      visibleFaces[i].render(this.ctx, lightLevel, scale);
+      visibleFaces[i].render(this.ctx, lightLevel, this.scale);
       if (selectedFace && visibleFaces[i] === selectedFace) {
-        visibleFaces[i].outline(this.ctx, 35, "yellow");
+        visibleFaces[i].outline(this.ctx, this.scale, "yellow");
       }
     }
 
@@ -545,6 +577,10 @@ ThreeDMapScreen.prototype = {
     return this._currentMap._mapData[z][x];
   },
 
+  getFaceAt: function(x, z) {
+     return this.faceIndex[z][x];
+  },
+
   makeWalls: function(x, y, z) {
       var leftNeighbor = this.getHeightAt(x - 1, z);
       var rightNeighbor = this.getHeightAt(x + 1, z);
@@ -651,18 +687,9 @@ ThreeDMapScreen.prototype = {
     for (var z = 0; z < map._dimY; z++) {
       for (var x = 0; x < map._dimX; x++) {
         var face = this.faceIndex[z][x];
-	  // TODO duplicates some code from Face.getScreenRect
-	  var minScreenX = Math.min(face._screenA.x, face._screenB.x,
-				    face._screenC.x, face._screenD.x)*35 + this.width/2;
-	  // TODO don't hardcode scale factor here
-	  var maxScreenX = Math.max(face._screenA.x, face._screenB.x,
-				    face._screenC.x, face._screenD.x)*35 + this.width/2;
-	  var minScreenY = Math.min(face._screenA.y, face._screenB.y,
-				    face._screenC.y, face._screenD.y)*35 + this.height/2;
-	  var maxScreenY = Math.max(face._screenA.y, face._screenB.y,
-				    face._screenC.y, face._screenD.y)*35 + this.height/2;
-	  if (screenX > minScreenX && screenX < maxScreenX &&
-	      screenY > minScreenY && screenY < maxScreenY) {
+	  var rect = this.getScaledScreenRect(face);
+	  if (screenX > rect.left && screenX < rect.right &&
+	      screenY > rect.top && screenY < rect.bottom) {
 	      return {x: x, z: z};
 	  }
       }
@@ -672,5 +699,25 @@ ThreeDMapScreen.prototype = {
 
   setSelectedSquare: function(selectedSquare) {
       this.selectedSquare = selectedSquare;
+  },
+
+  getScaledScreenRect: function(face) {
+      var screenRect = face.getScreenRect();
+      return {left: screenRect.left * this.scale + this.width/2,
+	      right: screenRect.right * this.scale + this.width/2,
+	      top: screenRect.top * this.scale + this.height/2,
+	      bottom: screenRect.bottom * this.scale + this.height/2};
+
+  },
+
+  getScaledScreenQuad: function(face) {
+      var a = face._screenA;
+      var b = face._screenB;
+      var c = face._screenC;
+      var d = face._screenD;
+      return {c: {x: c.x * this.scale + this.width/2,
+		  y: c.y * this.scale + this.height/2},
+	      d: {x: d.x * this.scale + this.width/2,
+		  y: d.y * this.scale + this.height/2}};
   }
 };
