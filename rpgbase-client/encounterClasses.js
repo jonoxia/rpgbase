@@ -160,6 +160,7 @@ function BattleSystem(htmlElem, canvas, options) {
   // use onClose instead
   this._attackSFX = null;
   this._statDisplayType = "battle";
+  this._battleOver = false;
 
   if (options.startBattleMsg) {
     this.startBattleMsg = options.startBattleMsg;
@@ -197,6 +198,10 @@ function BattleSystem(htmlElem, canvas, options) {
   this._victoryCallback = null;
   if (options.onVictory) {
     this._victoryCallback = options.onVictory;
+  }
+  this._defeatCallback = null;
+  if (options.onDefeat) {
+    this._defeatCallback = options.onDefeat;
   }
   this._randomTargetCallback = null;
 
@@ -387,6 +392,7 @@ BattleSystem.prototype = {
   startBattle: function(player, encounter, landType) {
     // TODO this is similar to MenuSystemMixin.open() but not quite
     // the same:
+    this._battleOver = false;
     this._freelyExit = false;
     this.deadMonsters = [];
     this.player = player;
@@ -440,7 +446,9 @@ BattleSystem.prototype = {
 
       // callback to userland to let menu be customized for this PC:
       var customCmds = this._party[i].customizeCmds(
-        this.defaultCmdSet);
+          this.defaultCmdSet);
+      // TODO: Customize command menus at start of every round, not just once at
+      // the start of the battle, because the available commands can change
       this.pcMenus.push(this.makeMenuForPC(this._party[i],
                                            customCmds));
     }
@@ -517,6 +525,10 @@ BattleSystem.prototype = {
 
   onVictory: function(callback) {
     this._victoryCallback = callback;
+  },
+
+  onDefeat: function(callback) {
+    this._defeatCallback = callback;
   },
 
   onEffect: function(effectName, callback) {
@@ -751,7 +763,7 @@ BattleSystem.prototype = {
     this.clearMsg();
     this.updateStats(); // in case end of round effects changed 
     // anything
-    if (!this._freelyExit) {
+    if (!this._battleOver) {
       // Unless fight has ended already, show menu for next round
       this.showStartRoundMenu();
     }
@@ -766,6 +778,7 @@ BattleSystem.prototype = {
     this.pcMenus = [];
     this._fixedDisplayBoxes = [];
     this._attackSFX = null;
+    this._battleOver = true;
     this.clearMsg();
 
     // TODO another error:  topMenu.getPos is not a function
@@ -778,10 +791,9 @@ BattleSystem.prototype = {
       this._party[i].clearTempStatMods();
     }
 
-      var endBattleMessage;
+    var endBattleMessage;
     switch (winLoseRun) {
     case "win":
-      this._freelyExit = true;
       if (this._victoryCallback) {
         endBattleMessage = this._victoryCallback(this.player,
                                                  this.deadMonsters);
@@ -794,23 +806,29 @@ BattleSystem.prototype = {
       }
       break;
     case "lose":
-      endBattleMessage = "YOU LOST! IT IS VERY SAD. THERE SHOULD PROBABLY BE A BUTTON HERE TO RELOAD A SAVE OR WHATEVER.";
+      endBattleMessage = "YOU LOST! IT IS VERY SAD. DEFEAT TEXT GOES HERE.";
       if (this.encounter.lose) {
         // special encounter lose results
         this.encounter.lose(this, this.player);
       }
       break;
     case "run":
-      this._freelyExit = true;
       endBattleMessage = "YOU BRAVELY RAN AWAY, AWAY!";
       break;
     case "peace":
-      this._freelyExit = true;
       endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
       break;
     }
     var endBattleText = new ScrollingTextBox(endBattleMessage, this);
     this.pushMenu(endBattleText);
+    var self = this;
+    endBattleText.onClose(function() {
+      self._freelyExit = true;
+      self.close();
+      if (winLoseRun == "lose" && self._defeatCallback) {
+	  self._defeatCallback();
+      }
+    });
     endBattleText.setPos(16, 16);
   },
 

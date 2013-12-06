@@ -282,6 +282,10 @@ Player.prototype = {
     this._resources[resourceName] += amount;
   },
 
+  setResource: function(resourceName, amount) {
+    this._resources[resourceName] = amount;
+  },
+
   hasResource: function(resourceName, amount) {
     if (!this._resources[resourceName]) {
       return false;
@@ -421,7 +425,7 @@ function MapSpriteMixin(subClassPrototype) {
                   this._width, this._height, x, y,
                   scaleWidth, scaleHeight);
   };
-
+    
   subClassPrototype.canMove = function(mapScreen, deltaX, deltaY) {
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
@@ -631,6 +635,12 @@ PlayerCharacter.prototype = {
     var myItems = this.getInventoryCmds(true);
     for (var i = 0; i < myItems.length; i++) {
       myItemCmd.add(myItems[i].name, new BatCmd(myItems[i]));
+      /* TODO - problem here is having two items with the same names
+       * the second one will overwrite the first in the command set.
+       * it works in field menu because they are not all put into a
+       * BattleCommandSet there, they are directly added to the menu instead.
+       * Same thing could be done here if we were passed an empty menu and
+       * told to populate it...*/
     }
     defaultCmds.add("ITEM", myItemCmd);
 

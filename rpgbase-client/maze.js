@@ -287,7 +287,7 @@ FirstPersonMaze.prototype = {
   },
 
   playerPosVector: function() {
-    var leadCharPos = this.player.aliveParty[0].getPos();
+    var leadCharPos = this.player.party[0].getPos();
     return new Vector(leadCharPos.x, 0, leadCharPos.y);
     // TODO make cameraOrientation a function of character facing?
   },

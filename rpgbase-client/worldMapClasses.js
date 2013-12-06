@@ -236,8 +236,8 @@ MapScreen.prototype = {
   },
   
   setTileOffset: function( newOffset ) {
-	this.pixelOffset = {x: newOffset.x * this.tilePixelsX,
-			    y: newOffset.y * this.tilePixelsY};
+    this.pixelOffset = {x: newOffset.x * this.tilePixelsX,
+                        y: newOffset.y * this.tilePixelsY};
   },
 
   setPlayer: function(player) {

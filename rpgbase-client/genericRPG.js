@@ -44,7 +44,7 @@ GenericRPG.prototype = {
 
     // Create the loader (to load all images)
     this.loader = new AssetLoader();
-    if (options.cursorImg) {
+    if (options.cursorImg) {  // menu cursor |>
       this._cursorImg = this.loader.add(options.cursorImg);
     }
 
@@ -72,7 +72,9 @@ GenericRPG.prototype = {
     this._setUpAudioPlayer();
     this._setUpMapScreen(mapFrameRate);
 
-    this.player = options.partyInit(this.loader);
+    if (options.partyInit) {
+      options.partyInit(this.loader);
+    }
     this.battleSystem = options.battleInit(this.canvas,
                                            this.loader,
                                            this.mazeScreen,
