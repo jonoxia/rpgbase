@@ -611,7 +611,16 @@ GenericRPG.prototype = {
       this.player.marchInOrder();
       this.inputDispatcher.menuMode("dialog").open(this.player);
       this.dialoglog.scrollText(pc.name + " HAS DIED.");
-      // TODO check for TPK and do game-over screen!
+      // check for TPK and do game-over screen!
+      var self = this;
+      this.dialoglog.onClose(function() {
+        if (self.player.getAliveParty().length == 0) {
+            if (self.doGameOver) {
+                // defined in userland -- a little awkward.
+                self.doGameOver(); 
+            }
+        }
+      });
     }
   },
 
