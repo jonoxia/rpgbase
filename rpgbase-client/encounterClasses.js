@@ -479,14 +479,14 @@ BattleSystem.prototype = {
     if (this.menuImpl == "canvas" && this.monsters.length > 0) {
       var monsterStatLines = [];
       for (var i = 0; i < this.monsters.length; i++) {
-	  var hp = this.monsters[i].getStat("hp");
-	  if (hp >= 100) {
-              monsterStatLines.push(hp);
-	  } else if (hp >= 10) {
-              monsterStatLines.push(" " + hp);
-	  } else {
-	      monsterStatLines.push("  " + hp);
-	  }
+        var hp = this.monsters[i].getStat("hp");
+        if (hp >= 100) {
+          monsterStatLines.push("" + hp);
+        } else if (hp >= 10) {
+          monsterStatLines.push(" " + hp);
+        } else {
+          monsterStatLines.push("  " + hp);
+        }
       }
       this._monsterHitPoints.setText(monsterStatLines);
     }
@@ -529,6 +529,10 @@ BattleSystem.prototype = {
 
   onDefeat: function(callback) {
     this._defeatCallback = callback;
+  },
+  
+  onGameOver: function(callback) {
+    this._gameOverCallback = callback;
   },
 
   onEffect: function(effectName, callback) {
@@ -806,7 +810,11 @@ BattleSystem.prototype = {
       }
       break;
     case "lose":
-      endBattleMessage = "YOU LOST! IT IS VERY SAD. DEFEAT TEXT GOES HERE.";
+        if (this._defeatCallback) {
+            endBattleMessage = this._defeatCallback();
+        } else {
+            endBattleMessage = "YOU LOST! IT IS VERY SAD. DEFEAT TEXT GOES HERE.";
+        }
       if (this.encounter.lose) {
         // special encounter lose results
         this.encounter.lose(this, this.player);
@@ -825,8 +833,8 @@ BattleSystem.prototype = {
     endBattleText.onClose(function() {
       self._freelyExit = true;
       self.close();
-      if (winLoseRun == "lose" && self._defeatCallback) {
-	  self._defeatCallback();
+      if (winLoseRun == "lose" && self._gameOverCallback) {
+        self._gameOverCallback();
       }
     });
     endBattleText.setPos(16, 16);
@@ -909,18 +917,27 @@ BattleSystem.prototype = {
     // TODO set some kind of guard flag? didn't we used to have one?
     var activeParty = this.getActiveParty();
 
-    if (this.monsters.length == 0) {
-      // if all monsters die, you win!
+    // if all monsters are dead or fled, you win:
+    var aliveMonsters = false;
+    for (var i = 0; i < this.monsters.length; i++) {
+        if (this.monsters[i].isAlive() &&
+            !this.monsters[i].hasStatus("fled")) {
+            aliveMonsters = true;
+        }
+    }
+    if (!aliveMonsters) {
+      // you win!
       this.endBattle("win");
       return true;
     }
+    // TODO how do peaceful and fled interact?
 
     // if all monsters are peaceful, it's a peaceful resolution:
     var peacefulResolution = true;
     for (var i = 0; i < this.monsters.length; i++) {
       if (this.monsters[i].isAlive() &&
-	!this.monsters[i].hasStatus("peaceful")) {
-	 peacefulResolution = false;
+         !this.monsters[i].hasStatus("peaceful")) {
+         peacefulResolution = false;
       }
     }
     if (peacefulResolution) {

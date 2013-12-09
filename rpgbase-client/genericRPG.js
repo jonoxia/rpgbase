@@ -75,10 +75,7 @@ GenericRPG.prototype = {
     if (options.partyInit) {
       options.partyInit(this.loader);
     }
-    this.battleSystem = options.battleInit(this.canvas,
-                                           this.loader,
-                                           this.mazeScreen,
-                                           this._cursorImg);
+    this.battleSystem = options.battleInit(this);
     this.manuel = options.monsterInit(this.loader); // monster dictionary
     this.fieldMenu = options.fieldMenuInit(this, this._cursorImg);
     this.overworld = options.overworldInit(this);
