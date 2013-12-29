@@ -344,6 +344,7 @@ function MapSpriteMixin(subClassPrototype) {
     this._x = 0;
     this._y = 0;
     this._spriteSlice = {x: 0, y: 0};
+    this._defaultSpriteSlice = {x: 0, y: 0};
     this._width = width;
     this._height = height;
 
@@ -359,6 +360,7 @@ function MapSpriteMixin(subClassPrototype) {
   
   subClassPrototype.setSprite = function(sliceX, sliceY) {
     this._spriteSlice = {x: sliceX, y: sliceY};
+    this._defaultSpriteSlice = {x: sliceX, y: sliceY};
   };
 
   subClassPrototype.useSpriteRow = function(sliceY) {
