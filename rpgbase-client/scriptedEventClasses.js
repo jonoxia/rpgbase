@@ -190,8 +190,98 @@ ScriptedEvent.prototype = {
     });
     return this; // for daisy-chaining
   },
-  
+
+  partyMove: function(directionList) {
+    // moves the whole party according to directionList
+    // TODO much code duplicated from NPC.walkPath
+    var self = this;
+
+
+    function simplifiedMove(player, mapScreen, dx, dy) {
+        var aliveParty = player.aliveParty;
+        var mainChar = aliveParty[0];
+        var numAnimFrames = mainChar.walkAnimationFrames;
+        // set facing of main character even if we can't move:
+        mainChar.setFacing(dx, dy);
+        var scrolliness = mapScreen.calcAutoScroll( mainChar._x, 
+				                         mainChar._y,
+				                         dx,
+				                         dy);
+        var animation = null;
+        if (scrolliness.x != 0 || scrolliness.y != 0) {
+            // if screen will scroll, start with the scrolling animation
+            animation = mapScreen.getScrollAnimation(scrolliness,
+                                                     numAnimFrames);
+        } else {
+            // otherwise start with an empty animation.
+            animation = new Animation(numAnimFrames);
+        }
+        var partyMoveDirections = [{x: dx, y: dy}];
+        for (var i = 0; i < aliveParty.length - 1; i++) {
+          partyMoveDirections.push(aliveParty[i].getLastMoved());
+        }
+
+        for (var i = 0; i < aliveParty.length; i++) {
+          var member = aliveParty[i];
+          var walkDir = partyMoveDirections[i];
+          animation.composite(member.makeStepAnimation
+                              (mapScreen, numAnimFrames,
+                               walkDir.x, walkDir.y));
+        }
+        
+        return animation;
+    }
+
+    function doAddStep(deltaX, deltaY) {
+      self._addStep(function() {
+          /* Make sure not to make one call to simplifiedMove until
+           * the previous call has done animating.  Otherwise
+           * lastMoved won't be correct and nobody will follow the
+           * lead character. */
+          var stepAnim = simplifiedMove(self._player,
+                                        self._mapScreen, deltaX, deltaY);
+          stepAnim.onFinish(function() {
+              self.nextStep();
+          });
+          self._mapScreen.animate(stepAnim);
+      });
+    }
+
+    var deltaX, deltaY;
+    for (var i = 0; i < directionList.length; i++) {
+        switch(directionList[i]) {
+        case "n":
+            deltaX = 0, deltaY = -1; break;
+        case "s":
+            deltaX = 0, deltaY = 1; break;
+        case "e":
+            deltaX = 1, deltaY = 0; break;
+        case "w":
+            deltaX = -1, deltaY = 0; break;
+        }
+
+        doAddStep(deltaX, deltaY);
+    }
+     
+    return this;
+  },
+
+  partyEnter: function(mapDomain, x, y) {
+    // Puts party onto map at location x, y.
+    // Different from switchMapDomain because this one moves
+    // the party, that one only moves the "camera".
+    var self = this;
+    this._addStep(function() {
+        console.log("partyEnter - mapDomain is " + mapDomain.id);
+      self._mapScreen.setNewDomain(mapDomain);
+      self._player.enterMapScreen(self._mapScreen, x, y);
+      self.nextStep();
+    });
+    return this;
+  },
+
   pcMove: function(pc, directionList) {
+    // moves a single PC, in case we need to break up party for dialogue
     var self = this;
     this._addStep(function() {
       // do stuff here
@@ -222,7 +312,7 @@ ScriptedEvent.prototype = {
           x = pos.x; y = pos.y;
       }
       self._mapScreen.scrollToShow(x, y);
-      // TODO animate map screen...
+      // TODO animate scrolling of map screen...
       self.nextStep();
     });
     return this; // for daisy-chaining
@@ -231,9 +321,8 @@ ScriptedEvent.prototype = {
   scrollMapTo: function(x, y) {
     var self = this;
     this._addStep(function() {
-      // do stuff here
-      // self._mapScreen
-      // TODO call nextStep when scroll animation done
+      self._mapScreen.scrollToShow(x, y);
+      // TODO animate scrolling of map screen...
       self.nextStep();
     });
     return this; // for daisy-chaining
