@@ -116,6 +116,7 @@ ScriptedEvent.prototype = {
       textBox.setPos(dlg._positioning.msgLeft,
                      dlg._positioning.msgTop);
       textBox.onClose(function() {
+        dlg.popMenu();
         callback();
       });
   },
@@ -125,9 +126,9 @@ ScriptedEvent.prototype = {
   npcSpeak: function(npc, text) {
     var self = this;
     this._addStep(function() {
-            self.scrollText(text, function() {
-                    self.nextStep();
-                });
+        self.scrollText(text, function() {
+            self.nextStep();
+        });
     });
     return this; // for daisy-chaining
   },
@@ -183,12 +184,11 @@ ScriptedEvent.prototype = {
   pcSpeak: function(pc, text) {
     var self = this;
     this._addStep(function() {
-      // TODO call nextStep when player closes the dialog
-      // window. Actually not sure how this will be different from
-      // npcSpeak.
-      self.nextStep();
+        self.scrollText(text, function() {
+            self.nextStep();
+        });
     });
-    return this; // for daisy-chaining
+    return this;
   },
 
   partyMove: function(directionList) {
@@ -272,7 +272,6 @@ ScriptedEvent.prototype = {
     // the party, that one only moves the "camera".
     var self = this;
     this._addStep(function() {
-        console.log("partyEnter - mapDomain is " + mapDomain.id);
       self._mapScreen.setNewDomain(mapDomain);
       self._player.enterMapScreen(self._mapScreen, x, y);
       self.nextStep();
@@ -280,15 +279,49 @@ ScriptedEvent.prototype = {
     return this;
   },
 
-  pcMove: function(pc, directionList) {
-    // moves a single PC, in case we need to break up party for dialogue
+  pcEnter: function(pc, mapDomain, x, y) {
     var self = this;
     this._addStep(function() {
-      // do stuff here
-      // TODO call nextStep when pc move animation finishes
+      self._mapScreen.setNewDomain(mapDomain);
+      pc.setPos(x, y);
+      pc.setFacing(0, 1);
       self.nextStep();
     });
-    return this; // for daisy-chaining
+    return this;
+  },
+
+  pcMove: function(pc, directionList) {
+      var self = this;
+    function doAddStep(deltaX, deltaY) {
+      self._addStep(function() {
+          var numAnimFrames = pc.walkAnimationFrames;
+          var stepAnim = pc.makeStepAnimation(self._mapScreen,
+                                              numAnimFrames,
+                                              deltaX, deltaY);
+          stepAnim.onFinish(function() {
+              self.nextStep();
+          });
+          self._mapScreen.animate(stepAnim);
+      });
+    }
+
+    var deltaX, deltaY;
+    for (var i = 0; i < directionList.length; i++) {
+        switch(directionList[i]) {
+        case "n":
+            deltaX = 0, deltaY = -1; break;
+        case "s":
+            deltaX = 0, deltaY = 1; break;
+        case "e":
+            deltaX = 1, deltaY = 0; break;
+        case "w":
+            deltaX = -1, deltaY = 0; break;
+        }
+
+        doAddStep(deltaX, deltaY);
+    }
+     
+    return this;
   },
 
   pcMoveTo: function(pc, x, y) {
