@@ -439,6 +439,7 @@ GenericRPG.prototype = {
         self._mainMode = "map";
 	  self.inputDispatcher.mapMode("overworld");
 	  self.mazeScreen.stop();
+          self.mapScreen.setNewDomain(self.overworld); // in case last domain was not overworld
 	  self.mapScreen.start();
 	  self.player.enterMapScreen(self.mapScreen,
                                overworldX,
