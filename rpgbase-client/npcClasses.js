@@ -124,7 +124,6 @@ NPC.prototype = {
   turn: function(deltaX, deltaY){ 
     if (this._animationCallback) {
       this._animationCallback(deltaX, deltaY, 0);
-      this._mapScreen.render();
     }
   }
 

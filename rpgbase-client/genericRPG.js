@@ -419,7 +419,7 @@ GenericRPG.prototype = {
     // a fight ends!) neither of which is happening currently
     this.overworld.onStep({x: overworldX, y: overworldY},
       function(pc, x, y, landType) {
-	  // TODO CONSOLIDATE MODE SWITCHES
+        // TODO CONSOLIDATE MODE SWITCHES
         self._mainMode = "maze";
         self.inputDispatcher.mapMode("maze");
         self.mapScreen.stop();
@@ -433,7 +433,7 @@ GenericRPG.prototype = {
       });
 
     maze.onStep({x: mazeX, y: mazeY},
-		// TODO CONSOLIDATE MODE SWITCHES
+        // TODO CONSOLIDATE MODE SWITCHES
         function(pc, x, y) {
 	  // TODO pc argument is bogus, don't use it
         self._mainMode = "map";
