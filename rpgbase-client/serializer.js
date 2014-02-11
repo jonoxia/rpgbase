@@ -38,9 +38,12 @@ function SerializableMixin(subclassConstructor) {
       for (var i = 0; i < fields.length; i++) {
 	var fieldName = fields[i];
         var value = this[fieldName];
+         //console.log("Serializing " + this.serializableClassName + "." + fieldName);
 
-        if (!value) {
-          console.log("No value for " + fieldName);
+        if (typeof(value) == "undefined") {
+          console.log("Error: " + this.serializableClassName + "."
+                      + fieldName + " is undefined, can't serialize");
+          continue;
         }
 
 	// actually look if the sub object is itself
@@ -92,6 +95,9 @@ function SerializableMixin(subclassConstructor) {
       for (var i = 0; i < fields.length; i++) {
         var fieldName = fields[i];
         var value = jsonobj[fieldName];
+        if (typeof(value) == "undefined") {
+          console.log("Restoration error: expected field " + fieldName + " is not present.");
+        }
         // if any sub object is itself serializable, then
         // restore its data recursively from the json
         

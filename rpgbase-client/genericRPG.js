@@ -7,6 +7,8 @@ function GenericRPG(canvasTagId) {
   this._subMode = null; // null, "menus", or "battle"
 }
 GenericRPG.prototype = {
+  serializableClassName: "Game",
+  serializableFields: ["player", "_mainMode", "plotManager"],
 
   setMapScreenDimensions: function(squaresX, squaresY,
                                    pixelsX, pixelsY) {
@@ -532,32 +534,32 @@ GenericRPG.prototype = {
     }
   },
 
-  saveGame: function(data) {
-    // TODO this is a json string, need access to
-    // json object. Temporary hackaround:
-    jsonobj = JSON.parse(data);
-    jsonobj.mapId = this.getCurrentMapId();
-    console.log("Saving mapID " + jsonobj.mapId);
-    jsonobj.mainMode = this._mainMode;
-    // TODO save direction player is facing in maze!!
-    // (TODO make serializable?)
+  onSerialize: function(jsonobj) {
+    console.log("genericRPG.onSerialize called");
+    jsonobj._mapId = this.getCurrentMapId();
 
-    // Save plot manager flags
-    jsonobj.plot = this.plotManager.serialize();
-    console.log("Saving plot flags: " + jsonobj.plot);
-    return JSON.stringify(jsonobj);
+    /* x-y location of first player in party will be stored
+     * in playerX, playerY; whole party will re-enter map at that
+     * point. (TODO: We could make _x and _y serializable on the
+     * PlayerCharacter class instead, would that be better?) */
+    var pos = this.player.getAliveParty()[0].getPos();
+    jsonobj._playerX = pos.x;
+    jsonobj._playerY = pos.y;
+
+    // TODO serialize vehicle locations, treasure states
+    jsonobj._vehicles = [];
+    jsonobj._treasureStates = [];
   },
-  
-  loadGame: function(jsonobj) {
-    this._mainMode = jsonobj.mainMode;
-    var map = this.getMapById(jsonobj.mapId);
-    console.log("MapID to load is " + jsonobj.mapId);
-    
+
+  onDeserialize: function(jsonobj) {
+    var map = this.getMapById(jsonobj._mapId);
+    console.log("MapID to load is " + jsonobj._mapId);
+
     if (this._mainMode == "maze") {
         this.mazeScreen.loadMaze(map);
         this.mazeScreen.enterPlayer(this.player,
-                                    jsonobj.x,
-                                    jsonobj.y, "e");
+                                    jsonobj._playerX,
+                                    jsonobj._playerY, "e");
 
         // (TODO run the following only if
         // the game has already started in map mode -- it
@@ -570,13 +572,10 @@ GenericRPG.prototype = {
     } else {
         this.mapScreen.setNewDomain(map);
         this.player.enterMapScreen(this.mapScreen,
-                                   jsonobj.x,
-                                   jsonobj.y);
+                                   jsonobj._playerX,
+                                   jsonobj._playerY);
     }
-    // load plot manager flags
-    this.plotManager.restore(jsonobj.plot);
     this.player.marchInOrder();
-    console.log("Load game done");
   },
 
   inMaze: function() {
@@ -626,3 +625,4 @@ GenericRPG.prototype = {
       this.inputDispatcher.menuMode("dialog").scrollText(text);
   }
 };
+SerializableMixin(GenericRPG);

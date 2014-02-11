@@ -14,10 +14,6 @@ Player.prototype = {
     // TODO record lead character x, y, the name or ID of the
     // MapDomain I'm standing in,
     // and where I left my boat.
-
-    var pos = this.aliveParty[0].getPos();
-    jsonobj.x = pos.x;
-    jsonobj.y = pos.y;
   },
 
   onDeserialize: function(jsonobj) {
@@ -801,6 +797,11 @@ function Vehicle(spriteSheet, width, height, offsetX, offsetY) {
   this._bumpCallback = null;
 }
 Vehicle.prototype = {
+  serializableClassName: "vehicle",
+  serializableFields: ["_x", "_y"],
+    // TODO serialize some kind of name/id so we know which vehicle is which
+    // if there are multiples.
+
   embark: function(player) {
     // called when party tries to walk onto space with vehicle
     this._playerOnboard = player;
