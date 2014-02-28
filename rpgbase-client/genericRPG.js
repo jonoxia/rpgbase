@@ -5,10 +5,14 @@ function GenericRPG(canvasTagId) {
   this._maps = [];
   this._mainMode = "map"; // "map" or "maze"
   this._subMode = null; // null, "menus", or "battle"
+  this.player = null;
+  this._vehicles = [];
+  this._treasureStates = [];
 }
 GenericRPG.prototype = {
   serializableClassName: "Game",
-  serializableFields: ["player", "_mainMode", "plotManager"],
+  serializableFields: ["player", "_mainMode", "plotManager",
+                       "_vehicles", "_treasureStates"],
 
   setMapScreenDimensions: function(squaresX, squaresY,
                                    pixelsX, pixelsY) {
@@ -545,10 +549,6 @@ GenericRPG.prototype = {
     var pos = this.player.getAliveParty()[0].getPos();
     jsonobj._playerX = pos.x;
     jsonobj._playerY = pos.y;
-
-    // TODO serialize vehicle locations, treasure states
-    jsonobj._vehicles = [];
-    jsonobj._treasureStates = [];
   },
 
   onDeserialize: function(jsonobj) {
@@ -576,6 +576,7 @@ GenericRPG.prototype = {
                                    jsonobj._playerY);
     }
     this.player.marchInOrder();
+    // TODO do something with ._vehicles and ._treasureStates!
   },
 
   inMaze: function() {
@@ -614,7 +615,7 @@ GenericRPG.prototype = {
         if (self.player.getAliveParty().length == 0) {
             if (self.doGameOver) {
                 // defined in userland -- a little awkward.
-                self.doGameOver(); 
+                self.doGameOver();
             }
         }
       });
@@ -623,6 +624,10 @@ GenericRPG.prototype = {
 
   scrollFieldMessage: function(text) {
       this.inputDispatcher.menuMode("dialog").scrollText(text);
+  },
+
+  addVehicle: function(vehicle) {
+      this._vehicles.push(vehicle);
   }
 };
 SerializableMixin(GenericRPG);

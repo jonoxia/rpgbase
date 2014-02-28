@@ -790,7 +790,9 @@ PlayerCharacter.prototype.getStat = function(statName) {
 };
 
 
-function Vehicle(spriteSheet, width, height, offsetX, offsetY) {
+function Vehicle(id, spriteSheet, width, height, offsetX, offsetY) {
+  this._id = id; // Used to keep track of which vehicle is which when
+  // saving/restoring game state.
   this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
   this._playerOnboard = null;
   this._embarkCallback = null;
@@ -798,9 +800,7 @@ function Vehicle(spriteSheet, width, height, offsetX, offsetY) {
 }
 Vehicle.prototype = {
   serializableClassName: "vehicle",
-  serializableFields: ["_x", "_y"],
-    // TODO serialize some kind of name/id so we know which vehicle is which
-    // if there are multiples.
+  serializableFields: ["_x", "_y", "_id"],
 
   embark: function(player) {
     // called when party tries to walk onto space with vehicle
@@ -861,3 +861,4 @@ Vehicle.prototype = {
   }
 };
 MapSpriteMixin(Vehicle.prototype);
+SerializableMixin(Vehicle);
