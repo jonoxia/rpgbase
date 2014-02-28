@@ -34,11 +34,10 @@ function SerializableMixin(subclassConstructor) {
           return {serializedClass: className,
                   json: subObjectJson};
       };
-
       for (var i = 0; i < fields.length; i++) {
 	var fieldName = fields[i];
         var value = this[fieldName];
-         //console.log("Serializing " + this.serializableClassName + "." + fieldName);
+        //console.log("Serializing " + this.serializableClassName + "." + fieldName);
 
         if (typeof(value) == "undefined") {
           console.log("Error: " + this.serializableClassName + "."
@@ -50,6 +49,7 @@ function SerializableMixin(subclassConstructor) {
 	// serializable -- if so, then call serialize on it;
 	// if not, just json.stringify it.
         if (value.serializableClassName) {
+          console.log(fieldName + " is a serializable sub object.");
           jsonobj[fieldName] = serializeSubObj(value);
         } else if (value instanceof Array && 
                    value.length > 0 &&
@@ -59,8 +59,8 @@ function SerializableMixin(subclassConstructor) {
           // assume for now that if array contains one serializable,
           // all its contents are serializables.
           var serializedArray = [];
-          for (var i =0; i < value.length; i++) {
-            serializedArray.push(serializeSubObj(value[i]));
+          for (var j =0; j < value.length; j++) {
+            serializedArray.push(serializeSubObj(value[j]));
           }
           jsonobj[fieldName] = serializedArray;
         } else {
