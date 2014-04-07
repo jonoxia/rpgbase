@@ -75,23 +75,40 @@ Player.prototype = {
     // set facing of main character even if we can't move:
     mainChar.setFacing(dx, dy);
 
+    // see if there's a vehicle in front of me that i might
+    // be trying to move into:
+    var newX = mainChar._x + dx;
+    var newY = mainChar._y + dy;
+    var aVehicle = self.mapScreen.getVehicleAt(newX, newY);
+
     // if we're in vehicle, use the vehicle's canMove method to
-    // decide if we can move forward; otherwise use the mainChar
-    var canMove
+    // decide if we can move forward...
+    var canMove;
     if (this.inVehicle) {
-      canMove = this.inVehicle.canMove(self.mapScreen, dx, dy);
-      // vehicle not being able to move MAY be a sign to
-      // disembark.
-      if (!canMove) {
-        this.inVehicle.bump(self.mapScreen, dx, dy);
+      if (aVehicle) {
+        // moving from one vehicle into another...?
+        canMove = this.inVehicle.canMoveToAnotherVehicle(aVehicle);
+      } else {
+        canMove = this.inVehicle.canMove(self.mapScreen, dx, dy);
+        // vehicle not being able to move MAY be a sign to
+        // disembark.
+        if (!canMove) {
+          this.inVehicle.bump(self.mapScreen, dx, dy);
+        }
       }
     }
 
     if (!this.inVehicle) {
-      // this is a separate check because we may have just left vehicle
-      // or we may never have been in one.
-      // can main char take this step or are they blocked?
+      // if not in a vehicle, use mainChar's canMove method
+      // to decide if we can take this step...
+      // this is a separate check because we may have JUST
+      // disembarked in the above code block.
       canMove = mainChar.canMove(self.mapScreen, dx, dy);
+      // always allow us to move in order to embark into a
+      // vehicle:
+      if (aVehicle) {
+          canMove = true;
+      }
     }
     var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
 				                     mainChar._y,
@@ -160,11 +177,16 @@ Player.prototype = {
     // when animation is done, if we moved, trigger
     // map effects of the lead character's step
     if (canMove) {
-      if (this.inVehicle) {
-        // TODO if in vehicle, process vehicle's step too ?
-      }
       animation.onFinish(function() {
-        self.mapScreen.processStep(self, mainChar._x, mainChar._y);
+        if (aVehicle && self.inVehicle) {
+           // TODO other step effects of vehicle movement
+          // would go here:
+          self.inVehicle.bumpIntoAnotherVehicle(aVehicle);
+        } else {
+          self.mapScreen.processStep(self,
+                                     mainChar._x,
+                                     mainChar._y);
+        }
       });
     }
 
@@ -428,7 +450,7 @@ function MapSpriteMixin(subClassPrototype) {
                   scaleWidth, scaleHeight);
   };
     
-  subClassPrototype.canMove = function(mapScreen, deltaX, deltaY) {
+  subClassPrototype.canMove = function(mapScreen, deltaX, deltaY)  {
     var newX = this._x + deltaX;
     var newY = this._y + deltaY;
     if (!mapScreen.pointInBounds(newX, newY)) {
@@ -449,13 +471,6 @@ function MapSpriteMixin(subClassPrototype) {
       // has *started* moving into, otherwise there may be a collision
       // maybe PC needs to lay claim to the space in front as soon
       // as they start walking?
-    }
-
-    // if there's a vehicle in the space we're walking into,
-    // we're always allowed to enter it, even if it's on an otherwise
-    // impassible land type:
-    if (mapScreen.getVehicleAt(newX, newY)) {
-      return true;
     }
 
     // don't walk through impassible terrain types
@@ -796,8 +811,10 @@ Vehicle.prototype = {
     }
   },
   disembark: function() {
+    var playerOnboard = this._playerOnboard;
     this._playerOnboard.exitVehicle();
     this._playerOnboard = null;
+    return playerOnboard;
   },
   bump: function(mapScreen, dx, dy) {
     // just failed to move in {dx, dy} direction.
@@ -827,6 +844,19 @@ Vehicle.prototype = {
     this._bumpCallback = callback;
     // callback will be called when vehicle tries to move into
     // a tile it can't cross -- this can be signal to disembark.
+  },
+  canMoveToAnotherVehicle: function(otherVehicle) {
+    // override this if you want to be able to move into another
+    // vehicle...
+        console.log("CanMove into another vehicle called");
+    return false; 
+  },
+  bumpIntoAnotherVehicle: function(otherVehicle) {
+        console.log("Bump into another vehicle called");
+        if (otherVehicle === this) {
+            console.log("Wait, it's me");
+        }
+    // and override this to make it do something...
   }
 };
 MapSpriteMixin(Vehicle.prototype);

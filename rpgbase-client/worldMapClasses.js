@@ -55,11 +55,11 @@ Map.prototype = {
 
   processStep: function(x, y, player) {
     // check if we're stepping into a vehicle:
-    if (!player.inVehicle) {
-      var vehicle = this.getVehicleAt(x, y);
-      if (vehicle) {
-        vehicle.embark(player);
-      }
+    var vehicle = this.getVehicleAt(x, y);
+    if (vehicle) {
+        if (!player.inVehicle) {
+            vehicle.embark(player);
+        }
     }
 
     // check all the step handlers:
@@ -128,6 +128,13 @@ Map.prototype = {
   addVehicle: function(vehicle, x, y) {
     this._vehicles.push(vehicle);
     vehicle.setPos(x, y);
+  },
+
+  removeVehicle: function(vehicle) {
+    var index = this._vehicles.indexOf(vehicle);
+    if (index > -1) {
+      this._vehicles.splice(index, 1);
+    }
   },
 
   getNPCAt: function(x, y) {
