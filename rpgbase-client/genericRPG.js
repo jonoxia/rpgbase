@@ -576,7 +576,21 @@ GenericRPG.prototype = {
                                    jsonobj._playerY);
     }
     this.player.marchInOrder();
-    // TODO do something with ._vehicles and ._treasureStates!
+
+    // TODO do something with ._treasureStates!
+
+    // restore vehicle positions (TODO this is only needed
+    // because overworld has its own copy of the vehicle list
+    // and that copy is now out of date. If we only had one
+    // copy we wouldn't have to worry about it. Something to
+    // think about.)
+    var vehicles = this.overworld.getAllVehicles();
+    for (var i = 0; i < vehicles.length; i++) {
+      var loadedVehicleData = this.getVehicle(vehicles[i]._id);
+      vehicles[i].setPos(loadedVehicleData._x,
+			 loadedVehicleData._y);
+    }
+
   },
 
   inMaze: function() {
@@ -626,8 +640,20 @@ GenericRPG.prototype = {
       this.inputDispatcher.menuMode("dialog").scrollText(text);
   },
 
-  addVehicle: function(vehicle) {
+  addVehicle: function(vehicle, x, y) {
+      // TODO we're maintaining 2 lists of vehicles, one here and one
+      // in overworld -- violates DRY.
       this._vehicles.push(vehicle);
+  },
+
+  getVehicle: function(id) {
+      for (var i = 0; i < this._vehicles.length; i++) {
+	  if (id == this._vehicles[i]._id) {
+	      return this._vehicles[i];
+	  }
+      }
+      return null;
   }
+
 };
 SerializableMixin(GenericRPG);

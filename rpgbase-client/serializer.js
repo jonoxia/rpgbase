@@ -111,8 +111,8 @@ function SerializableMixin(subclassConstructor) {
                    value.length > 0 &&
                    value[0].serializedClass) {
           var restoredArray = [];
-          for (var i = 0; i < value.length; i++) {
-            restoredArray.push(restoreSubObj(value[i]));
+          for (var j = 0; j < value.length; j++) {
+            restoredArray.push(restoreSubObj(value[j]));
           }
           this[fieldName] = restoredArray;
         } else {

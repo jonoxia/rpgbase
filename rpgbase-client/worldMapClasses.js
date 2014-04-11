@@ -114,6 +114,11 @@ Map.prototype = {
     npc.setPos(x, y);
   },
 
+  addVehicle: function(vehicle, x, y) {
+    this._vehicles.push(vehicle);
+    vehicle.setPos(x, y);
+  },
+
   removeNPC: function(npc) {
     var index = this._npcs.indexOf(npc);
     if (index > -1) {
@@ -125,9 +130,8 @@ Map.prototype = {
     this._npcs = [];
   },
 
-  addVehicle: function(vehicle, x, y) {
-    this._vehicles.push(vehicle);
-    vehicle.setPos(x, y);
+  removeAllVehicles: function() {
+    this._vehicles = [];
   },
 
   removeVehicle: function(vehicle) {
