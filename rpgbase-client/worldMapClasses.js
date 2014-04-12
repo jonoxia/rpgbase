@@ -116,7 +116,9 @@ Map.prototype = {
 
   addVehicle: function(vehicle, x, y) {
     this._vehicles.push(vehicle);
-    vehicle.setPos(x, y);
+    if (x != undefined && y != undefined) {
+        vehicle.setPos(x, y);
+    }
   },
 
   removeNPC: function(npc) {

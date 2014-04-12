@@ -790,10 +790,13 @@ PlayerCharacter.prototype.getStat = function(statName) {
 };
 
 
-function Vehicle(id, spriteSheet, width, height, offsetX, offsetY) {
-  this._id = id; // Used to keep track of which vehicle is which when
-  // saving/restoring game state.
-  this.defineSprite(spriteSheet, width, height, offsetX, offsetY);
+function Vehicle() {
+  // spriteSheet and spriteDimensions have been set on prototype
+  this.defineSprite(this.spriteSheet,
+                    this.spriteDimensions.width,
+                    this.spriteDimensions.height,
+                    this.spriteDimensions.offsetX,
+                    this.spriteDimensions.offsetY);
   this._playerOnboard = null;
   this._embarkCallback = null;
   this._bumpCallback = null;
@@ -801,6 +804,11 @@ function Vehicle(id, spriteSheet, width, height, offsetX, offsetY) {
 Vehicle.prototype = {
   serializableClassName: "vehicle",
   serializableFields: ["_x", "_y", "_id"],
+
+  setId: function(id) {
+     this._id = id;// Used to keep track of which vehicle is which when
+  // saving/restoring game state.
+  },
 
   embark: function(player) {
     // called when party tries to walk onto space with vehicle

@@ -584,12 +584,22 @@ GenericRPG.prototype = {
     // and that copy is now out of date. If we only had one
     // copy we wouldn't have to worry about it. Something to
     // think about.)
-    var vehicles = this.overworld.getAllVehicles();
-    for (var i = 0; i < vehicles.length; i++) {
-      var loadedVehicleData = this.getVehicle(vehicles[i]._id);
-      vehicles[i].setPos(loadedVehicleData._x,
-			 loadedVehicleData._y);
-    }
+    this.overworld._vehicles = this._vehicles;
+    // bit of a hack -- this would be cleaner if vehicle list
+    // was serialized directly from overworld, but that would
+    // mean making map screens serializable... TODO.
+
+    // oh i see what's happening
+    // the restore saved game is creatint a new vehicle array
+    // in gameEngine after the real vehicle array is already
+    // created in overworld. Hmm.
+
+    // 1. separate the moonserpent customization of the vehicles
+    // from the initialization of the vehicles. Only initialize
+    // on new game, not if we are loading a save
+
+    // 2. there should be only one vehicle list. Let's say it
+    // lives in overworld -- then all we need is to 
 
   },
 
@@ -641,18 +651,17 @@ GenericRPG.prototype = {
   },
 
   addVehicle: function(vehicle, x, y) {
-      // TODO we're maintaining 2 lists of vehicles, one here and one
-      // in overworld -- violates DRY.
-      this._vehicles.push(vehicle);
+      this.overworld.addVehicle(vehicle);
+      this._vehicles = this.overworld._vehicles;  // should be 2 refs to same array
   },
 
   getVehicle: function(id) {
-      for (var i = 0; i < this._vehicles.length; i++) {
-	  if (id == this._vehicles[i]._id) {
-	      return this._vehicles[i];
-	  }
+    for (var i = 0; i < this._vehicles.length; i++) {
+	    if (id == this._vehicles[i]._id) {
+        return this._vehicles[i];
       }
-      return null;
+    }
+    return null;
   }
 
 };
