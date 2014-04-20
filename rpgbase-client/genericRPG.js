@@ -478,6 +478,45 @@ GenericRPG.prototype = {
 
   registerMap: function(map) {
     this._maps[map.getId()] = map;
+    var treasureStates = this._treasureStates;
+
+    map.onLoad(function() {
+      // Look up this map in treasureStates, and empty any
+      // treasure chests that have already been gotten.
+      // (Note: to work correctly this must be called AFTER the
+      // callback that instantiates all the treasure chests...)
+      var emptyChests = treasureStates[map.getId()];
+      if (emptyChests) {
+        for (var i = 0; i < emptyChests.length; i++) {
+          var chest = map.getNPCAt(emptyChests[i][0],
+                                   emptyChests[i][1]);
+          if (chest && chest.makeEmpty) {
+            chest.makeEmpty();
+          }
+        }
+      }
+    });
+
+    map.onUnload(function() {
+      // Save gotten chests to treasureStates, THEN removeAllNPCs.
+      // removing all NPCs must happen LAST.
+      // so userland should NOT register a callback to remove all NPCs.
+      // Do that here instead.
+      var npcs = map.getAllNPCs();
+      treasureStates[map.getId()] = [];
+      for (var i = 0; i < npcs.length; i++) {
+        if (npcs[i]._taken) { // only chests have this property
+          // TODO don't break encapsulation here; make a better way of
+          // querying an NPC whether it needs to save state.
+
+          // record position of opened chest:
+          var pos = npcs[i].getPos();
+          treasureStates[map.getId()].push([pos.x, pos.y]);
+        }
+      }
+      map.removeAllNPCs(); // TODO get rid of this call in all userland code
+    });
+
   },
 
   getMapById: function(id) {
@@ -578,6 +617,7 @@ GenericRPG.prototype = {
     this.player.marchInOrder();
 
     // TODO do something with ._treasureStates!
+    // 
 
     // restore vehicle positions (TODO this is only needed
     // because overworld has its own copy of the vehicle list

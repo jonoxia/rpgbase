@@ -155,13 +155,17 @@ TreasureChest.prototype = {
       player.findRoomForAnItem(dialoglog, self._itemType._name,
                                function(receiver) {
         dialoglog.scrollText(receiver.name + " OBTAINED " + self._itemType._name + "!");
-        self._taken = true;
-        self.setSprite(1, 0);
+        self.makeEmpty();
         receiver.gainItem(self._itemType);
       });
     } else {
       dialoglog.scrollText("IT'S EMPTY.");
     }
+  },
+
+  makeEmpty: function() {
+    self._taken = true;
+    self.setSprite(1, 0);
   },
 
   setFacing: function(dir) {
@@ -189,15 +193,24 @@ MoneyChest.prototype = {
   talk: function(dialoglog, player) {
     if (!this._taken) {
       player.gainResource(this._resource, this._amount);
-      this._taken = true;
-      this.setSprite(1, 0);
+      this.makeEmpty();
       dialoglog.showPartyResources(player, this._resource);
       dialoglog.scrollText("YOU FOUND " + this._amount + " "
                            + this._resource + "!");
     } else {
       dialoglog.scrollText("IT'S EMPTY.");
     }
+  },
+  // TODO duplicated code from TreasureChest, refactor!
+  makeEmpty: function() {
+    self._taken = true;
+    self.setSprite(1, 0);
+  },
+
+  setFacing: function(dir) {
+      this.facing = dir;
   }
+
 };
 MapSpriteMixin(MoneyChest.prototype);
 
