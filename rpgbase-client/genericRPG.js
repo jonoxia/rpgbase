@@ -476,25 +476,46 @@ GenericRPG.prototype = {
     self.battleSystem.startBattle(self.player, encounter, landType);
   },
 
+  recordEmptyChests: function(map) {
+    var mapId = map.getId();
+    var npcs = map.getAllNPCs();
+    this._treasureStates[mapId] = [];
+    for (var i = 0; i < npcs.length; i++) {
+      if (npcs[i]._taken) { // only chests have this property
+        // TODO don't break encapsulation here; make a better way of
+        // querying an NPC whether it needs to save state.
+        
+        // record position of opened chest:
+        var pos = npcs[i].getPos();
+        this._treasureStates[mapId].push([pos.x, pos.y]);
+      }
+    }
+  },
+
+  applyEmptyChests: function(map) {
+    var mapId = map.getId();
+    var emptyChests = this._treasureStates[mapId];
+    if (emptyChests) {
+      for (var i = 0; i < emptyChests.length; i++) {
+        var chest = map.getNPCAt(emptyChests[i][0],
+                                 emptyChests[i][1]);
+        if (chest && chest.makeEmpty) {
+          chest.makeEmpty();
+        }
+      }
+    }
+  },
+
   registerMap: function(map) {
     this._maps[map.getId()] = map;
-    var treasureStates = this._treasureStates;
+    var self = this;
 
     map.onLoad(function() {
+      self.applyEmptyChests(map);
       // Look up this map in treasureStates, and empty any
       // treasure chests that have already been gotten.
       // (Note: to work correctly this must be called AFTER the
       // callback that instantiates all the treasure chests...)
-      var emptyChests = treasureStates[map.getId()];
-      if (emptyChests) {
-        for (var i = 0; i < emptyChests.length; i++) {
-          var chest = map.getNPCAt(emptyChests[i][0],
-                                   emptyChests[i][1]);
-          if (chest && chest.makeEmpty) {
-            chest.makeEmpty();
-          }
-        }
-      }
     });
 
     map.onUnload(function() {
@@ -502,18 +523,7 @@ GenericRPG.prototype = {
       // removing all NPCs must happen LAST.
       // so userland should NOT register a callback to remove all NPCs.
       // Do that here instead.
-      var npcs = map.getAllNPCs();
-      treasureStates[map.getId()] = [];
-      for (var i = 0; i < npcs.length; i++) {
-        if (npcs[i]._taken) { // only chests have this property
-          // TODO don't break encapsulation here; make a better way of
-          // querying an NPC whether it needs to save state.
-
-          // record position of opened chest:
-          var pos = npcs[i].getPos();
-          treasureStates[map.getId()].push([pos.x, pos.y]);
-        }
-      }
+      self.recordEmptyChests(map);
       map.removeAllNPCs(); // TODO get rid of this call in all userland code
     });
 
@@ -588,6 +598,18 @@ GenericRPG.prototype = {
     var pos = this.player.getAliveParty()[0].getPos();
     jsonobj._playerX = pos.x;
     jsonobj._playerY = pos.y;
+
+    // Ensure currently loaded map records its treasure states:
+    this.recordEmptyChests(this.getMapById(jsonobj._mapId));
+    // TODO write the treasure-states dict:
+
+    jsonobj["_treasureStates"] = {};
+    for (var key in this._treasureStates) {
+      jsonobj["_treasureStates"][key] = this._treasureStates[key].slice();
+    }
+
+    // why does onSerialize happen AFTER basic serialization? Wouldn't it make
+    // more sense to do this first? Longterm refactor.
   },
 
   onDeserialize: function(jsonobj) {
@@ -616,8 +638,13 @@ GenericRPG.prototype = {
     }
     this.player.marchInOrder();
 
-    // TODO do something with ._treasureStates!
-    // 
+    // Load the treasure-states dict here:
+    this._treasureStates = {};
+    for (var key in jsonobj["_treasureStates"]) {
+      this._treasureStates[key] = jsonobj["_treasureStates"][key].slice();
+    }
+    // then apply treasure states for currently loaded map!
+    this.applyEmptyChests(map);
 
     // restore vehicle positions (TODO this is only needed
     // because overworld has its own copy of the vehicle list

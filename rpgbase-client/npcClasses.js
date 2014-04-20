@@ -164,13 +164,13 @@ TreasureChest.prototype = {
   },
 
   makeEmpty: function() {
-    self._taken = true;
-    self.setSprite(1, 0);
+    this._taken = true;
+    this.setSprite(1, 0);
   },
 
   setFacing: function(dir) {
-      console.log("SetFacing called");
-      this.facing = dir;
+    console.log("SetFacing called");
+    this.facing = dir;
   }
 };
 MapSpriteMixin(TreasureChest.prototype);
@@ -203,8 +203,8 @@ MoneyChest.prototype = {
   },
   // TODO duplicated code from TreasureChest, refactor!
   makeEmpty: function() {
-    self._taken = true;
-    self.setSprite(1, 0);
+    this._taken = true;
+    this.setSprite(1, 0);
   },
 
   setFacing: function(dir) {
