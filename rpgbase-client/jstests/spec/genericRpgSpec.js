@@ -42,30 +42,89 @@ function genericRPGSetup() {
 }
 
 
-describe("GenericRPG", function() {
+describe("GenericRPG save/restore feature", function() {
   /* A lot to do to make GenericRPG into something testable.
    * Not to mention, disentangling the truly generic stuff from the
    * Moonserpent stuff. There's a lot of tight coupling in moonserpent-main.js right
-   * now.
-   * Let's get started. */
-  it("Should retain party location when serialized/deserialized.", function() {
+   * now. */
 
-    // TOOD also create a vehicle, set its location
-    // Set their locations
+  it("Should retain party location when serialized/deserialized.", function() {
     var gameEngine = genericRPGSetup();
     var character = gameEngine.player.getParty()[0];
     character.setPos(128, 96);
-    
     var gameData = gameEngine.serialize();
+
   
-
-
     var restoredGameEngine = genericRPGSetup();
     restoredGameEngine.restore(gameData);
     var pos = restoredGameEngine.player.getParty()[0].getPos();
-    // TODO test that player and vehicle locations are as-saved.
     expect(pos.x).toEqual(128);
     expect(pos.y).toEqual(96);
+  });
+
+  it("Should retain vehicle locations when serialized/deserialized.", function() {
+
+    var gameEngine = genericRPGSetup();
+    var ship = new Vehicle();
+    ship.setId("ship");
+    var boat = new Vehicle();
+    boat.setId("canoe");
+    gameEngine.addVehicle(ship);
+    gameEngine.addVehicle(boat);
+    ship.setPos(32, 64);
+    boat.setPos(64, 32);
+    var gameData = gameEngine.serialize();
+
+  
+    var restoredGameEngine = genericRPGSetup();
+    restoredGameEngine.restore(gameData);
+    var restoredBoat = restoredGameEngine.getVehicle("canoe");
+    var restoredShip = restoredGameEngine.getVehicle("ship");
+    var pos = restoredBoat.getPos();
+    expect(pos.x).toEqual(64);
+    expect(pos.y).toEqual(32);
+    pos = restoredShip.getPos();
+    expect(pos.x).toEqual(32);
+    expect(pos.y).toEqual(64);
+  });
+
+
+  it("Should remember whether canoe is loaded onto ship", function() {
+    var gameEngine = genericRPGSetup();
+    var ship = new Vehicle();
+    ship.setId("ship");
+    var boat = new Vehicle();
+    boat.setId("canoe");
+    gameEngine.addVehicle(ship);
+    gameEngine.addVehicle(boat);
+    ship.loadedCanoe = boat;
+
+    var gameData = gameEngine.serialize();
+
+  
+    var restoredGameEngine = genericRPGSetup();
+    restoredGameEngine.restore(gameData);
+    var restoredBoat = restoredGameEngine.getVehicle("canoe");
+    var restoredShip = restoredGameEngine.getVehicle("ship");
+    expect(restoredShip.loadedCanoe).toBe(restoredBoat);
+  });
+
+
+  it("Should remember whether party is on board ship", function() {
+    var gameEngine = genericRPGSetup();
+    var ship = new Vehicle();
+    ship.setId("ship");
+    gameEngine.addVehicle(ship);
+    ship.embark(gameEngine.player);
+
+    var gameData = gameEngine.serialize();
+
+  
+    var restoredGameEngine = genericRPGSetup();
+    restoredGameEngine.restore(gameData);
+    var restoredShip = restoredGameEngine.getVehicle("ship");
+    expect(restoredShip._playerOnboard).toBe(restoredGameEngine.player);
+    expect(restoredGameEngine.player.inVehicle).toBe(restoredShip);
   });
 
 });
