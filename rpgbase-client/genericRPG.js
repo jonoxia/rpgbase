@@ -608,6 +608,13 @@ GenericRPG.prototype = {
       jsonobj["_treasureStates"][key] = this._treasureStates[key].slice();
     }
 
+    // Record if I'm on a vehicle:
+    if (this.player.inVehicle) {
+      jsonobj["embarked_vehicle"] = this.player.inVehicle._id; // encapsulation breaky
+    } else {
+      jsonobj["embarked_vehicle"] = "";
+    }
+
     // why does onSerialize happen AFTER basic serialization? Wouldn't it make
     // more sense to do this first? Longterm refactor.
   },
@@ -657,7 +664,7 @@ GenericRPG.prototype = {
     // mean making map screens serializable... TODO.
 
     // oh i see what's happening
-    // the restore saved game is creatint a new vehicle array
+    // the restore saved game is creating a new vehicle array
     // in gameEngine after the real vehicle array is already
     // created in overworld. Hmm.
 
@@ -668,6 +675,11 @@ GenericRPG.prototype = {
     // 2. there should be only one vehicle list. Let's say it
     // lives in overworld -- then all we need is to 
 
+    if (jsonobj["embarked_vehicle"] != "") {
+      var vehicle = this.getVehicle(jsonobj["embarked_vehicle"]);
+      this.player.inVehicle = vehicle;
+      vehicle._playerOnboard = this.player; // super encapsulation breaky
+    }
   },
 
   inMaze: function() {
