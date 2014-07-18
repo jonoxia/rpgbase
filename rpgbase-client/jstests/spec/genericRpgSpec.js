@@ -127,4 +127,6 @@ describe("GenericRPG save/restore feature", function() {
     expect(restoredGameEngine.player.inVehicle).toBe(restoredShip);
   });
 
+  // TODO test loading canoe onto ship and unloading off of ship into river
+
 });

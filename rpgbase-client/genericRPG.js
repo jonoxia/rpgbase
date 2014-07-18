@@ -675,8 +675,9 @@ GenericRPG.prototype = {
     // 2. there should be only one vehicle list. Let's say it
     // lives in overworld -- then all we need is to 
 
-    if (jsonobj["embarked_vehicle"] != "") {
-      var vehicle = this.getVehicle(jsonobj["embarked_vehicle"]);
+    var embarked = jsonobj["embarked_vehicle"];
+    if (embarked && embarked != "") {
+      var vehicle = this.getVehicle(embarked);
       this.player.inVehicle = vehicle;
       vehicle._playerOnboard = this.player; // super encapsulation breaky
     }
