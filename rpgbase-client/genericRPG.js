@@ -653,28 +653,17 @@ GenericRPG.prototype = {
     // then apply treasure states for currently loaded map!
     this.applyEmptyChests(map);
 
-    // restore vehicle positions (TODO this is only needed
-    // because overworld has its own copy of the vehicle list
-    // and that copy is now out of date. If we only had one
-    // copy we wouldn't have to worry about it. Something to
-    // think about.)
-    this.overworld._vehicles = this._vehicles;
-    // bit of a hack -- this would be cleaner if vehicle list
-    // was serialized directly from overworld, but that would
-    // mean making map screens serializable... TODO.
+    // Place all vehicles restored as part of the save file onto the
+    // overworld map.
+    this.overworld._vehicles = this._vehicles.slice();
+    // (Yes this means the overworld has a copy of the array.
+    // Overworld's copy are the vehicles present in the overworld,
+    // gameengine's copy is all vehicles ever.)
 
-    // oh i see what's happening
-    // the restore saved game is creating a new vehicle array
-    // in gameEngine after the real vehicle array is already
-    // created in overworld. Hmm.
+    // Any game-specific userland customization of vehicles must
+    // occur AFTER this restoration.
 
-    // 1. separate the moonserpent customization of the vehicles
-    // from the initialization of the vehicles. Only initialize
-    // on new game, not if we are loading a save
-
-    // 2. there should be only one vehicle list. Let's say it
-    // lives in overworld -- then all we need is to 
-
+    // Which vehicle (if any) is the party aboard?
     var embarked = jsonobj["embarked_vehicle"];
     if (embarked && embarked != "") {
       var vehicle = this.getVehicle(embarked);
@@ -731,8 +720,9 @@ GenericRPG.prototype = {
   },
 
   addVehicle: function(vehicle, x, y) {
+      // add vehicle to our master list and also place it on the overworld map:
       this.overworld.addVehicle(vehicle);
-      this._vehicles = this.overworld._vehicles;  // should be 2 refs to same array
+      this._vehicles.push(vehicle);
   },
 
   getVehicle: function(id) {
