@@ -89,27 +89,6 @@ describe("GenericRPG save/restore feature", function() {
   });
 
 
-  it("Should remember whether canoe is loaded onto ship", function() {
-    var gameEngine = genericRPGSetup();
-    var ship = new Vehicle();
-    ship.setId("ship");
-    var boat = new Vehicle();
-    boat.setId("canoe");
-    gameEngine.addVehicle(ship);
-    gameEngine.addVehicle(boat);
-    ship.loadedCanoe = boat;
-
-    var gameData = gameEngine.serialize();
-
-  
-    var restoredGameEngine = genericRPGSetup();
-    restoredGameEngine.restore(gameData);
-    var restoredBoat = restoredGameEngine.getVehicle("canoe");
-    var restoredShip = restoredGameEngine.getVehicle("ship");
-    expect(restoredShip.loadedCanoe).toBe(restoredBoat);
-  });
-
-
   it("Should remember whether party is on board ship", function() {
     var gameEngine = genericRPGSetup();
     var ship = new Vehicle();
@@ -128,5 +107,65 @@ describe("GenericRPG save/restore feature", function() {
   });
 
   // TODO test loading canoe onto ship and unloading off of ship into river
+
+
+  describe("GenericRPG battle system", function() {
+    it("Shouldn't allow REPEAT if any of last round's commands can't be repeated", function() {
+            // battleSystem.repeatLastRoundCommands() is the method
+            // gotta lock in some commands first
+            // Need to hack the showMsg function so a unit test can retrieve the message
+            // being shown and verify its correctness.
+
+            // in makeMenuForPC we have if (!cmd.canUse(pc)) to check. It always shows a
+            // NOT ENOUGH MP message even though there may be other reasons...!
+
+            // Another reason to disallow REPEAT is if the target for a non-random-target cmd
+            // (i.e. a heal spell)  is now invalid (i.e. dead)
+
+
+
+            var comList = new BattleCommandSet();
+            comList.add("ATTACK", new BatCmd({
+                        effect: function(battle, user) {
+                            battle.showMsg(user.name + " does a fight!");
+                        }
+            }));
+            comList.add("EXPENSIVE SPELL", new BatCmd({
+                        effect: function(battle, user) {
+                            battle.showMsg(user.name + " casts the expensive spell!");
+                        },
+                            cost: {resource: "mp", amount: 5}
+            }));
+            comList.add("REPEAT", new BatCmd({
+                        effect: function(battle, party) {
+                            battle.repeatLastRoundCommands();
+                        }
+            }));
+
+
+
+            var canvas = $("#mapscreen-canvas")[0];
+            var BS = new BattleSystem(null, canvas, {
+                    defaultCmdSet: comList;
+                });
+
+            // disable drawing of battle:
+            BS.draw = function() {};
+            
+            // todo set menuImpl to canvas or not?
+            // Do we need to give the battlesyste functions like onRollInitiative?
+
+            // I guess we need to create a player and a monstertype here
+            var encounter = {number: 1, type: monstertype};
+            var landType = 0; // don't care
+            BS.startBattle(player, encounter, landType);
+
+            // TODO how to fake player input now? startBattle calls showStartRoundMenu
+            // which calls showFirstPCMenu
+    });
+
+
+    it("Should consume consumable items used in combat", function() {
+    });
 
 });
