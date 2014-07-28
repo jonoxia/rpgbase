@@ -226,12 +226,19 @@ function BattleSystem(htmlElem, canvas, options) {
 
   this._freelyExit = false;
 
-  this._animator = new Animator(frameDelay,
-                                function() {self.draw();});
+  if (frameDelay > 0) {
+    this._animator = new Animator(frameDelay,
+                                  function() {self.draw();});
+  } else {
+    // if frameDelay is zero, then no animation
+    this._animator = null;
+  }
 
   // Stuff to always do when battle ends:
   this.onClose(function() {
-    self._animator.stop();
+    if (self._animator) {
+      self._animator.stop();
+    }
     if (self.player) {
       // tell player to re-jigger party in case people died during
       // battle TODO maybe put this in client code??
@@ -453,7 +460,9 @@ BattleSystem.prototype = {
                                            customCmds));
     }
     this.updateStats();
-    this._animator.start();
+    if (this._animator) {
+      this._animator.start();
+    }
 
     // startBattleCallback needs to itself take a callback!
     var self = this;
@@ -733,17 +742,22 @@ BattleSystem.prototype = {
     this.updateStats();
 
     // run animation for this action, then go on to execute next action.
-    if (cmd.animate) {
-      this._attackSFX = cmd.animate(this, fighter, target);
+    if (this._animator) {
+      if (cmd.animate) {
+        this._attackSFX = cmd.animate(this, fighter, target);
+      } else {
+        this._attackSFX = new Animation(10);
+      }
+      var self = this;
+      this._attackSFX.onFinish(function() {
+        self._attackSFX = null; // clear the attack sfx
+        self.executeNextFighterAction();
+      });
+      this._animator.runAnimation(this._attackSFX);
     } else {
-      this._attackSFX = new Animation(10);
-    }
-    var self = this;
-    this._attackSFX.onFinish(function() {
-      self._attackSFX = null; // clear the attack sfx
+      // if animation disabled, just go to next fighter action now:
       self.executeNextFighterAction();
-    });
-    this._animator.runAnimation(this._attackSFX);
+    }
   },
 
   finishRound: function() {
@@ -777,7 +791,9 @@ BattleSystem.prototype = {
     // Trigger a ScrollingTextBox to come up
     // with end of battle messages; closing the ScrollingTextBox
     // closes the battle menu system.
-    this._animator.cancelAllCallbacks();
+    if (this._animator) {
+      this._animator.cancelAllCallbacks();
+    }
     this.emptyMenuStack();
     this.pcMenus = [];
     this._fixedDisplayBoxes = [];

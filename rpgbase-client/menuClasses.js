@@ -578,6 +578,7 @@ function MenuSystemMixin(subClassPrototype) {
       this.displayElem.append($("<br>"));
       this.displayElem.show();
     }
+    this._lastMsgShown = msg; // for debugging/unit testing
   };
 
   subClassPrototype.clearMsg = function() {
@@ -786,6 +787,14 @@ function MenuSystemMixin(subClassPrototype) {
     }
     CanvasTextUtils.drawTextBox(ctx, x, y, width, height,
                                 textLines);
+  };
+
+  subClassPrototype.getHilitedCmd = function() {
+    if (this.menuStack.length < 1) {
+      return null;
+    }
+    var topMenu = this.menuStack[this.menuStack.length - 1];
+    return topMenu.cmdList[topMenu.selectedIndex];
   };
 
 }
