@@ -193,6 +193,7 @@ describe("GenericRPG save/restore feature", function() {
       }, 5000); // Waits for new menu to appear at end of round
 
       runs(function() {
+        expensiveSpellCast = false;
         expect(BS.getHilitedCmd().name).toEqual("REPEAT");
         BS.handleKey(CONFIRM_BUTTON);
       });
@@ -204,7 +205,13 @@ describe("GenericRPG save/restore feature", function() {
       runs(function() {
         expect(expensiveSpellCast).toBe(false);
         expect(BS._lastMsgShown).toBe("NOT ENOUGH MP.");
+        // Would be better if it said name + " HAS NOT ENOUGH MP TO CAST " + spell.
       });
+
+      // An additional test: make a command that's only valid on certain targets,
+      // like a "CAN'T HEAL THE DEAD" limitation, try casting it on legal target, then
+      // making target illegal, then use REPEAT and see that we get back the
+      // CAN'T HEAL THE DEAD message instead of the NOT ENOUGH MP message.
 
     });
 

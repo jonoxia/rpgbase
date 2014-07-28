@@ -597,21 +597,29 @@ BattleSystem.prototype = {
   },
 
   repeatLastRoundCommands: function() {
-    // (LONGTERM_TODO: retarget any command with a chosen target
-    // that is no longer valid.)
-
-    // make sure everyone has a command:
+    // make sure everyone has a command and that they're still legal:
     var everyoneHasCommands = true;
     for (var i = 0; i < this._party.length; i++) {
-      if (!this._party[i].getLockedInCmd()) {
-        everyoneHasCommands = false;
+      var pc = this._party[i];
+      var lockin = pc.getLockedInCmd();
+      if (!lockin || !lockin.cmd) {
+        this.showMsg("YOU HAVEN'T ENTERED ANY COMMANDS YET TO REPEAT.");
+        return;
       }
+
+      if (!lockin.cmd.canUse(pc)) {
+        this.showMsg("NOT ENOUGH MP."); // TODO what if this isn't the reason?
+        // canUse should actually return a record with both true/false and error msg.
+        // or mabye change name to ".unusable" and have it return an error msg or falsy to
+        // be usable.
+        return;
+      }
+
+      // TODO we have lockin.target, so check also for the target no longer being valid...!
     }
-    if (everyoneHasCommands) {
-      this.fightOneRound();
-    } else {
-      this.showMsg("YOU HAVEN'T ENTERED ANY COMMANDS YET TO REPEAT.");
-    }
+    // If all commands are OK, then just start the round, everyone will reuse
+    // their locked-in commands from last round.
+    this.fightOneRound();
   },
 
   setDefaultMonsterCmd: function(cmd) {
