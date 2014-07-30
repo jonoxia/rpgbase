@@ -636,7 +636,8 @@ PlayerCharacter.prototype = {
     return this._inventory.isFull();
   },
   customizeCmds: function(defaultCmds) {
-    // called at beginning of battle to allow us a chance to override
+    // called at beginning of each battle round
+    // to allow us a chance to override
     // the default cmds with our own spell list, item list, etc.
     
     // TODO make a deep copy so we're not modifying the original
@@ -648,14 +649,8 @@ PlayerCharacter.prototype = {
     var myItems = this.getInventoryCmds(true);
     for (var i = 0; i < myItems.length; i++) {
       myItemCmd.add(myItems[i].name, new BatCmd(myItems[i]));
-      /* TODO - problem here is having two items with the same names
-       * the second one will overwrite the first in the command set.
-       * it works in field menu because they are not all put into a
-       * BattleCommandSet there, they are directly added to the menu instead.
-       * Same thing could be done here if we were passed an empty menu and
-       * told to populate it...*/
     }
-    defaultCmds.add("ITEM", myItemCmd);
+    defaultCmds.replace("ITEM", myItemCmd);
 
     // Override spell list with my spell list!!
     var myMagicCmd = new BattleCommandSet();
@@ -663,7 +658,7 @@ PlayerCharacter.prototype = {
       var spell = this._battleSpells[i];
       myMagicCmd.add(spell.name, spell);
     }
-    defaultCmds.add("MAGIC", myMagicCmd);
+    defaultCmds.replace("MAGIC", myMagicCmd);
 
     return defaultCmds;
     // TODO what happens if you REPEAT a round of battle in which

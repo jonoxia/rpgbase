@@ -470,9 +470,7 @@ function MenuSystemMixin(subClassPrototype) {
         });
       }
     };
-    for (var name in cmdSet.cmds) {
-      addOneCmd(name, cmdSet.cmds[name]);
-    }
+    cmdSet.forEach(addOneCmd);
     return subMenu;
   };
 

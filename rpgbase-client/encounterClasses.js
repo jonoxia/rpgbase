@@ -332,6 +332,7 @@ BattleSystem.prototype = {
       // if this command has a submenu, then choosing it
       // just opens the submenu:
       if (cmd.isContainer) {
+        // container with stuff in it: recurse!
         //cmdMenu.setTitle(pc.name); // TODO title maybe 
         // desired by some games but not moonserpent.
         cmdMenu.addCommand(name, function() {
@@ -373,9 +374,15 @@ BattleSystem.prototype = {
         }
       }
     };
-    for (var name in cmdSet.cmds) {
-      addOneCmd(name, cmdSet.cmds[name]);
+    cmdSet.forEach(addOneCmd);
+
+    // special-case the empty container:
+    if (cmdSet.isEmpty()) {
+      // put a placeholder command that does nothing
+      cmdMenu.addCommand("NOTHING", function() {
+      });
     }
+     
     return cmdMenu;
   },
 
@@ -446,19 +453,13 @@ BattleSystem.prototype = {
     }
     this.emptyMenuStack();
     this.pcMenus = [];
+
     for (var i = 0; i < this._party.length; i++) {
       // undo any "fled" status set at the end of last battle...
       this._party[i].setStatus("fled", false);
       this._party[i].setStatus("fleeing", false);
-
-      // callback to userland to let menu be customized for this PC:
-      var customCmds = this._party[i].customizeCmds(
-          this.defaultCmdSet);
-      // TODO: Customize command menus at start of every round, not just once at
-      // the start of the battle, because the available commands can change
-      this.pcMenus.push(this.makeMenuForPC(this._party[i],
-                                           customCmds));
     }
+
     this.updateStats();
     if (this._animator) {
       this._animator.start();
@@ -552,6 +553,19 @@ BattleSystem.prototype = {
   },
 
   showStartRoundMenu: function() {
+    // Adjust PC menu contents in case there were any changes last round
+    // (e.g. single-use items used up)
+    this.pcMenus = [];
+    for (var i = 0; i < this._party.length; i++) {
+      // callback to userland to let menu be customized for this PC:
+      var customCmds = this._party[i].customizeCmds(
+          this.defaultCmdSet);
+      // TODO this means I'm going to be replacing one pcMenu with another, potentially
+      // breaking any references to it...? does this break anything?
+      this.pcMenus.push(this.makeMenuForPC(this._party[i],
+                                           customCmds));
+    }
+
     for (var i = 0; i < this.pcMenus.length; i++) {
       this.pcMenus[i].reset();
     }
@@ -1014,6 +1028,7 @@ function BatCmd(options) {
 BatCmd.prototype = {
   isContainer: false,
   canUse: function(user) {
+    // TODO what if usability depends on target selection?
     if (this.cost) {
       if (user.getStat(this.cost.resource) < this.cost.amount) {
         return false;
@@ -1038,12 +1053,14 @@ BatCmd.prototype = {
 
 
 function BattleCommandSet() {
-  this.cmds = {};
+  this._cmds = [];
 }
 BattleCommandSet.prototype = {
   add: function(name, battleCommand) {
+    // note this allows multiple commands with the same name to be
+    // added. Use .replace() if you don't want this.
     battleCommand.name = name;
-    this.cmds[name] = battleCommand;
+    this._cmds.push(battleCommand);
     // battleCommand can be another BattleCommandSet
     // so these sets can nest recursively.
 
@@ -1053,7 +1070,35 @@ BattleCommandSet.prototype = {
   },
 
   get: function(name) {
-    return this.cmds[name];
+    // gets a command by name. Returns the first match if there
+    // is more than one.
+    for (var i = 0; i < this._cmds.length; i++) {
+      if (this._cmds[i].name == name) {
+        return this._cmds[i];
+      }
+    }
+    return null;
+  },
+
+  forEach: function(callback) {
+    for (var i = 0; i < this._cmds.length; i++) {
+      callback(this._cmds[i].name, this._cmds[i]);
+    }
+  },
+
+  replace: function(name, battleCommand) {
+    // remove old one by this name if it exists:
+    for (var i = 0; i < this._cmds.length; i++) {
+      if (this._cmds[i].name == name) {
+        this._cmds.splice(i, 1);
+        break;
+      }
+    }
+    this.add(name, battleCommand);
+  },
+  
+  isEmpty: function() {
+    return (this._cmds.length == 0);
   },
 
   isContainer: true

@@ -241,7 +241,7 @@ ItemInstance.prototype = {
   },
 
   consume: function() {
-      console.log(this._name + " is consumed");
+    console.log(this._name + " is consumed");
     if (this._numUses != null) {
       console.log(this._name + " is limited use");
       this._numUses -= 1;

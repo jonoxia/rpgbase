@@ -109,7 +109,7 @@ describe("GenericRPG save/restore feature", function() {
   // TODO test loading canoe onto ship and unloading off of ship into river
 });
 
-  describe("GenericRPG battle system", function() {
+describe("GenericRPG battle system", function() {
     it("Shouldn't allow REPEAT if any of last round's commands can't be repeated", function() {
       // battleSystem.repeatLastRoundCommands() is the method
       // gotta lock in some commands first
@@ -208,6 +208,7 @@ describe("GenericRPG save/restore feature", function() {
         // Would be better if it said name + " HAS NOT ENOUGH MP TO CAST " + spell.
       });
 
+      // TODO:
       // An additional test: make a command that's only valid on certain targets,
       // like a "CAN'T HEAL THE DEAD" limitation, try casting it on legal target, then
       // making target illegal, then use REPEAT and see that we get back the
@@ -216,5 +217,233 @@ describe("GenericRPG save/restore feature", function() {
     });
 
     it("Should consume consumable items used in combat", function() {
+      var comList = new BattleCommandSet();
+      comList.add("ATTACK", new BatCmd({
+        effect: function(battle, user) {
+          battle.showMsg(user.name + " does a fight!");
+        }
+      }));
+      comList.add("EXPENSIVE SPELL", new BatCmd({
+        effect: function(battle, user) {
+          battle.showMsg(user.name + " casts the expensive spell!");
+          expensiveSpellCast = true;
+        },
+        cost: {resource: "mp", amount: 5}
+      }));
+            
+      var canvas = $("#mapscreen-canvas")[0];
+      var BS = new BattleSystem(null, canvas, {
+        frameDelay: 0, // No animation, everything just happens instantly
+        defaultCmdSet: comList
+      });
+      
+      // disable drawing of battle:
+      BS.draw = function() {};
+      
+      var player = new Player();
+      var character = new PlayerCharacter();
+      character.name = "dudebro";
+      character.setStat("mp", 8); // enough to cast EXPENSIVE SPELL once but not twice
+      player.addCharacter(character);
+
+      var monsterType = new MonsterType(null, "BITEWORM",  {hp: 12, acc: 0,  str: 0, pow: 0, def: 0, agi: 0,  gps: 1,  exp: 1}, [comList.get("ATTACK")]);
+      // I guess we need to create a player and a monstertype here
+      var encounter = {number: 1, type: monsterType};
+      
+      var herbUsed = false;
+
+      var healingHerb = new ItemType("HERB", 1);
+      healingHerb.useEffect({target: "ally",
+                             inBattle: true,
+                             outOfBattle: true,
+                             effect: function(system, user, target) {
+                               system.showMsg(user.name + " applies the medical herb to " + target.name);
+                               herbUsed = true;
+                               return true; // herb used up
+                             }
+                            });
+
+      character.gainItem(healingHerb);
+
+      // ok 
+      runs(function() {
+        BS.startBattle(player, encounter, 0); // don't care about land type
+        BS.handleKey(DOWN_ARROW);
+        BS.handleKey(DOWN_ARROW);
+        // use the herb on myself:
+        expect(BS.getHilitedCmd().name).toEqual("ITEM");
+        BS.handleKey(CONFIRM_BUTTON);
+        expect(BS.getHilitedCmd().name).toEqual("HERB");
+        BS.handleKey(CONFIRM_BUTTON);
+        expect(BS.getHilitedCmd().name).toEqual("dudebro");
+        BS.handleKey(CONFIRM_BUTTON);
+      });
+
+      waitsFor(function() {
+        return (BS.menuStack.length > 0);
+      }, 5000); // Waits for new menu to appear at end of round
+
+      runs(function() {
+        expect(herbUsed).toBe(true);
+        
+        herbUsed = false;
+        BS.handleKey(DOWN_ARROW);
+        BS.handleKey(DOWN_ARROW);
+        expect(character._inventory.getList().length).toEqual(0); // this fails too
+        expect(BS.getHilitedCmd().name).toEqual("ITEM");
+        BS.handleKey(CONFIRM_BUTTON);
+        expect(BS.getHilitedCmd().name).toEqual("NOTHING");
+      });
+      
     });
+
+    it("should list duplicate items separately", function() {
+      // Get two of the same item, test that it appears twice in 
+      // the item command menu...!
+
+      var comList = new BattleCommandSet();
+      comList.add("ATTACK", new BatCmd({
+        effect: function(battle, user) {
+          battle.showMsg(user.name + " does a fight!");
+        }
+      }));
+      comList.add("EXPENSIVE SPELL", new BatCmd({
+        effect: function(battle, user) {
+          battle.showMsg(user.name + " casts the expensive spell!");
+          expensiveSpellCast = true;
+        },
+        cost: {resource: "mp", amount: 5}
+      }));
+            
+      var canvas = $("#mapscreen-canvas")[0];
+      var BS = new BattleSystem(null, canvas, {
+        frameDelay: 0, // No animation, everything just happens instantly
+        defaultCmdSet: comList
+      });
+      
+      // disable drawing of battle:
+      BS.draw = function() {};
+      
+      var player = new Player();
+      var character = new PlayerCharacter();
+      character.name = "dudebro";
+      character.setStat("mp", 8);
+      player.addCharacter(character);
+
+      var monsterType = new MonsterType(null, "BITEWORM",  {hp: 12, acc: 0,  str: 0, pow: 0, def: 0, agi: 0,  gps: 1,  exp: 1}, [comList.get("ATTACK")]);
+      // I guess we need to create a player and a monstertype here
+      var encounter = {number: 1, type: monsterType};
+      
+      var healingHerb = new ItemType("HERB", 1);
+      healingHerb.useEffect({target: "ally",
+                             inBattle: true,
+                             outOfBattle: true,
+                             effect: function(system, user, target) {
+                               system.showMsg(user.name + " applies the medical herb to " + target.name);
+                               herbUsed = true;
+                             }
+                            });
+
+      character.gainItem(healingHerb);
+      character.gainItem(healingHerb);
+
+      
+      BS.startBattle(player, encounter, 0); // don't care about land type
+      BS.handleKey(DOWN_ARROW);
+      BS.handleKey(DOWN_ARROW);
+      
+      expect(BS.getHilitedCmd().name).toEqual("ITEM");
+      BS.handleKey(CONFIRM_BUTTON);
+      
+      var menu = BS.menuStack[BS.menuStack.length - 1];
+      expect(menu.cmdList.length).toEqual(2);
+      expect(menu.cmdList[0].name).toEqual("HERB");
+      expect(menu.cmdList[1].name).toEqual("HERB");
+    });
+
+    // TODO And a test where you have a one-use item, you use it up, then you try
+    // to REPEAT. what should happen?
+});
+
+
+describe("BattleCommandSet", function() {
+  var set;
+  
+  beforeEach(function() {
+    set = new BattleCommandSet();
+    set.add("ATTACK", new BatCmd({
+      effect: function(battle, user) {}
+    }));
+    set.add("SPELL", new BatCmd({
+      effect: function(battle, user) {}
+    }));
+    set.add("ITEM", new BatCmd({
+      effect: function(battle, user) {}
+    }));
+    set.add("RUN", new BatCmd({
+      effect: function(battle, user) {}
+    }));
+  });
+
+  it("Should support a foreach method with callback", function() {
+  
+    var calledWith = {"ATTACK": 0, "SPELL": 0, "ITEM": 0, "RUN": 0};
+    
+    set.forEach(function(name, cmd) {
+      expect(name).toEqual(cmd.name);
+      calledWith[cmd.name] ++;
+    });
+
+    expect(calledWith["ATTACK"]).toEqual(1);
+    expect(calledWith["SPELL"]).toEqual(1);
+    expect(calledWith["ITEM"]).toEqual(1);
+    expect(calledWith["RUN"]).toEqual(1);
+
+  });
+
+  it("Should allow new cmd to be added even if it has same name", function() {
+    
+    var secondItemCalled = false;
+
+    set.add("ITEM", new BatCmd({
+      effect: function(battle, user) {
+        secondItemCalled = true;
+      }
+    }));
+
+    var numCmds = 0;
+    set.forEach(function(name, cmd) {
+      numCmds ++;
+    });
+
+    expect(numCmds).toEqual(5);
+    // get should still return the first one though
+    var itemCmd = set.get("ITEM");
+    itemCmd.effect(null, {name: "user"}, {name: "target"});
+    expect(secondItemCalled).toBe(false);
+  
+  });
+
+  it("Should support a replace method", function() {
+    var secondItemCalled = false;
+
+    set.replace("ITEM", new BatCmd({
+      effect: function(battle, user) {
+        secondItemCalled = true;
+      }
+    }));
+
+    var numCmds = 0;
+    set.forEach(function(name, cmd) {
+      numCmds ++;
+    });
+
+    expect(numCmds).toEqual(4);
+
+    var itemCmd = set.get("ITEM");
+    itemCmd.effect(null, {name: "user"}, {name: "target"});
+    expect(secondItemCalled).toBe(true);
+
+  });
+  
 });
