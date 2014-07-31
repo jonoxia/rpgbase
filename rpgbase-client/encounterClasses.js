@@ -343,7 +343,7 @@ BattleSystem.prototype = {
         // whether you can use it right now...
         if (!cmd.canUse(pc)) {
           cmdMenu.addCommand(name, function() {
-            self.showMsg("NOT ENOUGH MP!");
+            self.scrollText("NOT ENOUGH MP!");
             // TODO what if this isn't the reason
           });
           return;
@@ -617,12 +617,12 @@ BattleSystem.prototype = {
       var pc = this._party[i];
       var lockin = pc.getLockedInCmd();
       if (!lockin || !lockin.cmd) {
-        this.showMsg("YOU HAVEN'T ENTERED ANY COMMANDS YET TO REPEAT.");
+        this.scrollText("YOU HAVEN'T ENTERED ANY COMMANDS YET TO REPEAT.");
         return;
       }
 
       if (!lockin.cmd.canUse(pc)) {
-        this.showMsg("NOT ENOUGH MP."); // TODO what if this isn't the reason?
+        this.scrollText("NOT ENOUGH MP."); // TODO what if this isn't the reason?
         // canUse should actually return a record with both true/false and error msg.
         // or mabye change name to ".unusable" and have it return an error msg or falsy to
         // be usable.
