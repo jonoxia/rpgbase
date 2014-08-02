@@ -65,7 +65,7 @@ var CanvasTextUtils = {
     this._fontImg = img;
   },
 
-  drawTextBox: function(ctx, x, y, width, height, textLines) {
+  oldDrawTextBox: function(ctx, x, y, width, height, textLines) {
     var cornerRadius = this.styles.cornerRadius;
     ctx.beginPath();
     // top edge:
@@ -92,7 +92,6 @@ var CanvasTextUtils = {
     ctx.arc( x + cornerRadius,
 	     y + cornerRadius,
 	     cornerRadius, Math.PI, 3*Math.PI/2, false);
-
     // clear area
     ctx.fillStyle = this.styles.bgColor;
     ctx.strokeStyle = this.styles.borderColor;
@@ -106,6 +105,86 @@ var CanvasTextUtils = {
       for (var i = 0; i < textLines.length; i++) {
         var plotX = x + this.styles.leftMargin;
         var plotY = y + this.styles.topMargin + this.styles.lineHeight*i;
+        this.customRenderText(ctx, textLines[i], plotX, plotY);
+      }
+    }
+  },
+
+  drawTextBox: function(ctx, x, y, width, height, textLines) {
+
+    var W = 0;
+    for (var i =0; i < textLines.length; i++) {
+      if (textLines[i].length > W) {
+        W = textLines[i].length;
+      }
+    }
+    var L = textLines.length;
+
+    W *= this.styles.fontSize;
+    L *= this.styles.lineHeight;
+
+    W = width;
+    L = height;
+
+    /*White pixels from 1,0 to (8*W+2),1
+      White pixels from 0,1 to 1,(8*L+2,)
+      Characters placed from font.png starting at 2,2 with an 8 pixel offset.
+      Black pixels from 2,(8*L+2) to (8*W+1),(8*L+2)
+      Black pixels from (8*W+2),2 to (8*W+2),(8*L+1)
+      White pixels from 1,(8*L+4) to (8*W+2),(8*L+5)
+      While pixels from (8*W+4),1 to (8*W+5),(8*L+2,)*/
+    ctx.fillStyle = this.styles.bgColor;
+    ctx.fillRect(x+1, y+1, W+2, L+3);
+
+      // Top side:
+    ctx.strokeStyle = this.styles.borderColor;
+    ctx.beginPath();
+    ctx.moveTo(x+1, y);
+    ctx.lineTo(x + W + 3, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x+1, y+1);
+    ctx.lineTo(x + W + 3, y+1);
+    ctx.stroke();
+
+      // Left side:
+    ctx.beginPath();
+    ctx.moveTo(x, y+1);
+    ctx.lineTo(x, y+L + 4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x+1, y+1);
+    ctx.lineTo(x+1, y+L + 4);
+    ctx.stroke();
+
+      // Bottom side:
+    ctx.beginPath();
+    ctx.moveTo(x+1, y+ L + 4);
+    ctx.lineTo(x+ W +3, y+ L + 4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x+1, y+ L + 5);
+    ctx.lineTo(x+ W +3, y+ L + 5);
+    ctx.stroke();
+
+      // Right side:
+    ctx.beginPath();
+    ctx.moveTo(x+ W + 3, y+ 1);
+    ctx.lineTo(x+ W + 3, y + L+4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x+ W + 4, y+ 1);
+    ctx.lineTo(x+ W + 4, y + L+4);
+    ctx.stroke();
+
+    
+    if (textLines && textLines.length > 0) {
+      ctx.font = this.styles.font;
+      ctx.fillStyle = this.styles.fontColor;
+      // draw each line:
+      for (var i = 0; i < textLines.length; i++) {
+        var plotX = x + 2; // + this.styles.leftMargin;
+        var plotY = y + this.styles.lineHeight*i + 2; //+ this.styles.topMargin + this.styles.lineHeight*i;
         this.customRenderText(ctx, textLines[i], plotX, plotY);
       }
     }
@@ -256,7 +335,7 @@ CanvasCmdMenu.prototype = {
     // draw the triangular indicator:
     var yBase = y + styles.lineHeight * this.selectedIndex;
     if (this._cursorImg) {
-      ctx.drawImage(this._cursorImg, x + 1, yBase + 2);
+      ctx.drawImage(this._cursorImg, x + 2, yBase + 2);
     } else {
       ctx.beginPath();
       ctx.moveTo(x + 4, yBase + 5);
