@@ -110,7 +110,7 @@ var CanvasTextUtils = {
     }
   },
 
-  drawTextBox: function(ctx, x, y, width, height, textLines) {
+  drawTextBox: function(ctx, x, y, width, height, textLines, options) {
 
     var W = 0;
     for (var i =0; i < textLines.length; i++) {
@@ -123,58 +123,69 @@ var CanvasTextUtils = {
     W *= this.styles.fontSize;
     L *= this.styles.lineHeight;
 
-    W = width;
-    L = height;
+    // opional overrides:
+    // (HORRIBLE HACKERY here. If we're going to calc our own width/height for most
+    // things, then we shouldn't take width and height as required arguments only to ignore
+    // them! options should be the only optional argument. TODO refactor.
+    // we could have that args are ctx, x, y, textLines, width, height, and width/height are
+    // optional args. Or that passing "auto" to width and/or height lets this function calculate.
+    if (options && options.width) {
+        // Should calculate width/height correctly instead of adjusting it on the fly here.
+        // TODO refactor
+        W = options.width;
+    }
+    if (options && options.height) {
+        L = options.height;
+    }
 
-    /*White pixels from 1,0 to (8*W+2),1
-      White pixels from 0,1 to 1,(8*L+2,)
+    /*White pixels from 0,1 to 1,(8*L+2,)
       Characters placed from font.png starting at 2,2 with an 8 pixel offset.
       Black pixels from 2,(8*L+2) to (8*W+1),(8*L+2)
       Black pixels from (8*W+2),2 to (8*W+2),(8*L+1)
       White pixels from 1,(8*L+4) to (8*W+2),(8*L+5)
       While pixels from (8*W+4),1 to (8*W+5),(8*L+2,)*/
     ctx.fillStyle = this.styles.bgColor;
-    ctx.fillRect(x+1, y+1, W+2, L+3);
+    ctx.fillRect(x+1.5, y+1.5, W+2.5, L+1.5);
 
       // Top side:
     ctx.strokeStyle = this.styles.borderColor;
     ctx.beginPath();
-    ctx.moveTo(x+1, y);
-    ctx.lineTo(x + W + 3, y);
+    ctx.moveTo(x+1, y + 0.5);
+    ctx.lineTo(x + W + 4, y + 0.5);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x+1, y+1);
-    ctx.lineTo(x + W + 3, y+1);
+    ctx.moveTo(x+1, y+1.5);
+    ctx.lineTo(x + W + 4, y+1.5);
     ctx.stroke();
 
       // Left side:
     ctx.beginPath();
-    ctx.moveTo(x, y+1);
-    ctx.lineTo(x, y+L + 4);
+    ctx.moveTo(x + 0.5, y+1);
+    ctx.lineTo(x +0.5, y+L + 2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x+1, y+1);
-    ctx.lineTo(x+1, y+L + 4);
+    ctx.moveTo(x+1.5, y+1);
+    ctx.lineTo(x+1.5, y+L + 2);
     ctx.stroke();
 
       // Bottom side:
     ctx.beginPath();
-    ctx.moveTo(x+1, y+ L + 4);
-    ctx.lineTo(x+ W +3, y+ L + 4);
+    ctx.moveTo(x+1, y+ L + 1.5);
+    ctx.lineTo(x+ W +4, y+ L + 1.5);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x+1, y+ L + 5);
-    ctx.lineTo(x+ W +3, y+ L + 5);
+    ctx.moveTo(x+1, y+ L + 2.5);
+    ctx.lineTo(x+ W +4, y+ L + 2.5);
     ctx.stroke();
 
       // Right side:
     ctx.beginPath();
-    ctx.moveTo(x+ W + 3, y+ 1);
-    ctx.lineTo(x+ W + 3, y + L+4);
+    ctx.moveTo(x+ W + 3.5, y+ 1);
+    ctx.lineTo(x+ W + 3.5, y + L+2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x+ W + 4, y+ 1);
-    ctx.lineTo(x+ W + 4, y + L+4);
+    ctx.moveTo(x+ W + 4.5, y+ 1);
+    ctx.lineTo(x+ W + 4.5, y + L+2);
     ctx.stroke();
 
     
@@ -316,8 +327,8 @@ CanvasCmdMenu.prototype = {
     var y = this.y;
 
     if (this.title) {
-      var titleHeight = styles.topMargin + styles.lineHeight 
-        + styles.bottomMargin;
+        //var titleHeight = styles.topMargin + styles.lineHeight + styles.bottomMargin;
+      var titleHeight = styles.lineHeight + 3; // TODO this is moonserpent-specific!!
       CanvasTextUtils.drawTextBox(ctx, x, y, this.width, titleHeight,
                                  [this.title]);
       y += titleHeight;
@@ -1128,6 +1139,11 @@ FixedTextBox.prototype = {
   },
   setText: function(newTextLines) {
     this.textLines = newTextLines;
+  },
+  outsideWidth: function() {
+    // TODO this is specific to the moonserepent implementation of
+    // drawTextBox, which adds 4 columns of white pixels and 1 column of black pixels.
+    return this.width + 5;
   }
 };
 

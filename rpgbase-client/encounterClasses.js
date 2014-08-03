@@ -422,11 +422,16 @@ BattleSystem.prototype = {
     this._fixedDisplayBoxes = [];
     this.peacefulResolutionText = null;
 
-    // TODO the position of the monster name in the upper right should
-    // be specified in userland
+    // Monster name box:
     this._monsterNameBox = new FixedTextBox([encounter.type.name], this);
+    // Right-align option...
+    if (this._positioning.monsterNameX == "right") {
+        this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.outsideWidth(),
+                                    this._positioning.monsterNameY);
+    } else {
+        this._monsterNameBox.setPos(this._positioning.monsterNameX, this._positioning.monsterNameY);
+    }
     // TODO create right-align option?
-    this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.width, 0);
     this._fixedDisplayBoxes.push(this._monsterNameBox);
 
     // Give each monster a letter for a name:
@@ -444,8 +449,16 @@ BattleSystem.prototype = {
     } // else? can that happen?
 
     // Monster HP display:
+    // (Note repeates a lot of coe from monster name box. TODO refactor!
     this._monsterHitPoints = new FixedTextBox(monsterStatLines, this);
-    this._monsterHitPoints.setPos(this._screenWidth - this._monsterHitPoints.width, 14);
+    // Right-align option...
+    if (this._positioning.monsterStatsX == "right") {
+        this._monsterHitPoints.setPos(this._screenWidth - this._monsterHitPoints.outsideWidth(),
+                                    this._positioning.monsterStatsY);
+    } else {
+        this._monsterHitPoints.setPos(this._positioning.monsterStatsX,
+                                      this._positioning.monsterStatsY);
+    }
     this._fixedDisplayBoxes.push(this._monsterHitPoints);
 
     if (this.startBattleMsg && this.startBattleMsg != "") {
