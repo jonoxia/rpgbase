@@ -625,7 +625,6 @@ BattleSystem.prototype = {
 
   repeatLastRoundCommands: function() {
     // make sure everyone has a command and that they're still legal:
-    var everyoneHasCommands = true;
     for (var i = 0; i < this._party.length; i++) {
       var pc = this._party[i];
       var lockin = pc.getLockedInCmd();

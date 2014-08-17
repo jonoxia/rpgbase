@@ -335,8 +335,18 @@ Player.prototype = {
 
   forEachAliveMember: function(callback) {
     for (var i = 0; i < this.aliveParty.length; i++) {
-	callback(this.aliveParty[i]);
+      callback(this.aliveParty[i]);
     }
+  },
+
+  getPcByName: function(name) {
+    // can't believe we got by so long without this method
+    for (var i = 0; i < this.aliveParty.length; i++) {
+      if (this.aliveParty[i].name == name) {
+        return this.aliveParty[i];
+      }
+    }
+    return null;
   }
 };
 SerializableMixin(Player);
