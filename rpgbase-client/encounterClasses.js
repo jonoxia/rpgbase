@@ -776,13 +776,13 @@ BattleSystem.prototype = {
     this.updateStats();
 
     // run animation for this action, then go on to execute next action.
+    var self = this;
     if (this._animator) {
       if (cmd.animate) {
         this._attackSFX = cmd.animate(this, fighter, target);
       } else {
         this._attackSFX = new Animation(10);
       }
-      var self = this;
       this._attackSFX.onFinish(function() {
         self._attackSFX = null; // clear the attack sfx
         self.executeNextFighterAction();
