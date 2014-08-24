@@ -1036,6 +1036,7 @@ function BatCmd(options) {
   this._effect = options.effect;
   this.onStartRound = options.onStartRound;
   this.onEndRound = options.onEndRound;
+  this.wrapsItem = options.reference; // undefined if not item
 }
 BatCmd.prototype = {
   isContainer: false,

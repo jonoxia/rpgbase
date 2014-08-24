@@ -118,6 +118,18 @@ Inventory.prototype = {
 
   isFull: function() {
     return (this._itemList.length >= this._limit);
+  },
+
+  getItemByName: function(name) {
+    // If it contains an item with the given name, then returns a
+    // reference to it. otherwise returns null.
+    for (var i = 0; i < this._itemList.length; i++) {
+        if (this._itemList[i].getName() == name) {
+            return this._itemList[i];
+        }
+    }
+    return null;
+
   }
 };
 SerializableMixin(Inventory);
