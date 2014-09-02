@@ -639,6 +639,9 @@ PlayerCharacter.prototype = {
     giver.loseItem(instance);
     this._inventory.gainInstance(instance);
   },
+  getItemByName: function(name) {
+    return this._inventory.getItemByName(name);
+  },
   getInventoryCmds: function(isBattle) {
     return this._inventory.getItemNamesAndUses(isBattle);
   },

@@ -55,6 +55,24 @@ function CmdMenuMixin(subClassProto) {
   subClassProto.reset = function() {
     this.selectedIndex = 0;
   };
+
+  subClassProto.hasCmd = function(cmdName) {
+    for (var i = 0; i < this.cmdList.length; i++) {
+      if (this.cmdList[i].name == cmdName) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  subClassProto.listCmdNames = function() {
+    var names = [];
+    for (var i = 0; i < this.cmdList.length; i++) {
+      names.push(this.cmdList[i].name);
+    }
+    return names;
+  };
+
 }
 
 var CanvasTextUtils = {
