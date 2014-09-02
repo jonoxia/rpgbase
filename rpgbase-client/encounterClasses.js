@@ -209,6 +209,12 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onEndRound) {
     this._endRoundCallback = options.onEndRound;
   }
+  // TODO refactor to have a general purpose event listener
+  // registry instead of all these specific named methods!
+  this._beginRoundCallback = null;
+  if (options.onBeginRound) {
+    this._beginRoundCallback = options.onBeginRound;
+  }
 
   var frameDelay = 50; // default (very fast)
   if (options.frameDelay) {
@@ -395,7 +401,12 @@ BattleSystem.prototype = {
   },
 
   onEndRound: function(callback) {
+    // TODO allow more than one callback for some of these events?
     this._endRoundCallback = callback;
+  },
+
+  onBeginRound: function(callback) {
+    this._beginRoundCallback = callback;
   },
 /*
   onEndBattle: function(callback) {
@@ -661,6 +672,10 @@ BattleSystem.prototype = {
     var activeParty = this.getActiveParty();
     var fighters = activeParty.concat(this.monsters); //everyone
     var i;
+
+    if (this._beginRoundCallback) {
+      this._beginRoundCallback(this, fighters);
+    }
 
     // Tick down all temporary stat mods - they expire now if
     // their duration has run out
