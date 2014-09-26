@@ -32,17 +32,17 @@ SpecialEncounter.prototype = {
   },
   start: function(system, party) {
     if (this._startCallback) {
-      this._startCallback(system, party);
+      return this._startCallback(system, party);
     }
   },
   win: function(system, party) {
     if (this._winCallback) {
-      this._winCallback(system, party);
+      return this._winCallback(system, party);
     }
   },
   lose: function(system, party) {
     if (this._loseCallback) {
-      this._loseCallback(system, party);
+      return this._loseCallback(system, party);
     }
   }
 };
@@ -864,14 +864,22 @@ BattleSystem.prototype = {
     switch (winLoseRun) {
     case "win":
       if (this._victoryCallback) {
+        // Regular battle victory -- call victory callback, and use its return value
+        // for the end of battle text.
         endBattleMessage = this._victoryCallback(this.player,
                                                  this.deadMonsters);
       } else {
         endBattleMessage = "You won! Let's assume there is a whole lot of end battle text, including how many experience points you got, how much gold you got, whether anybody went up a level, and all that jazz.";
       }
+
+      /* If there's a special encounter in effect, call its win callback, AND replace the
+       * normal end-of-battle text with the special encounter end-of-battle-text (i.e.
+       * whatever is returned.) */
       if (this.encounter.win) {
-        // special encounter win results
-        this.encounter.win(this, this.player);
+        var specialMessage = this.encounter.win(this, this.player);
+        if (specialMessage != null) {
+          endBattleMessage = specialMessage;
+        }
       }
       break;
     case "lose":
@@ -882,7 +890,10 @@ BattleSystem.prototype = {
         }
       if (this.encounter.lose) {
         // special encounter lose results
-        this.encounter.lose(this, this.player);
+        var specialMessage  = this.encounter.lose(this, this.player);
+        if (specialMessage != null) {
+          endBattleMessage = specialMessage;
+        }
       }
       break;
     case "run":
