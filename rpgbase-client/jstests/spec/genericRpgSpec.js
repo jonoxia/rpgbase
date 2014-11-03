@@ -1,3 +1,9 @@
+function instantAnim(anim) {
+    // todo copypastad from MoonSerpentSpec.js -- move to animation class itself?
+    for (i = 0; i < anim.finishCallbacks.length; i++) {
+        anim.finishCallbacks[i]();
+    }
+}
 
 function genericRPGSetup() {
   var gameEngine = new GenericRPG("mapscreen-canvas");
@@ -446,4 +452,162 @@ describe("BattleCommandSet", function() {
 
   });
   
+});
+
+describe("Map screen", function() {
+
+  var dummyCanvas;
+  var mapScreen;
+  var player;
+  var thisland;
+
+  beforeEach(function() {
+    dummyCanvas = document.createElement("canvas");
+    var spriteSheet = "npcsprites";
+    // make a small (16x16) map
+          var mapData = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]];
+    
+    // make a map screen that shows 8x8 squares at a time
+    mapScreen = new MapScreen(dummyCanvas,
+                              8, 8, 32, 32, 50);
+    
+    thisland = new Map("thisland", mapData, spriteSheet) ;
+    mapScreen.setNewDomain(thisland);
+
+    MapSprite.setDefault("spriteDimensions", {width:16, height: 16, offsetX: 0, offsetY: 0});
+    MapSprite.setDefault("walkAnimationFrames", 8);
+    // Put a party with one character at 0, 0
+    player = new Player();
+    var character = new PlayerCharacter();
+    character.spriteSheet = "not a sprite sheet";
+    character.name = "dudebro";
+    character.setStat("mp", 8); // Need to give them a sprite!
+    player.addCharacter(character);
+    player.enterMapScreen(mapScreen, 0, 0);
+  });
+
+
+
+  it("Shouldn't allow NPCs to move through each other", function() {
+    var spriteSheet = "npcsprites";
+    this.mapScreen = new MapScreen(dummyCanvas,
+                                   dim.squaresX,
+                                   dim.squaresY,
+                                   dim.pixelsX,
+                                   dim.pixelsY,
+                                   animFrameTime);
+    var town = new Map("Testy town", mapData, spriteSheet) ;
+    
+    // gameEngine.adNPCToTown?
+    var npcOne = new NPC(spriteSheet, mapScreen);
+    npcOne.setSprite(0, 0);
+    town.addNPC(npcOne, 0, 0);
+    var npcTwo = new NPC(spriteSheet, mapScreen);
+    npcOne.setSprite(0, 1);
+    town.addNPC(npcOne, 1, 1);
+    // have npcOne walk right and npcTwo walk up
+    // test that they do not both end up in square (1, 0)
+  });
+
+  it("Should block you at map borders by default", function() {
+    // walk west, should bump into edge of map:
+    var anim = player.move(-1, 0);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(0);
+    expect(pos.y).toBe(0);
+
+    // walk north, should bump into top of map:
+    var anim = player.move(0, -1);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(0);
+    expect(pos.y).toBe(0);
+
+    // but walk right a bunch of times...
+    for (var i = 1; i < 16; i++) {
+        var anim = player.move(1, 0);
+        instantAnim(anim);
+        var pos = player.party[0].getPos();
+        expect(pos.x).toBe(i);
+        expect(pos.y).toBe(0);
+    }
+    // then walk right again, should bump into right edge of map:
+    var anim = player.move(1, 0);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(15);
+    expect(pos.y).toBe(0);
+
+    // walk down a bunch of times:
+    for (var i = 1; i < 16; i++) {
+        var anim = player.move(0, 1);
+        instantAnim(anim);
+        var pos = player.party[0].getPos();
+        expect(pos.x).toBe(15);
+        expect(pos.y).toBe(i);
+    }
+
+    // walk down again, should bump into bottom of map:
+    var anim = player.move(0, 1);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(15);
+    expect(pos.y).toBe(15);
+    
+  });
+
+
+  it("With x-wrap set to true, should wrap around west to east and east to west", function() {
+    thisland.x_wrap = true;
+    // TODO 
+
+    // walk west, should wrap around to east side of map:
+    var anim = player.move(-1, 0);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(15);
+    expect(pos.y).toBe(0);
+
+    // walk north, should bump into top of map:
+    var anim = player.move(0, -1);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(15);
+    expect(pos.y).toBe(0);
+
+    // walk right, should wrap back around to left:
+
+    var anim = player.move(1, 0);
+    instantAnim(anim);
+    var pos = player.party[0].getPos();
+    expect(pos.x).toBe(0);
+    expect(pos.y).toBe(0);
+  });
+
+  // Other things to test:
+  // impassible terrain on the other side of the map still blocks my step
+  // i can still step into a vehicle on the other side of the international date line
+  // i can open a treasure chest across the international date line (not that this ever comes up)
+  // if party is split across the international date line, they all draw correctly
+  // that vehicles can cross the international date line OK
+
+  // OK to write this test I need a way to say "what land type is at
+  // screen coordinate x, y right now?" which doesn't currently exist
+
 });

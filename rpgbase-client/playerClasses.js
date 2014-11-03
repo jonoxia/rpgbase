@@ -73,8 +73,10 @@ Player.prototype = {
 
     // see if there's a vehicle in front of me that i might
     // be trying to move into:
-    var newX = mainChar._x + dx;
-    var newY = mainChar._y + dy;
+
+    var newPos = self.mapScreen.getNeighbor(mainChar._x, mainChar._y, dx, dy);
+    var newX = newPos.x;
+    var newY = newPos.y;
     var aVehicle = self.mapScreen.getVehicleAt(newX, newY);
 
     // if we're in vehicle, use the vehicle's canMove method to
@@ -217,7 +219,7 @@ Player.prototype = {
     var mainChar = this.aliveParty[0];
     var pos = mainChar.getPos();
     var facing = mainChar.getFacing();
-    var space = {x: pos.x + facing.x, y: pos.y + facing.y};
+    var space = this.mapScreen.getNeighbor(pos.x, pos.y, facing.x, facing.y);
     return space;
   },
 
@@ -457,8 +459,9 @@ function MapSpriteMixin(subClassPrototype) {
   };
     
   subClassPrototype.canMove = function(mapScreen, deltaX, deltaY)  {
-    var newX = this._x + deltaX;
-    var newY = this._y + deltaY;
+    var newPos = mapScreen.getNeighbor(this._x, this._y, deltaX, deltaY);
+    var newX = newPos.x;
+    var newY = newPos.y;
     if (!mapScreen.pointInBounds(newX, newY)) {
       // don't go off the map
       return false;
@@ -490,10 +493,9 @@ function MapSpriteMixin(subClassPrototype) {
   };
 
   subClassPrototype.move = function( mapScreen, deltaX, deltaY ) {
-    var newX = this._x + deltaX;
-    var newY = this._y + deltaY;
-    this._x = newX;
-    this._y = newY;
+    var newPos = mapScreen.getNeighbor(this._x, this._y, deltaX, deltaY);
+    this._x = newPos.x;
+    this._y = newPos.y;
 
     this._lastMoved = {x: deltaX, y: deltaY};
     this._facing = {x: deltaX, y: deltaY};
@@ -836,8 +838,9 @@ Vehicle.prototype = {
   bump: function(mapScreen, dx, dy) {
     // just failed to move in {dx, dy} direction.
     // TODO this duplicates some code from canMove
-    var newX = this._x + dx;
-    var newY = this._y + dy;
+    var newPos = mapScreen.getNeighbor(this._x, this._y, dx, dy);
+    var newX = newPos.x;
+    var newY = newPos.y;
     if (!mapScreen.pointInBounds(newX, newY)) {
       // going off the map is not a bump
       return;

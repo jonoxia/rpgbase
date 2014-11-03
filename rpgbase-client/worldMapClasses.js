@@ -1,5 +1,5 @@
 function Map(id, data, spritesheet) {
-  // mapData must be array of dimensions equal to dimX and dimY.
+  // mapData must be 2d array of landtype codes.
   this._mapData = data;
   this._dimX = data[0].length;
   this._dimY = data.length;
@@ -31,14 +31,14 @@ Map.prototype = {
     // more specific triggers (specific x-y point) to take
     // priority over more general triggers.
     if (!trigger.hasOwnProperty('priority')) {
-	if (trigger.hasOwnProperty('x') ||
-	    trigger.hasOwnProperty('edge')) {
-	    trigger.priority = 1;
-	    trigger.passThrough = false;
-	} else {
-	    trigger.priority = 2;
-	    trigger.passThrough = true;
-	}
+      if (trigger.hasOwnProperty('x') ||
+        trigger.hasOwnProperty('edge')) {
+        trigger.priority = 1;
+        trigger.passThrough = false;
+      } else {
+        trigger.priority = 2;
+        trigger.passThrough = true;
+      }
     }
     this._stepHandlers.push({
         trigger: trigger,
@@ -103,8 +103,8 @@ Map.prototype = {
         /* Handlers with passThrough = false (the default)
 	 * end the handler chain when triggered. */ 
         if (!trigger.passThrough) {
-	  break;
-	}
+	        break;
+        }
       }
     }
   },
@@ -209,6 +209,26 @@ Map.prototype = {
 
   onUnload: function(callback) {
     this._unloadHandlers.push(callback);
+  },
+
+  getNeighbor: function(x, y, dx, dy) {
+    // Gets square at x + dx, y + dy taking wrap into account
+    // returns {x: x, y: y};
+    var newX = x + dx;
+    var newY = y + dy;
+    if (newX < 0 && this.x_wrap) {
+        newX += this._dimX;
+    }
+    if (newX >= this._dimX && this.x_wrap) {
+        newX -= this._dimX;
+    }
+    if (newY < 0 && this.y_wrap) {
+        newY += this._dimY;
+    }
+    if (newY >= this._dimY && this.y_wrap) {
+        newY -= this._dimY;
+    }
+    return {x: newX, y: newY};
   }
 }
 
@@ -278,25 +298,122 @@ MapScreen.prototype = {
     // x, y are world-coordinates, not screen-coordinates.
     return this._currentDomain._mapData[y][x];
   },
+
   _getTileElementAt: function( x, y ) {
+    // Deprecated. TODO: Delete.
     //convert to screen coordinates:
     x = x - this._scrollX;
     y = y - this._scrollY;
     var id = "tile_" + x + "_" + y;
     return document.getElementById(id);
   },
+
+  _worldToScreen: function( worldX, worldY ) {
+    // subtracts current scroll to turn a world position
+    // into a screen position -- accounting for wrapping
+    var scrolledX = worldX - this._scrollX;
+    var scrolledY = worldY - this._scrollY;
+    if (this._currentDomain.x_wrap) {
+      if (scrolledX < 0) {
+        scrolledX += this._currentDomain._dimX;
+      }
+      if (scrolledX >= this._currentDomain._dimX) {
+        scrolledX -= this._currentDomain._dimX;
+      }
+    }
+    if (this._currentDomain.y_wrap) {
+      if (scrolledY < 0) {
+        scrolledY += this._currentDomain._dimY;
+      }
+      if (scrolledY >= this._currentDomain._dimY) {
+        scrolledY -= this._currentDomain._dimY;
+      }
+    }
+    return {x: scrolledX, y: scrolledY};
+  },
+
+  _screenToWorld: function( screenX, screenY ) {
+    // adds current scroll to turn a world position
+    // into a screen position -- accounting for wrapping
+    var scrolledX = screenX + this._scrollX;
+    var scrolledY = screenY + this._scrollY;
+    // TODO mostly duplicated from _worldToScreen
+    if (this._currentDomain.x_wrap) {
+      if (scrolledX < 0) {
+        scrolledX += this._currentDomain._dimX;
+      }
+      if (scrolledX >= this._currentDomain._dimX) {
+        scrolledX -= this._currentDomain._dimX;
+      }
+    }
+    if (this._currentDomain.y_wrap) {
+      if (scrolledY < 0) {
+        scrolledY += this._currentDomain._dimY;
+      }
+      if (scrolledY >= this._currentDomain._dimY) {
+        scrolledY -= this._currentDomain._dimY;
+      }
+    }
+    return {x: scrolledX, y: scrolledY};
+  },
+
   transform: function( worldX, worldY ) {
     // transforms world coords to screen coords:
-    var screenX = this.tilePixelsX * (worldX - this._scrollX);
-    var screenY = this.tilePixelsY * (worldY - this._scrollY);
+    var worldXY = this._worldToScreen(worldX, worldY);
+    var screenX = this.tilePixelsX * worldXY.x;
+    var screenY = this.tilePixelsY * worldXY.y;
     return [screenX + this.pixelOffset.x,
 	    screenY + this.pixelOffset.y];
   },
+
   isOnScreen: function( worldX, worldY ) {
-    var screenX = worldX - this._scrollX;
-    var screenY = worldY - this._scrollY;
+    var worldXY = this._worldToScreen(worldX, worldY);
+    var screenX = worldXY.x;
+    var screenY = worldXY.y;
     return (screenX > -1 && screenX < this.numTilesX &&
             screenY > -1 && screenY < this.numTilesY);
+  },
+
+  clipScrollToEdges: function(scrollX, scrollY) {
+    if (scrollX < 0) {
+      if (this._currentDomain.x_wrap) {
+          // wrap around left edge of wrapping map
+          scrollX += this._currentDomain._dimX;
+      } else {
+          // stop scrolling at left edge of non-wrapping map
+          scrollX = 0;
+      }
+    } else if ( scrollX + this.numTilesX > this._currentDomain._dimX) {
+      if (this._currentDomain.x_wrap) {
+        if (scrollX >= this._currentDomain._dimX) {
+          // wrap around right edge of wrapping map
+          scrollX -= this._currentDomain._dimX;
+        }
+      } else {
+        // stop scrolling at right edge of non-wrapping map
+        scrollX = this._currentDomain._dimX - this.numTilesX;
+      }
+    }
+    if (scrollY < 0) {
+      if (this._currentDomain.y_wrap) {
+        // wrap around top edge of wrapping map
+        scrollY += this._currentDomain._dimY;
+      } else {
+        // stop scrolling at top edge of non-wrapping map
+        scrollY = 0;
+      }
+    } else if (scrollY + this.numTilesY > this._currentDomain._dimY) {
+      if (this._currentDomain.y_wrap) {
+        // wrap around bottom edge of wrapping map
+        if (scrollY >= this._currentDomain._dimY) {
+          scrollY -= this._currentDomain._dimY;
+        }
+      } else {
+        // stop scrolling at bottom edge of non-wrapping map
+        scrollY = this._currentDomain._dimY - this.numTilesY;
+      }
+    }
+    return {x: scrollX, y: scrollY};
   },
 
   calcAutoScroll: function(x, y, delX, delY) {
@@ -321,20 +438,14 @@ MapScreen.prototype = {
     } 
     if (delY > 0 && screenY > bottomEdge) {
       scrollY += (screenY - bottomEdge);
-    }
+    } // TODO wrap this part may still need adjustment if the map wraps
 
-    // Stop at edges of map:
-    if (scrollX < 0)
-      scrollX = 0;
-    if ( scrollX + this.numTilesX > this._currentDomain._dimX)
-      scrollX = this._currentDomain._dimX - this.numTilesX;
-    if (scrollY < 0)
-      scrollY = 0;
-    if (scrollY + this.numTilesY > this._currentDomain._dimY)
-      scrollY = this._currentDomain._dimY - this.numTilesY;
+    // Stop at edges of map -- or wrap around to other side
+    // depending on settings:
+    var clippedScroll = this.clipScrollToEdges(scrollX, scrollY);
 
-    return {x: scrollX - this._scrollX,
-            y: scrollY - this._scrollY};
+    return {x: clippedScroll.x - this._scrollX,
+            y: clippedScroll.y - this._scrollY};
   },
 
   render: function() {
@@ -342,8 +453,9 @@ MapScreen.prototype = {
     // a .x and .y
     for (var y = 0; y < this.numTilesY; y++) {
       for (var x = 0; x < this.numTilesX; x++) {
-        var code = this.getLandType( x + this._scrollX,
-                                     y + this._scrollY);
+
+        var worldPt = this._screenToWorld(x, y);
+        var code = this.getLandType( worldPt.x, worldPt.y );
         var img = this._currentDomain._img;
         
         var tile = this._currentDomain.getTileForCode(code);
@@ -439,17 +551,10 @@ MapScreen.prototype = {
   scroll: function( deltaX, deltaY ) {
     var scrollX = this._scrollX + deltaX;
     var scrollY = this._scrollY + deltaY;
-    if (scrollX < 0)
-      scrollX = 0;
-    if ( scrollX + this.numTilesX > this._currentDomain._dimX)
-      scrollX = this._currentDomain._dimX - this.numTilesX;
-    if (scrollY < 0)
-      scrollY = 0;
-    if (scrollY + this.numTilesY > this._currentDomain._dimY)
-      scrollY = this._currentDomain._dimY - this.numTilesY;
 
-    this._scrollX = scrollX;
-    this._scrollY = scrollY;
+    var clippedScroll = this.clipScrollToEdges(scrollX, scrollY);
+    this._scrollX = clippedScroll.x;
+    this._scrollY = clippedScroll.y;
   },
 
   pointInBounds: function( x, y ) {
@@ -529,5 +634,9 @@ MapScreen.prototype = {
             ctx.fillRect(0, 0, self._screenWidth,
                          self._screenHeight);
         });
+  },
+
+  getNeighbor: function(x, y, dx, dy) {
+    return this._currentDomain.getNeighbor(x, y, dx, dy);
   }
 };
