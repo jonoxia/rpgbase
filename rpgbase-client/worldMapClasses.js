@@ -417,8 +417,9 @@ MapScreen.prototype = {
   },
 
   calcAutoScroll: function(x, y, delX, delY) {
-    var screenX = (x + delX) - this._scrollX;
-    var screenY = (y + delY) - this._scrollY;
+    var screen = this._worldToScreen( x + delX, y + delY );
+    var screenX = screen.x;
+    var screenY = screen.y;
     
     var topEdge = this.margins.top;
     var leftEdge = this.margins.left;
@@ -438,8 +439,7 @@ MapScreen.prototype = {
     } 
     if (delY > 0 && screenY > bottomEdge) {
       scrollY += (screenY - bottomEdge);
-    } // TODO wrap this part may still need adjustment if the map wraps
-
+    }
     // Stop at edges of map -- or wrap around to other side
     // depending on settings:
     var clippedScroll = this.clipScrollToEdges(scrollX, scrollY);
