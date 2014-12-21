@@ -94,10 +94,11 @@ GenericRPG.prototype = {
     this.dialoglog.setMenuPositions({msgLeft: 20,
                                      msgTop: 128});
 
-    this.plotManager = new PlotManager(this._menuBaseHtmlElem,
-                                       this._cursorImg,
-                                       this._canvasWidth,
-                                       this._canvasHeight);
+    this.plotManager = new PlotManager();
+    this.plotDlog = new PlotDialogSystem(this._menuBaseHtmlElem,
+                                         this._cursorImg,
+                                         this._canvasWidth,
+                                         this._canvasHeight);
 
     this._setupInputDispatch();
 
@@ -108,12 +109,12 @@ GenericRPG.prototype = {
       this.mapScreen.afterRender(function(ctx) {
         self.fieldMenu.drawCanvasMenus(ctx);
         self.dialoglog.drawCanvasMenus(ctx);
-        self.plotManager.dlog.drawCanvasMenus(ctx);
+        self.plotDlog.drawCanvasMenus(ctx);
       });
       this.mazeScreen.afterRender(function(ctx) {
         self.fieldMenu.drawCanvasMenus(ctx);
         self.dialoglog.drawCanvasMenus(ctx);
-        self.plotManager.dlog.drawCanvasMenus(ctx);
+        self.plotDlog.drawCanvasMenus(ctx);
       });
     }
 
@@ -131,7 +132,6 @@ GenericRPG.prototype = {
   },
 
   _setupInputDispatch: function() {
-
     var self = this;
     var dispatcher = makeInputDispatcher(40); // TODO NO HARDCODE KEY REPEAT RATE
     
@@ -218,7 +218,7 @@ GenericRPG.prototype = {
     dispatcher.addMenuMode("menu", self.fieldMenu);
     dispatcher.addMenuMode("battle", self.battleSystem);
     dispatcher.addMenuMode("dialog", self.dialoglog);
-    dispatcher.addMenuMode("plot", self.plotManager.dlog);
+    dispatcher.addMenuMode("plot", self.plotDlog);
 
     this.inputDispatcher = dispatcher;
   },
@@ -732,6 +732,10 @@ GenericRPG.prototype = {
       }
     }
     return null;
+  },
+
+  makePlotEvent: function(flagName) {
+    return new ScriptedEvent(this.plotManager, flagName, this.plotDlog);
   }
 
 };

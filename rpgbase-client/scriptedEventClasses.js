@@ -2,10 +2,9 @@
 // freely exit flag to false so you have a non-cancelable dialog.
 
 
-function PlotManager(htmlElem, cursorImg, width, height) {
+function PlotManager() {
   this._flags = [];
   this._miscStorage = {};
-  this.dlog = new PlotDialogSystem(htmlElem, cursorImg, width, height);
 }
 PlotManager.prototype = {
   serializableClassName: "PlotManager",
@@ -53,10 +52,6 @@ PlotManager.prototype = {
     return (this._flags.indexOf(flagName) > -1);
   },
 
-  makeEvent: function(flagName) {
-    return new ScriptedEvent(this, flagName);
-  },
-
   setData: function(key, value) {
     this._miscStorage[key] = value;
   },
@@ -89,13 +84,13 @@ PlotDialogSystem.prototype.handleKey = function(keyCode) {
 // dialoglog needs to hold the input focus until scripted event
 // is done, so that you can't move your character while the event
 // is happening.
-function ScriptedEvent(plotMgr, plotFlagName) {
+function ScriptedEvent(plotMgr, plotFlagName, dialoglog) {
   this._steps = [];
   this._player = null;
   this._mapScreen = null;
   this._plotFlagName = plotFlagName;
   this._plotMgr = plotMgr;
-  this._dialoglog = plotMgr.dlog;
+  this._dialoglog = dialoglog;
 }
 ScriptedEvent.prototype = {
   npcEnter: function(npc, x, y) {
@@ -129,7 +124,7 @@ ScriptedEvent.prototype = {
         self.scrollText(text, function() {
             self.nextStep();
         });
-    });
+    }); 
     return this; // for daisy-chaining
   },
   
