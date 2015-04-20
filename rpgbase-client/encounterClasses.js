@@ -268,6 +268,7 @@ BattleSystem.prototype = {
   },
 
   showMenuForPC: function(pc) {
+    console.log("Show menu for pc called");
     // kind of a hack to allow non-index-based access to menus
     // in case some pcs are dead:
     var index = this._party.indexOf(pc);
@@ -422,7 +423,7 @@ BattleSystem.prototype = {
     this.deadMonsters = [];
     this.player = player;
     this._party = player.getParty();
-    if (this._menuImpl == "css") {
+    if (this.menuImpl == "css") {
       this._htmlElem.show();
     }
     this.clearMsg();
@@ -577,6 +578,7 @@ BattleSystem.prototype = {
   },
 
   showStartRoundMenu: function() {
+    console.log("Show start round menu called");
     // Adjust PC menu contents in case there were any changes last round
     // (e.g. single-use items used up)
     this.pcMenus = [];
@@ -623,6 +625,7 @@ BattleSystem.prototype = {
   },
 
   showFirstPCMenu: function() {
+    console.log("Show first pc menu called");
     var firstPC = this.getNextActingPC(null);
     if (firstPC) {
       this.showMenuForPC(firstPC);

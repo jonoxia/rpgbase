@@ -60,7 +60,11 @@ span.menu {
 }
 
 div.stats {
-    float: left;
+    position: absolute;
+    z-index: 2;
+   left: 100px;
+   top: 500px;
+   /*float: left;*/
    background-color: black;
    color: white;
    font-weight: bold;
