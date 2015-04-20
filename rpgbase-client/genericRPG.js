@@ -81,12 +81,15 @@ GenericRPG.prototype = {
     if (options.partyInit) {
       options.partyInit(this.loader);
     }
-    this.battleSystem = options.battleInit(this);
+    if (options.battleInit) {
+      this.battleSystem = options.battleInit(this);
+    }
     this.manuel = options.monsterInit(this.loader); // monster dictionary
-    this.fieldMenu = options.fieldMenuInit(this, this._cursorImg);
+    if (options.fieldMenuInit) {
+      this.fieldMenu = options.fieldMenuInit(this, this._cursorImg);
+    }
     this.overworld = options.overworldInit(this);
     this.registerMap(this.overworld);
-
     this.dialoglog = new Dialoglog(this._menuBaseHtmlElem,
 				   this._cursorImg,
 				   this._canvasWidth,
@@ -107,7 +110,9 @@ GenericRPG.prototype = {
     if (this._menuStyle == "canvas") {
       // Draw any open canvas menus on top of map or maze screen
       this.mapScreen.afterRender(function(ctx) {
-        self.fieldMenu.drawCanvasMenus(ctx);
+        if (self.fieldMenu) {
+          self.fieldMenu.drawCanvasMenus(ctx);
+        }
         self.dialoglog.drawCanvasMenus(ctx);
         self.plotDlog.drawCanvasMenus(ctx);
       });
@@ -121,14 +126,16 @@ GenericRPG.prototype = {
     /* When a battle ends, return to map-screen style input, and
      * redraw the map screen: */
       // TODO CONSOLIDATE MODE SWITCHES
-    this.battleSystem.onClose(function(winLoseDraw) {
-      if (self._mainMode == "map") {
-        self.mapScreen.start();
-      } 
-      if (self._mainMode == "maze") {
-        self.mazeScreen.start();
-      }
-    });
+    if (this.battleSystem) {
+      this.battleSystem.onClose(function(winLoseDraw) {
+        if (self._mainMode == "map") {
+          self.mapScreen.start();
+        } 
+        if (self._mainMode == "maze") {
+          self.mazeScreen.start();
+        }
+      });
+    }
   },
 
   _setupInputDispatch: function() {
@@ -215,8 +222,12 @@ GenericRPG.prototype = {
 
     dispatcher.addMapMode("overworld", mapScreenKeyCallback);
     dispatcher.addMapMode("maze", mazeKeyCallback);
-    dispatcher.addMenuMode("menu", self.fieldMenu);
-    dispatcher.addMenuMode("battle", self.battleSystem);
+    if (self.fieldMenu) {
+      dispatcher.addMenuMode("menu", self.fieldMenu);
+    }
+    if (self.battleSystem) {
+      dispatcher.addMenuMode("battle", self.battleSystem);
+    }
     dispatcher.addMenuMode("dialog", self.dialoglog);
     dispatcher.addMenuMode("plot", self.plotDlog);
 
@@ -258,7 +269,12 @@ GenericRPG.prototype = {
     }
 
     var self = this;
+    console.log("Gonna loadThemAll");
+    // This is a common place for startup to fail, because if
+    // any of the loading files doesnt' load, the callback never
+    // gets called
     this.loader.loadThemAll(function() {
+      console.log("Loaded them all");
 	// TODO CONSOLIDATE MODE SWITCHES
       if (this._mainMode == "maze") {
         self.inputDispatcher.mapMode("maze");
@@ -472,7 +488,9 @@ GenericRPG.prototype = {
       self.mapScreen.stop();
     }
 
-    self.audioPlayer.changeTrack(this._musicTracks["battle"], true);
+    if (this._musicTracks && this._musicTracks["battle"]) {
+	self.audioPlayer.changeTrack(this._musicTracks["battle"], true);
+    }
     self.battleSystem.startBattle(self.player, encounter, landType);
   },
 
