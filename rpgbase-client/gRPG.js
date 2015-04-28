@@ -24,13 +24,15 @@ var gRPG = (function(){
 /* gRPG Namepsace */
   
   function GameEngine(canvasElem, width, height, options) {
+
     this.settings = {htmlElem: canvasElem,
                      screenWidth: width,
                      screenHeight: height};
-
+    console.log("Instantiated game engine, htmlElem is " + this.settings.htmlElem);
     if (!!options) {
       this.setOptions(options);
     }
+    console.log("Now htmlElem is " + this.settings.htmlElem);
 
     this._modeRegistry = {};
     this._monsterRegistry = {};
@@ -38,6 +40,7 @@ var gRPG = (function(){
     this._itemRegistry = {};
     this._commandRegistry = {};
     this._vehicleRegistry = {};
+    this._keypressCallbacks = {};
 
     this._mainMode = null;
     this._subMode = null; // TODO be a stack? Probably not.
@@ -56,6 +59,20 @@ var gRPG = (function(){
           self._mainMode.handleKey(key);
         }
       });
+    
+    this.loader = new AssetLoader()
+
+    // implement scaling:
+    this.canvas = this.settings.htmlElem[0];
+    var ctx = this.canvas.getContext("2d");
+    if (this.settings.scale && this.settings.scale != 1) {
+      // Zoom in the canvas to given factor, without anti-aliasing:
+      ctx.scale(this.settings.scale, this.settings.scale);
+      ctx.mozImageSmoothingEnabled = false;
+      ctx.webkitImageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = false;
+    }
+
   }
   GameEngine.prototype = {
     // TODO Needs to have mechanism for saving/loading globals
@@ -89,10 +106,12 @@ var gRPG = (function(){
     },
     
     addMode: function(name, modeObject) {
+      console.log("Adding mode " + name );
       this._modeRegistry[name] = modeObject;
       // Let the mode know about the global settings:
-      modeObject.setOptions(this.settings);
+      console.log("Adding mode " + name + ", will give it my htmlElem = " + this.settings.htmlElem);
       modeObject.engine = this;
+      modeObject.setOptions(this.settings);
 
     },
     
@@ -111,12 +130,14 @@ var gRPG = (function(){
     mainMode: function(name) {
       // TODO raise an exception if the named mode cannot be
       // a main mode
+      if (!this._modeRegistry.hasOwnProperty(name)) {
+        throw "There is no mode named " + name;
+      }
 
       if (this._mainMode) {
         this._mainMode.stop();
         this._mapInputHandler.stopListening();
       }
-
 
       this._mainMode = this._modeRegistry[name];
 
@@ -131,6 +152,9 @@ var gRPG = (function(){
     openMode: function(name) {
       // TODO raise an exception if the named mode cannot be
       // a sub mode
+      if (!this._modeRegistry.hasOwnProperty(name)) {
+        throw "There is no mode named " + name;
+      }
       this._subMode = this._modeRegistry[name];
 
       // switch input to menu style:
@@ -158,6 +182,10 @@ var gRPG = (function(){
       this._menuInputHandler.stopListening();
       this._mapInputHandler.startListening();
       this._subMode = null;
+    },
+
+    loadImage: function(filename) {
+      return this.loader.add(filename);
     },
     
     addMap: function(name, map) {
@@ -200,6 +228,19 @@ var gRPG = (function(){
     
     mainMenu: function(callback) {
     },
+
+    onButtonPress: function(keycode, callback) {
+      // all main modes will listen for this keycode and call the
+      // callback when it's pressed.
+
+      this._keypressCallbacks[keycode] = callback;
+    },
+
+    handleKey: function(keycode) {
+      if (this._keypressCallbacks.hasOwnProperty(keycode)) {
+        this._keypressCallbacks[keycode](this);
+      }
+    },
     
     onStartGame: function(callback) {
       // called whether it's a new game or a loaded save game
@@ -222,7 +263,19 @@ var gRPG = (function(){
       // (player object probably belongs to session)
     },
 
-    start: function(startingMode) {
+    start: function(startingMode, callback) {
+      var self = this;
+      console.log("Gonna loadThemAll");
+      // This is a common place for startup to fail, because if
+      // any of the loading files doesnt' load, the callback never
+      // gets called
+      this.loader.loadThemAll(function() {
+        console.log("Loaded them all");
+        self.mainMode(startingMode);
+        if (callback) {
+          callback();
+        }
+      });
 
     }
 
@@ -256,14 +309,19 @@ var gRPG = (function(){
   }
 
   
-  function MapScreen(options) {
+  function MapMode(options) {
     // Defaults:
     this.settings = {scale: 1.0,
                      pixelsPerSquare: 16,
                      widthSquares: 20,
                      heightSquares: 18,
                      mapAnimFrameTime: 40,
-                     tileOffset: {x: 0, y: 0}
+                     tileOffset: {x: 0, y: 0},
+                     spriteDimensions: {width: 16, height: 16,
+                                        offsetX: 0, offsetY: 0},
+                     walkAnimationFrames: 5,
+                     scrollMargins: {left: 6, top: 5, right: 6, bottom: 5},
+                     animationCallback: function() {}
                     };
     this.setOptions(options);
     this.hasOwnAnimator = true;
@@ -271,19 +329,36 @@ var gRPG = (function(){
     this.animator = new Animator(this.settings.mapAnimFrameTime);
 
     this._mapRegistry = {};
+
   }
-  MapScreen.prototype = {
+  MapMode.prototype = {
     setOptions: function(options) {
       this.saveNamedOptions(options, ["htmlElem", "screenWidth", "screenHeight",
                                       "scale", "widthSquares", "heightSquares",
                                       "pixelsPerSquare", "mapAnimFrameTime",
-                                      "tileOffset"]);
-      // Should support options like:
-      // scroll margins
-      // animation frame rate
-      // default sprite dimensions
-      // walk animation frames
-      // animation callback
+                                      "tileOffset", "walkAnimationFrames",
+                                      "spriteDimensions",
+                                      "scrollMargins", "animationCallback"]);
+      // TODO maybe better to read this list from my own defaults?
+
+      if (this.settings.htmlElem) {
+        // i'm assuming this gets called only once...
+        this._realMapScreen = new MapScreen(this.settings.htmlElem[0],
+                                            this.settings.widthSquares,
+                                            this.settings.heightSquares,
+                                            this.settings.pixelsPerSquare,
+                                            this.settings.pixelsPerSquare,
+                                            this.settings.mapAnimFrameTime
+                                           );
+        
+        this._realMapScreen.setTileOffset(this.settings.tileOffset);
+        this._realMapScreen.setScrollMargins(this.settings.scrollMargins);
+        
+        MapSprite.setDefault("spriteDimensions", this.settings.spriteDimensions);
+        MapSprite.setDefault("walkAnimationFrames", this.settings.walkAnimationFrames);
+        MapSprite.setDefault("_animationCallback", this.settings.animationCallback);
+
+      }
     },
 
     handleKey: function(key) {
@@ -303,19 +378,8 @@ var gRPG = (function(){
       case RIGHT_ARROW:
         delX = 1; delY = 0;
         break;
-      case CONFIRM_BUTTON:
-        // If you're facing an NPC, talk to them!
-        var facingSpace = self.player.getFacingSpace();
-        var npc = self.mapScreen.getNPCAt(facingSpace.x, 
-                                          facingSpace.y);
-        if (npc) {
-          //npc.talk(dispatcher.menuMode("dialog"), self.player);
-        }
-        break;
-      case CANCEL_BUTTON:
-        // Pop open the field menu system
-        self.engine.openMode("fieldMenu"); // todo move definition to userland?
-        // dispatcher.menuMode("menu").open(self.player);
+      default:
+        this.engine.handleKey(key);
         break;
       }
 
@@ -323,33 +387,46 @@ var gRPG = (function(){
         // Animate the player moving, wait for animation to finish:
         var anim = self.player.move(delX, delY);
         self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
-        self.mapScreen.animate(anim); // ??
+        self._realMapScreen.animate(anim); // ??
       }
     },
 
+    getAnimator: function() {
+      return this._realMapScreen._animator;
+    },
+
     start: function() {
-      this.animator.start();
+      //this.animator.start();
+      this._realMapScreen.start();
     },
 
     stop: function() {
-      this.animator.stop();
+      //this.animator.stop();
+      this._realMapScreen.stop();
     },
 
     addMap: function(name, map) {
       this._mapRegistry[name] = map;
     },
 
-    getMap: function(name, map) {
+    getMap: function(name) {
       return this._mapRegistry[name];
+    },
+    
+    putPlayerAt: function(player, mapName, x, y) {
+      this.player = player;
+      this._realMapScreen.setNewDomain(this.getMap(mapName)._realMap);
+      player.enterMapScreen(this._realMapScreen, x, y);
     }
+
 
     // Figure out the best place to set which land types are crossable
     // (on foot and in each vehicle)
   };
-  GameModeMixin(MapScreen.prototype);
+  GameModeMixin(MapMode.prototype);
 
 
-  function BattleScreen(options) {
+  function BattleMode(options) {
     // Defaults:
     this.settings = {
     };
@@ -357,7 +434,7 @@ var gRPG = (function(){
     this.hasOwnAnimator = true;
     this.animator = new Animator(10);
   }
-  BattleScreen.prototype = {
+  BattleMode.prototype = {
     setOptions: function(options) {
       // Should support options like:
       // animation frame rate
@@ -368,18 +445,26 @@ var gRPG = (function(){
       // if these are "options" then they should have sensible defaults!
     },
 
+    getAnimator: function() {
+      return this.animator;
+    },
+
     start: function() {
       this.animator.start();
     },
 
     stop: function() {
       this.animator.stop();
+    },
+
+    onDrawBattle: function(callback) {
+      // TODO
     }
   };
-  GameModeMixin(BattleScreen.prototype);
+  GameModeMixin(BattleMode.prototype);
 
 
-  function MazeScreen(options) {
+  function MazeMode(options) {
     // Defaults:
     this.settings = {
       mazeAnimFrameTime: 100
@@ -391,7 +476,7 @@ var gRPG = (function(){
 
     this._mapRegistry = {};
   }
-  MazeScreen.prototype = {
+  MazeMode.prototype = {
     setOptions: function(options) {
       this.saveNamedOptions(options, ["mazeAnimFrameTime"]);
     },
@@ -412,24 +497,18 @@ var gRPG = (function(){
       case RIGHT_ARROW:
         anim = self.mazeScreen.turnRight();
         break;
-      case CONFIRM_BUTTON:
-        // If you're facing an NPC, talk to them!
-        var npc = self.mazeScreen.getNPC();
-        if (npc) {
-          // npc.talk(dispatcher.menuMode("dialog"), self.player);
-        }
-        break;
-
-      case CANCEL_BUTTON:
-        // Pop open the field menu system
-        self.engine.openMode("fieldMenu"); // TODO move to userland?
-        // dispatcher.menuMode("menu").open(self.player);
+      default:
+        this.engine.handleKey(key);
         break;
       }
       if (anim) {
         self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
         self.animator.runAnimation(anim);
       }
+    },
+
+    getAnimator: function() {
+      return this.animator;
     },
 
     start: function() {
@@ -448,10 +527,10 @@ var gRPG = (function(){
       return this._mapRegistry[name];
     }
   };
-  GameModeMixin(MazeScreen.prototype);
+  GameModeMixin(MazeMode.prototype);
 
   
-  function FieldMenuSystem(options) {
+  function MenuMode(options) {
     // Defaults:
     this.settings = {
       menuImpl: "css"
@@ -459,7 +538,7 @@ var gRPG = (function(){
     this.setOptions(options);
     this.hasOwnAnimator = false;
   }
-  FieldMenuSystem.prototype = {
+  MenuMode.prototype = {
     setOptions: function(options) {
       this.saveNamedOptions(options, ["menuBaseElem", "menuImpl"]);
       // Should support options like:
@@ -471,7 +550,7 @@ var gRPG = (function(){
     
     // needs a 'setMenuPositions'
   };
-  GameModeMixin(FieldMenuSystem.prototype);
+  GameModeMixin(MenuMode.prototype);
 
   function MapMixin(subclassPrototype) {
   }
@@ -489,6 +568,8 @@ var gRPG = (function(){
   function SingleImageMap(data, imagefile) {
     this._mapData = data;
     this._imagefile = imagefile;
+
+    this._realMap = new Map("mapname", data, null);
   }
   SingleImageMap.prototype = {
   };
@@ -497,10 +578,10 @@ var gRPG = (function(){
 
 
   return { GameEngine: GameEngine,
-           MapScreen: MapScreen,
-           BattleScreen: BattleScreen,
-           MazeScreen: MazeScreen,
-           FieldMenuSystem: FieldMenuSystem,
+           MapMode: MapMode,
+           BattleMode: BattleMode,
+           MazeMode: MazeMode,
+           MenuMode: MenuMode,
            TileMap: TileMap,
            SingleImageMap: SingleImageMap
          };
