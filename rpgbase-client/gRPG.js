@@ -7,6 +7,8 @@
  * start method for engine
  * registerMap, getCurrentMapId, 
 
+ * put an actual map screen inside the map screen mode
+
  * onSerialize, onDeserialize:
  *     allow each game mode to do whatever serialization/deserialization it wants
  *     and then record which mode is currently the main
