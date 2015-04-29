@@ -55,6 +55,7 @@ var gRPG = (function(){
 
     this._mapInputHandler = new DPadStyleKeyHandler(40, // TODO NO HARDCODE KEY REPEAT RATE
       function(key) {
+        console.log("Keypress going to dpad");
         if (self._mainMode) {
           self._mainMode.handleKey(key);
         }
@@ -168,8 +169,9 @@ var gRPG = (function(){
       // stop the old mode and start the new mode:
       if (this._subMode.hasOwnAnimator) {
         this._mainMode.stop();
-        this._subMode.start();
       }
+      // otherwise, just start the new one:
+      this._subMode.start();
     },
     
     closeMode: function() {
@@ -533,19 +535,56 @@ var gRPG = (function(){
   function MenuMode(options) {
     // Defaults:
     this.settings = {
-      menuImpl: "css"
+      menuBaseElem: null,
+      menuImpl: "css",
+      defaultCmdSet: [],
+      menuPositions: {msgLeft: 10,
+                      msgTop: 100,
+                      menuLeft: 100,
+                      menuTop: 100,
+                      menuXOffset: 25},
+      menuTextStyles: {
+      }
     };
     this.setOptions(options);
     this.hasOwnAnimator = false;
   }
   MenuMode.prototype = {
     setOptions: function(options) {
-      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl"]);
+      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
+                                      "screenWidth", "screenHeight",
+                                      "defaultCmdSet", "menuPositions",
+                                      "menuTextStyles"]);
       // Should support options like:
       // default command set (do these go in the command registry or not?)
       // include spell menu? include item menu?
       // canvas vs css menus, and text style are set globally in game engine
       // but menu positions are set here
+
+      this._realFieldMenu = new FieldMenu(this.settings.menuBaseElem, 
+                                          null, this.settings.screenWidth,
+                                          this.settings.screenHeight,
+                                          this.settings.defaultCmdSet);
+
+      this._realFieldMenu.setMenuPositions(this.settings.menuPositions);
+
+      var self = this;
+      this._realFieldMenu.onClose(function() {
+        self.engine.closeMode();
+      });
+
+    },
+
+    handleKey: function(key) {
+      this._realFieldMenu.handleKey(key);
+    },
+
+    start: function() {
+      this._realFieldMenu.open(this.player);
+    },
+
+    stop: function() {
+
     }
     
     // needs a 'setMenuPositions'
