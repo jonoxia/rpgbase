@@ -1,4 +1,4 @@
-function Map(id, data, spritesheet) {
+function Map(id, data, spritesheet, mapImplType) {
   // mapData must be 2d array of landtype codes.
   this._mapData = data;
   this._dimX = data[0].length;
@@ -12,6 +12,12 @@ function Map(id, data, spritesheet) {
   this._id = id;
   this._loadHandlers = [];
   this._unloadHandlers = [];
+
+  if (mapImplType) {
+    this._mapImpl = mapImplType;
+  } else {
+    this._mapImpl = "tilemap"; // default
+  }
 }
 Map.prototype = {
   getId: function() {
@@ -448,7 +454,7 @@ MapScreen.prototype = {
             y: clippedScroll.y - this._scrollY};
   },
 
-  render: function() {
+  _renderTileMap: function() {
     // pixel adjustment is optional but if present it should have
     // a .x and .y
     for (var y = 0; y < this.numTilesY; y++) {
@@ -479,6 +485,27 @@ MapScreen.prototype = {
                this.tilePixelsX,
                this.tilePixelsY);
       }
+    }
+  },
+  
+  _renderSingleImgMap: function() {
+    var drawX = 0 - (this._scrollX * this.tilePixelsX);
+    var drawY = 0 - (this._scrollY * this.tilePixelsY);
+    if (this.scrollAdjustment) {
+      drawX += this.scrollAdjustment.x;
+      drawY += this.scrollAdjustment.y;
+    }
+    
+    var img = this._currentDomain._img;
+    this._ctx.drawImage(img, drawX, drawY);
+  },
+
+  render: function() {
+    switch (this._currentDomain._mapImpl) {
+    case "singleImage": this._renderSingleImgMap();
+      break;
+    case "tilemap": this._renderTileMap();
+      break;
     }
 
     // make an array of all player and NPC sprites:

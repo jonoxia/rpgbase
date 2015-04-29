@@ -556,22 +556,34 @@ var gRPG = (function(){
   }
 
 
-  function TileMap(data, tileset) {
+  function TileMap(mapname, data, tileset) {
     this._mapData = data;
     this._tileset = tileset;
+    this._realMap = new Map(mapname, data, tileset, "tilemap");
   }
   TileMap.prototype = {
+
+    drawMap: function(ctx, drawX, drawY) {
+    }
   };
   MapMixin(TileMap.prototype);
 
 
-  function SingleImageMap(data, imagefile) {
+  function SingleImageMap(mapname, data, imagefile) {
     this._mapData = data;
     this._imagefile = imagefile;
 
-    this._realMap = new Map("mapname", data, null);
+    this._realMap = new Map(mapname, data, imagefile, "singleImage");
+    // TODO:
+    // get engine and then do this._mainImage = engine.loadImage(imagefile);
+    // set up realMap to call this.drawMap() in the middle of its render()
+    // method.
+    // Or maybe just delete these two classes and make the changes in 
+    // worldMapClasses.Map ?
   }
   SingleImageMap.prototype = {
+    drawMap: function(ctx, drawX, drawY) {
+    }
   };
   MapMixin(SingleImageMap.prototype);
 
