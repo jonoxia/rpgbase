@@ -55,7 +55,6 @@ var gRPG = (function(){
 
     this._mapInputHandler = new DPadStyleKeyHandler(40, // TODO NO HARDCODE KEY REPEAT RATE
       function(key) {
-        console.log("Keypress going to dpad");
         if (self._mainMode) {
           self._mainMode.handleKey(key);
         }
@@ -419,6 +418,11 @@ var gRPG = (function(){
       this.player = player;
       this._realMapScreen.setNewDomain(this.getMap(mapName)._realMap);
       player.enterMapScreen(this._realMapScreen, x, y);
+    },
+
+    switchTo: function(mapName, x, y) {
+      this._realMapScreen.setNewDomain(this.getMap(mapName)._realMap);
+      this.player.enterMapScreen(this._realMapScreen, x, y);
     }
 
 
@@ -431,13 +435,27 @@ var gRPG = (function(){
   function BattleMode(options) {
     // Defaults:
     this.settings = {
+      menuBaseElem: null,
+      menuImpl: "css",
+      battleCmdSet: [],
+      menuPositions: {msgLeft: 10,
+                      msgTop: 100,
+                      menuLeft: 100,
+                      menuTop: 100,
+                      menuXOffset: 25},
+      menuTextStyles: {
+      }
     };
     this.setOptions(options);
     this.hasOwnAnimator = true;
-    this.animator = new Animator(10);
   }
   BattleMode.prototype = {
     setOptions: function(options) {
+      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
+                                      "screenWidth", "screenHeight",
+                                      "stdBattleCmds", "menuPositions",
+                                      "menuTextStyles"]);
+
       // Should support options like:
       // animation frame rate
       // defaultCmdSet -- just a list of command NAMES which refer to command registry
@@ -445,22 +463,44 @@ var gRPG = (function(){
       // canvas or css menus?
       // menuPositions
       // if these are "options" then they should have sensible defaults!
+
+      if (this.engine && !this._realBattleSystem) {
+        this._realBattleSystem = new BattleSystem(this.settings.menuBaseElem,
+                                                  this.engine.canvas,
+                                                  {defaultCmdSet: this.settings.stdBattleCmds,
+                                                   width: this.settings.screenWidth,
+                                                   height: this.settings.screenHeight
+                                                  });
+        this._realBattleSystem.setMenuPositions(this.settings.menuPositions);
+        var self = this;
+        this._realBattleSystem.onClose(function() {
+          self.engine.closeMode();
+        });
+      }
     },
 
     getAnimator: function() {
-      return this.animator;
+      return this._realBattleSystem._animator;
     },
 
     start: function() {
-      this.animator.start();
+      //this._realBattleSystem._animator.start();
     },
 
     stop: function() {
-      this.animator.stop();
+      //this._realBattleSystem._animator.stop();
+    },
+
+    startBattle: function(player, encounter, landType) {
+      this._realBattleSystem.startBattle(player, encounter, landType);
     },
 
     onDrawBattle: function(callback) {
-      // TODO
+      this._realBattleSystem.onDrawBattle(callback);
+    },
+
+    handleKey: function(key) {
+      this._realBattleSystem.handleKey(key);
     }
   };
   GameModeMixin(BattleMode.prototype);
@@ -586,10 +626,59 @@ var gRPG = (function(){
     stop: function() {
 
     }
-    
-    // needs a 'setMenuPositions'
   };
   GameModeMixin(MenuMode.prototype);
+
+
+  function DialogMode(options) {
+    // Defaults:
+    this.settings = {
+      menuBaseElem: null,
+      menuImpl: "css",
+      defaultCmdSet: [],
+      menuPositions: {msgLeft: 20,
+                      msgTop: 128},
+      menuTextStyles: {
+      }
+    };
+    this.setOptions(options);
+    this.hasOwnAnimator = false;
+  }
+  DialogMode.prototype = {
+    setOptions: function(options) {
+      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
+                                      "screenWidth", "screenHeight",
+                                      "menuPositions", "menuTextStyles"]);
+
+      this._realDialog = new Dialoglog(this.settings.menuBaseElem, 
+                                       null, this.settings.screenWidth,
+                                       this.settings.screenHeight);
+      this._realDialog.setMenuPositions({msgLeft: 20,
+                                         msgTop: 128});
+
+      var self = this;
+      this._realDialog.onClose(function() {
+        self.engine.closeMode();
+      });
+
+    },
+
+    handleKey: function(key) {
+      this._realDialog.handleKey(key);
+    },
+
+    start: function() {
+      this._realDialog.open(this.player);
+    },
+
+    stop: function() {
+
+    }
+    
+  };
+  GameModeMixin(DialogMode.prototype);
+
+
 
   function MapMixin(subclassPrototype) {
   }
@@ -603,6 +692,10 @@ var gRPG = (function(){
   TileMap.prototype = {
 
     drawMap: function(ctx, drawX, drawY) {
+    },
+
+    onStep: function(trigger, callback) {
+      this._realMap.onStep(trigger, callback);
     }
   };
   MapMixin(TileMap.prototype);
@@ -614,14 +707,15 @@ var gRPG = (function(){
 
     this._realMap = new Map(mapname, data, imagefile, "singleImage");
     // TODO:
-    // get engine and then do this._mainImage = engine.loadImage(imagefile);
-    // set up realMap to call this.drawMap() in the middle of its render()
-    // method.
-    // Or maybe just delete these two classes and make the changes in 
+    // Maybe just delete these two classes and make the changes in 
     // worldMapClasses.Map ?
   }
   SingleImageMap.prototype = {
     drawMap: function(ctx, drawX, drawY) {
+    },
+
+    onStep: function(trigger, callback) {
+      this._realMap.onStep(trigger, callback);
     }
   };
   MapMixin(SingleImageMap.prototype);
@@ -633,6 +727,7 @@ var gRPG = (function(){
            BattleMode: BattleMode,
            MazeMode: MazeMode,
            MenuMode: MenuMode,
+           DialogMode: DialogMode,
            TileMap: TileMap,
            SingleImageMap: SingleImageMap
          };
