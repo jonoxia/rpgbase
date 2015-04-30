@@ -130,6 +130,18 @@ Inventory.prototype = {
     }
     return null;
 
+  },
+
+  hasMultiple: function(name, number) {
+    // returns true if you have at least <number> of the named item,
+    // otherwise false.
+    var copiesFound = 0
+    for (var i = 0; i < this._itemList.length; i++) {
+        if (this._itemList[i].getName() == name) {
+            copiesFound ++;
+        }
+    }
+    return (copiesFound >= number);
   }
 };
 SerializableMixin(Inventory);
