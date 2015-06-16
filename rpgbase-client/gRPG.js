@@ -499,6 +499,10 @@ var gRPG = (function(){
       this._realBattleSystem.onDrawBattle(callback);
     },
 
+    onStartBattle: function(callback) {
+      this._realBattleSystem.onStartBattle(callback);
+    },
+
     handleKey: function(key) {
       this._realBattleSystem.handleKey(key);
     }

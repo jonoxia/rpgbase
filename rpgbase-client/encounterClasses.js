@@ -362,6 +362,15 @@ BattleSystem.prototype = {
             self.choosePCCommand(pc, cmd, "random_monster");
           });
           break;
+        case "one_enemy":
+          // if it targets one enemy, then picking it pops open
+          // the enemy menu:
+          cmdMenu.addCommand(name, function() {
+            self.chooseOne("", self.monsters, function(target) {
+              self.choosePCCommand(pc, cmd, target);
+            });
+          });
+          break;
         case "ally":
           // if it targets one ally, then picking it pops open
           // the ally menu:
