@@ -1260,7 +1260,7 @@ CssFixedTextBox.prototype.display = function() {
   this.parentTag.css("left", this.screenX);
   this.parentTag.css("top", this.screenY);
   this.container.append(this.parentTag);
-  this.parentTag.html(this.textLines);
+  this.parentTag.html(this.textLines.join("<br>"));
 };
 CssFixedTextBox.prototype.outsideWidth = function() {
     // TODO implement me
