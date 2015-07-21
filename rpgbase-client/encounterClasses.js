@@ -444,7 +444,7 @@ BattleSystem.prototype = {
     this.peacefulResolutionText = null;
 
     // Monster name box:
-    this._monsterNameBox = new FixedTextBox([encounter.type.name], this);
+    this._monsterNameBox = this.makeFixedTextBox([encounter.type.name]);
     // Right-align option...
     if (this._positioning.monsterNameX == "right") {
         this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.outsideWidth(),
@@ -470,8 +470,8 @@ BattleSystem.prototype = {
     } // else? can that happen?
 
     // Monster HP display:
-    // (Note repeates a lot of coe from monster name box. TODO refactor!
-    this._monsterHitPoints = new FixedTextBox(monsterStatLines, this);
+    // (Note repeates a lot of code from monster name box. TODO refactor!
+    this._monsterHitPoints = this.makeFixedTextBox(monsterStatLines);
     // Right-align option...
     if (this._positioning.monsterStatsX == "right") {
         this._monsterHitPoints.setPos(this._screenWidth - this._monsterHitPoints.outsideWidth(),
@@ -915,7 +915,7 @@ BattleSystem.prototype = {
       endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
       break;
     }
-    var endBattleText = new ScrollingTextBox(endBattleMessage, this);
+    var endBattleText = this.makeScrollingTextBox(endBattleMessage);
     this.pushMenu(endBattleText);
     var self = this;
     endBattleText.onClose(function() {

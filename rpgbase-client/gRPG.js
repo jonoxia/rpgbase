@@ -7,7 +7,10 @@
  * start method for engine
  * registerMap, getCurrentMapId, 
 
- * put an actual map screen inside the map screen mode
+ * probably apply GameModeMixin directly to BattleSystem, FieldMenu, MapScreen,
+ * MazeScreen instead of having these awkward mode classes that are just thin wrappers around
+ * them. We could even apply the mixin here, in this file, so that if you don't include gRPG
+ * then the basic classes remain un-mixed.
 
  * onSerialize, onDeserialize:
  *     allow each game mode to do whatever serialization/deserialization it wants

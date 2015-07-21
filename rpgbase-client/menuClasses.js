@@ -309,20 +309,8 @@ var CanvasTextUtils = {
 };
 
 
-function CanvasCmdMenu(cursorImg) {
-  this._init();
-  this.x = 0; 
-  this.y = 0;
-  this.width = 50;
-  this.height = 150;
-  this._cursorImg = cursorImg;
-}
-CanvasCmdMenu.prototype = {
-  showArrowAtIndex: function(index) {
-    // TODO  -- if display is getting called on
-    // the animation loop, do I even need this?
-  },
-  display: function(ctx) {
+function CanvasMixin(subclassPrototype) {
+  subclassPrototype.display = subclassPrototype.parentDisplay = function(ctx) {
     if (!ctx) {
       return;
     }
@@ -331,14 +319,15 @@ CanvasCmdMenu.prototype = {
     // contents
 
     this.width = styles.leftMargin + styles.rightMargin;
+    var textLines = this.getTextLines();
     var longestCommand = 0;
-    for (var i =0; i < this.cmdList.length; i++) {
-      if (this.cmdList[i].name.length > longestCommand) {
-        longestCommand = this.cmdList[i].name.length;
+    $.each(textLines, function(i, line) {
+      if (line.length > longestCommand) {
+        longestCommand = line.length;
       }
-    }
+    });
     // TODO use that method that calcs text size:
-    this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * (longestCommand + 1);
+    this.width = styles.leftMargin + styles.rightMargin + styles.fontSize * longestCommand;
     this.height = this.cmdList.length * styles.lineHeight + styles.topMargin + styles.bottomMargin;
     
     var x = this.x;
@@ -351,20 +340,52 @@ CanvasCmdMenu.prototype = {
                                  [this.title]);
       y += titleHeight;
     }
-    var textLines = [];
-    for (var i =0; i < this.cmdList.length; i++) {
-      // prepend space to give room for cursor
-      textLines.push(" " + this.cmdList[i].name);
-    }
     
     CanvasTextUtils.drawTextBox(ctx, x, y,
                                 this.width, this.height, textLines);
+  };
 
+  subclassPrototype.close = function() {
+    // TODO anything to do here? Just stop drawing it right?
+  };
+
+  subclassPrototype.setPos = function(x, y) {
+    this.x = x;
+    this.y = y;
+  };
+
+  subclassPrototype.getPos = function() {
+    return {x: this.x, y: this.y};
+  };
+}
+
+
+
+function CanvasCmdMenu(cursorImg) {
+  this._init();
+  this.x = 0; 
+  this.y = 0;
+  this.width = 50;
+  this.height = 150;
+  this._cursorImg = cursorImg;
+}
+CanvasMixin(CanvasCmdMenu.prototype);
+CmdMenuMixin(CanvasCmdMenu.prototype);
+CanvasCmdMenu.prototype.getTextLines = function() {
+  var textLines = [];
+  // prepend space before each line of text, to give room for cursor
+  for (var i =0; i < this.cmdList.length; i++) {
+    textLines.push( " " + this.cmdList[i].name);
+  }
+  return textLines;
+};
+CanvasCmdMenu.prototype.display = function(ctx) {
+  this.parentDisplay(ctx);
     // If cursorImg is defined, draw that; otherwise,
     // draw the triangular indicator:
-    var yBase = y + styles.lineHeight * this.selectedIndex;
+    var yBase = this.y + styles.lineHeight * this.selectedIndex;
     if (this._cursorImg) {
-      ctx.drawImage(this._cursorImg, x + 2, yBase + 2);
+      ctx.drawImage(this._cursorImg, this.x + 2, yBase + 2);
     } else {
       ctx.beginPath();
       ctx.moveTo(x + 4, yBase + 5);
@@ -373,19 +394,12 @@ CanvasCmdMenu.prototype = {
       ctx.lineTo(x + 4, yBase + 5);;
       ctx.fill();
     }
-  },
-  close: function() {
-    // TODO anything to do here? Just stop drawing it right?
-  },
-  setPos: function(x, y) {
-    this.x = x;
-    this.y = y;
-  },
-  getPos: function() {
-    return {x: this.x, y: this.y};
-  }
 };
-CmdMenuMixin(CanvasCmdMenu.prototype);
+CanvasCmdMenu.prototype.showArrowAtIndex = function(index) {
+  // TODO  -- if display is getting called on
+  // the animation loop, do I even need this?
+};
+
 
 /* Canvas menus TODO: 
    (check) * - the showMsg must be drawn in this way too -- preferrably somewhere NOT overlapping default menu position the way it does now!
@@ -425,26 +439,8 @@ CmdMenuMixin(CanvasCmdMenu.prototype);
 */
 
 
-
-function CssCmdMenu(container) {
-  this._init();
-  this.container = container;
-  this.cursorHtml = "<blink>&#x25B6;</blink>";
-}
-CssCmdMenu.prototype = {
-    showArrowAtIndex: function(index) {
-      var rows = this.table.find("tr");
-      for (var r = 0; r < rows.length; r++) {
-	var cell = $(rows[r]).find("td")[0];
-	if (r == index) {
-	  $(cell).html(this.cursorHtml);
-	} else {
-	  $(cell).empty();
-	}
-      }
-    },
-
-    display: function() {
+function CssMixin(subclassPrototype) {
+   subclassPrototype.display = subclassPrototype.parentDisplay = function() {
       this.parentTag = $("<div></div>");
       this.parentTag.addClass("menu");
       if (this.title) {
@@ -454,7 +450,6 @@ CssCmdMenu.prototype = {
         this.parentTag.append(titleSpan);
       }
       this.table = $("<table></table>");
-      this.table.addClass("menu");
       this.parentTag.css("left", this.screenX);
       this.parentTag.css("top", this.screenY);
       this.parentTag.append(this.table);
@@ -484,26 +479,48 @@ CssCmdMenu.prototype = {
 	}
 	this.showArrowAtIndex(0);
 	this.parentTag.focus();
-    },
-
-  close: function() {
+   };
+  
+  subclassPrototype.close = function() {
     this.parentTag.remove();
-  },
+  };
 
-  setPos: function(x, y) {
+  subclassPrototype.setPos = function(x, y) {
     this.screenX = x;
     this.screenY = y;
     if (this.parentTag) {
       this.parentTag.css("left", x);
       this.parentTag.css("top", y);
     }
-  },
+  };
 
-  getPos: function() {
+  subclassPrototype.getPos = function() {
     return {x: this.screenX, y: this.screenY};
-  }
+  };
+}
+
+
+function CssCmdMenu(container) {
+  this._init();
+  this.container = container;
+  this.cursorHtml = "<blink>&#x25B6;</blink>";
+}
+CssCmdMenu.prototype = {
+    showArrowAtIndex: function(index) {
+      var rows = this.table.find("tr");
+      for (var r = 0; r < rows.length; r++) {
+	var cell = $(rows[r]).find("td")[0];
+	if (r == index) {
+	  $(cell).html(this.cursorHtml);
+	} else {
+	  $(cell).empty();
+	}
+      }
+    }
 };
 CmdMenuMixin(CssCmdMenu.prototype);
+CssMixin(CssCmdMenu.prototype);
+
 
 function MenuSystemMixin(subClassPrototype) {
   subClassPrototype._init = function(htmlElem, cursorImg, width, height) {
@@ -621,6 +638,25 @@ function MenuSystemMixin(subClassPrototype) {
     }
   };
 
+  subClassPrototype.makeScrollingTextBox = function(dialogText) {
+    if (this.menuImpl == "canvas") {
+      return new CanvasScrollingTextBox(dialogText, this);
+    } else {
+      return new CssScrollingTextBox(dialogText, this);
+    }
+  };
+
+  subClassPrototype.makeFixedTextBox = function(dialogText) {
+    if (this.menuImpl == "canvas") {
+      return new CanvasFixedTextBox(dialogText, this);
+    } else {
+      return new CssFixedTextBox(dialogText, this);
+    }
+  };
+
+  // TODO will need a function that instantiates fixed or scrolling text boxes
+  // also according to this.menuImpl
+
   subClassPrototype.pushMenu = function(newMenu) {
     var x, y;
     
@@ -700,7 +736,7 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.scrollText = function(dialogText) {
     // Turn into a scrolling message box and push onto stack
     this.clearMsg();
-    var textBox = new ScrollingTextBox(dialogText, this);
+    var textBox = this.makeScrollingTextBox(dialogText);
     this.pushMenu(textBox);
     textBox.setPos(this._positioning.msgLeft,
                    this._positioning.msgTop);
@@ -1062,9 +1098,36 @@ FieldMenu.prototype.showMsg = function(text) {
   // field menu always uses scrolling text box for text, never the
   // stack-independent status display
   this.scrollText(text);
+  // TODO this needs to respect this._menuImpl
 };
 
-function ScrollingTextBox(text, menuSystem) {
+
+
+function ScrollingTextBoxMixin(subclassPrototype) {
+  subclassPrototype.onKey = function(key) {
+    if (this.currLine + this.linesAtOnce < this.lines.length) { 
+      // advance through scroll text, if large
+      this.currLine ++;
+      this.update();
+    } else {
+      // if done, treat any key as cancel button
+      this.menuSystem.handleKey(CANCEL_BUTTON);
+      for (var i = 0; i < this._closeCallbacks.length; i++) {
+        this._closeCallbacks[i]();
+      }
+    }
+  },
+
+  subclassPrototype.onClose = function(callback) {
+    this._closeCallbacks.push(callback);
+  };
+
+  subclassPrototype.update = function() {
+  };
+};
+
+
+function CanvasScrollingTextBox(text, menuSystem) {
   this.lines = CanvasTextUtils.splitLines(text);
   // currently hard-coded to show 2 lines at a time
   this.currLine = 0;
@@ -1078,43 +1141,55 @@ function ScrollingTextBox(text, menuSystem) {
     + this.linesAtOnce * styles.lineHeight;
   this._closeCallbacks = [];
 }
-ScrollingTextBox.prototype = {
-  // Satisfies same interface as a CmdMenu, so it can go on
+// Satisfies same interface as a CmdMenu, so it can go on
   // the menu stack.
-  onKey: function(key) {
-    if (this.currLine + this.linesAtOnce < this.lines.length) { 
-      // advance through scroll text, if large
-      this.currLine ++;
-    } else {
-      // if done, treat any key as cancel button
-      this.menuSystem.handleKey(CANCEL_BUTTON);
-      for (var i = 0; i < this._closeCallbacks.length; i++) {
-        this._closeCallbacks[i]();
-      }
-    }
-  },
-  setPos: function(x, y) {
-    this.x = x;
-    this.y = y;
-  },
-  getPos: function() {
-    return {x: this.x, y: this.y};
-  },
-  display: function(ctx) {
+ScrollingTextBoxMixin(CanvasScrollingTextBox.prototype);
+CanvasMixin(CanvasScrollingTextBox.prototype);
+CanvasScrollingTextBox.prototype.display = function(ctx) {
     if (!ctx) { return; }
     var lines = this.lines.slice(this.currLine,
                                  this.currLine + this.linesAtOnce);
     CanvasTextUtils.drawTextBox(ctx, this.x, this.y, 
                                 this.width, this.height, lines);
-  },
-  close: function() {
-  },
-  onClose: function(callback) {
-    this._closeCallbacks.push(callback);
-  }
 };
 
-function FixedTextBox(textLines, menuSystem) {
+
+function CssScrollingTextBox(text, menuSystem) {
+  // TODO rewrite this constructor -- how do we decide where to split lines?
+  this.lines = CanvasTextUtils.splitLines(text);
+  // currently hard-coded to show 2 lines at a time
+  this.currLine = 0;
+  this.menuSystem = menuSystem;
+  this.container = menuSystem._htmlElem;
+  var styles = CanvasTextUtils.getStyles();
+  this.linesAtOnce = styles.scrollBoxLines;
+  /*this.width = styles.leftMargin + styles.rightMargin 
+    + styles.maxLineLength * styles.fontSize;
+
+  this.height = styles.topMargin + styles.bottomMargin
+    + this.linesAtOnce * styles.lineHeight;*/
+  this._closeCallbacks = [];
+};
+ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
+CssMixin(CssScrollingTextBox.prototype);
+CssScrollingTextBox.prototype.display = function() {
+  // Mostly copied from CssCmdMenu
+  this.parentTag = $("<div></div>");
+  this.parentTag.css("left", this.screenX);
+  this.parentTag.css("top", this.screenY);
+  //this.parentTag.append(this.table);
+  this.container.append(this.parentTag);
+  this.update();
+};
+CssScrollingTextBox.prototype.update = function() {
+  this.textLines = this.lines.slice(this.currLine,
+                                    this.currLine + this.linesAtOnce).join("<br>");
+  this.parentTag.html(this.textLines);
+};
+
+
+
+function CanvasFixedTextBox(textLines, menuSystem) {
   // tries to open window big enough to show all lines of text
   // at once.
   this.menuSystem = menuSystem;
@@ -1132,7 +1207,7 @@ function FixedTextBox(textLines, menuSystem) {
     + textLines.length * styles.lineHeight;
   this.textLines = textLines;
 }
-FixedTextBox.prototype = {
+CanvasFixedTextBox.prototype = {
   // Satisfies same interface as a CmdMenu, so it can go on
   // the menu stack.
   onKey: function(key) {
@@ -1164,6 +1239,34 @@ FixedTextBox.prototype = {
     return this.width + 5;
   }
 };
+
+
+function CssFixedTextBox(textLines, menuSystem) {
+  //this._init();
+  this.container = menuSystem._htmlElem; //container;
+  //this.cursorHtml = "<blink>&#x25B6;</blink>";
+  this.textLines = textLines;
+}
+CssMixin(CssFixedTextBox.prototype);
+CssFixedTextBox.prototype.onKey = function(key) {
+  // do nothing
+};
+CssFixedTextBox.prototype.setText = function(newTextLines) {
+  this.textLines = newTextLines;
+};
+CssFixedTextBox.prototype.display = function() {
+  // Mostly copied from CssCmdMenu
+  this.parentTag = $("<div></div>");
+  this.parentTag.css("left", this.screenX);
+  this.parentTag.css("top", this.screenY);
+  this.container.append(this.parentTag);
+  this.parentTag.html(this.textLines);
+};
+CssFixedTextBox.prototype.outsideWidth = function() {
+    // TODO implement me
+};
+
+
 
 function BackgroundImgBox(width, height) {
   this.x = this.y = 0;
