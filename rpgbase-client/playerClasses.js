@@ -370,6 +370,8 @@ function MapSpriteMixin(subClassPrototype) {
 
   subClassPrototype.defineSprite = function(spriteSheet, width, height,
                                offsetX, offsetY) {
+    // the "constructor" for map sprites -- must be called by the
+    // constructor of the subclass to initialize relevant attributes
     this._img = spriteSheet;
     this._x = 0;
     this._y = 0;
@@ -386,6 +388,13 @@ function MapSpriteMixin(subClassPrototype) {
 
     this._lastMoved = {x: 0, y: 0};
     this._isVisible = true;
+  };
+
+  subClassPrototype.setSpriteSheet = function(spriteSheet) {
+    // overrides the default spritesheet, redefines sprite based on it,
+    // without changing other properties
+    this.defineSprite(spriteSheet, this._width, this._height,
+                      this._offsetX, this._offsetY);
   };
   
   subClassPrototype.setSprite = function(sliceX, sliceY) {
