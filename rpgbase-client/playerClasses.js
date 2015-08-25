@@ -659,32 +659,33 @@ PlayerCharacter.prototype = {
   inventoryIsFull: function() {
     return this._inventory.isFull();
   },
-  customizeCmds: function(defaultCmds) {
-    // called at beginning of each battle round
-    // to allow us a chance to override
-    // the default cmds with our own spell list, item list, etc.
-    
-    // TODO make a deep copy so we're not modifying the original
-    // (not that it matters for now)
-    //var defaultCmds = defaultCmds.clone();
-    var myItemCmd = new BattleCommandSet();
+  generateItemSubMenu: function() {
     // Should we be making this new one every time? Does old one
     // get garbage collected???
+    var myItemCmd = new BattleCommandSet();
     var myItems = this.getInventoryCmds(true);
     for (var i = 0; i < myItems.length; i++) {
       myItemCmd.add(myItems[i].name, new BatCmd(myItems[i]));
     }
-    defaultCmds.replace("ITEM", myItemCmd);
-
-    // Override spell list with my spell list!!
+    return myItemCmd;
+  },
+  generateMagicSubMenu: function() {
     var myMagicCmd = new BattleCommandSet();
     for (i = 0; i < this._battleSpells.length; i++) {
       var spell = this._battleSpells[i];
       myMagicCmd.add(spell.name, spell);
     }
-    defaultCmds.replace("MAGIC", myMagicCmd);
-
-    return defaultCmds;
+    return myMagicCmd;
+  },
+  customizeCmds: function(defaultCmds) {
+    // called at beginning of each battle round
+    // to allow us a chance to override
+    // the default cmds with our own spell list, item list, etc.
+    var newCmds = defaultCmds.deepCopy();
+    newCmds.replace("ITEM", this.generateItemSubMenu());
+    // Override spell list with my spell list!!
+    newCmds.replace("MAGIC", this.generateMagicSubMenu());
+    return newCmds;
     // TODO what happens if you REPEAT a round of battle in which
     // somebody used a one-use item?
   },
