@@ -449,6 +449,7 @@ var gRPG = (function(){
       menuTextStyles: {
       }
     };
+    this.startBattleMsg = null;
     this.setOptions(options);
     this.hasOwnAnimator = true;
   }
@@ -457,7 +458,7 @@ var gRPG = (function(){
       this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
                                       "screenWidth", "screenHeight",
                                       "stdBattleCmds", "menuPositions",
-                                      "menuTextStyles"]);
+                                      "menuTextStyles", "startBattleMsg"]);
 
       // Should support options like:
       // animation frame rate
@@ -472,7 +473,8 @@ var gRPG = (function(){
                                                   this.engine.canvas,
                                                   {defaultCmdSet: this.settings.stdBattleCmds,
                                                    width: this.settings.screenWidth,
-                                                   height: this.settings.screenHeight
+                                                   height: this.settings.screenHeight,
+                                                   startBattleMsg: this.settings.startBattleMsg
                                                   });
         this._realBattleSystem.setMenuPositions(this.settings.menuPositions);
         var self = this;
