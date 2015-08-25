@@ -1152,6 +1152,18 @@ BattleCommandSet.prototype = {
     return (this._cmds.length == 0);
   },
 
+  deepCopy: function() {
+    var copy = new BattleCommandSet();
+    this.forEach(function(name, cmd) {
+      if (cmd.isContainer) {
+        copy.add(name, cmd.deepCopy()); // recursively deep copy sub-menus
+      } else {
+        copy.add(name, cmd);
+      }
+    });
+    return copy;
+  },
+
   isContainer: true
 };
 
