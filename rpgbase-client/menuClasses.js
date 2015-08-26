@@ -768,11 +768,19 @@ function MenuSystemMixin(subClassPrototype) {
         this.canvasPartyStats = true;
     } else {
       this._htmlElem.find(".stats").remove();
+      var left = this._positioning.statsLeft;
+      var top = this._positioning.statsTop;
       for (var i = 0; i < this._party.length; i++) {
         var statHtml = this._party[i].getStatDisplay(this._statDisplayType);
         var statBox = $("<div></div>").html(statHtml);
         statBox.addClass("stats");
+        statBox.css("left", left + "px");
+        statBox.css("top", top + "px");
+        statBox.css("width", this._positioning.statsWidth);
+        statBox.css("height", this._positioning.statsHeight);
         this._htmlElem.append(statBox);
+        left += this._positioning.statsXOffset;
+        top += this._positioning.statsYOffset;
       }
     }
   };
