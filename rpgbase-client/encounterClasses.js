@@ -215,6 +215,10 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onBeginRound) {
     this._beginRoundCallback = options.onBeginRound;
   }
+  this._showMenuCallback = null;
+  if (options.onShowMenu) {
+    this._showMenuCallback = options.onShowMenu;
+  }
 
   var frameDelay = 50; // default (very fast)
   if (options.frameDelay) {
@@ -279,6 +283,10 @@ BattleSystem.prototype = {
                   this._positioning.menuTop);
     }
     this.saveStackDepth();
+
+    if (this._showMenuCallback) {
+      this._showMenuCallback(this, pc);
+    }
   },
 
   choosePCCommand: function(pc, cmd, target) {
@@ -417,6 +425,10 @@ BattleSystem.prototype = {
 
   onBeginRound: function(callback) {
     this._beginRoundCallback = callback;
+  },
+
+  onShowMenu: function(callback) {
+    this._showMenuCallback = callback;
   },
 /*
   onEndBattle: function(callback) {
