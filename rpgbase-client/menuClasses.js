@@ -1165,17 +1165,10 @@ CanvasScrollingTextBox.prototype.display = function(ctx) {
 function CssScrollingTextBox(text, menuSystem) {
   // TODO rewrite this constructor -- how do we decide where to split lines?
   this.lines = CanvasTextUtils.splitLines(text);
-  // currently hard-coded to show 2 lines at a time
   this.currLine = 0;
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
-  var styles = CanvasTextUtils.getStyles();
-  this.linesAtOnce = styles.scrollBoxLines;
-  /*this.width = styles.leftMargin + styles.rightMargin 
-    + styles.maxLineLength * styles.fontSize;
-
-  this.height = styles.topMargin + styles.bottomMargin
-    + this.linesAtOnce * styles.lineHeight;*/
+  this.linesAtOnce = 3; // TODO don't hardcode me
   this._closeCallbacks = [];
 };
 ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
