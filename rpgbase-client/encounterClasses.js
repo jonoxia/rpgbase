@@ -1193,6 +1193,8 @@ function MonsterType(img, name, statBlock, commandList) {
     this._commandList = [];
   }
   this._effectHandlers = {};
+
+  this._loot = null; // loot table
 }
 MonsterType.prototype = {
   onEffect: function(effectName, callback) {
@@ -1202,6 +1204,10 @@ MonsterType.prototype = {
   knowsCommand: function(cmd) {
     this._commandList.push(cmd);
   },
+  
+  setLootTable: function(lootTable) {
+    this._loot = lootTable;
+  },
 
   instantiate: function() {
     // return a Monster instance
@@ -1210,8 +1216,12 @@ MonsterType.prototype = {
       cloneStats[name] = this.statBlock[name];
     }
     var cloneCmds = this._commandList.slice();
-    return new Monster(this.img, cloneStats, cloneCmds,
-                       this._effectHandlers);
+    var instance = new Monster(this.img, cloneStats, cloneCmds,
+                               this._effectHandlers);
+    if (this._loot) {
+      instance.loot = this._loot;
+    }
+    return instance;
   }
 };
 
