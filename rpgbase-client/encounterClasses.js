@@ -439,6 +439,7 @@ BattleSystem.prototype = {
   startBattle: function(player, encounter, landType) {
     // TODO this is similar to MenuSystemMixin.open() but not quite
     // the same:
+    var self = this;
     this._battleOver = false;
     this._freelyExit = false;
     this.deadMonsters = [];
@@ -452,11 +453,24 @@ BattleSystem.prototype = {
     this._attackSFX = null;
     this._whoseTurn = null; // currently only used to target counters
     this.encounter = encounter;
+
+    var encounterGroups = null;
+    // A mixed-type encounter could look like this:
+    // {groups: [{number: 1, type: hawk}, {number:2, type: bandit}, {number:1, type: commander}]}
+    // but an old style-single type encounter looks like this:
+    // {number: 3, type: wolf}
+
+    if (encounter.groups) {
+      encounterGroups = encounter.groups
+    } else {
+      encounterGroups = [encounter]; // backwards compatibility
+    }
+
     this._fixedDisplayBoxes = [];
     this.peacefulResolutionText = null;
 
-    // Monster name box:
-    this._monsterNameBox = this.makeFixedTextBox([encounter.type.name]);
+    // Monster name box: (TODO should this be moved out to moonserpent actually?)
+    this._monsterNameBox = this.makeFixedTextBox([encounterGroups[0].type.name]);
     // Right-align option...
     if (this._positioning.monsterNameX == "right") {
         this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.outsideWidth(),
@@ -470,16 +484,17 @@ BattleSystem.prototype = {
     // Give each monster a letter for a name:
     var monsterStatLines = [];
     this.monsters = [];
-    if (encounter.number) {
-      for (var i = 0; i < encounter.number; i++) {
-        var monster = encounter.type.instantiate();
+
+    $.each(encounterGroups, function(i, group) {
+      for (var i = 0; i < group.number; i++) {
+        var monster = group.type.instantiate();
         // name them e.g. "Biteworm A", "Biteworm B" etc.
         var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        monster.setName(encounter.type.name + " " + letters[i]);
-        this.monsters.push(monster);
+        monster.setName(group.type.name + " " + letters[i]);
+        self.monsters.push(monster);
         monsterStatLines.push("   ");
       }
-    } // else? can that happen?
+    });
 
     // Monster HP display:
     // (Note repeates a lot of code from monster name box. TODO refactor!
@@ -512,7 +527,6 @@ BattleSystem.prototype = {
     }
 
     // startBattleCallback needs to itself take a callback!
-    var self = this;
     var afterAnimation = function() {
       if (encounter.start) {
         encounter.start(self, self.player);
