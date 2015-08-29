@@ -76,6 +76,7 @@ var gRPG = (function(){
       ctx.imageSmoothingEnabled = false;
     }
 
+    this.player = new Player();
   }
   GameEngine.prototype = {
     // TODO Needs to have mechanism for saving/loading globals
@@ -115,7 +116,6 @@ var gRPG = (function(){
       console.log("Adding mode " + name + ", will give it my htmlElem = " + this.settings.htmlElem);
       modeObject.engine = this;
       modeObject.setOptions(this.settings);
-
     },
     
     getModeByName: function(name) {
@@ -629,7 +629,7 @@ var gRPG = (function(){
     },
 
     start: function() {
-      this._realFieldMenu.open(this.player);
+      this._realFieldMenu.open(this.engine.player);
     },
 
     stop: function() {
@@ -677,7 +677,7 @@ var gRPG = (function(){
     },
 
     start: function() {
-      this._realDialog.open(this.player);
+      this._realDialog.open(this.engine.player);
     },
 
     stop: function() {
