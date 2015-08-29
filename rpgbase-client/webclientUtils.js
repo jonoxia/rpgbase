@@ -137,7 +137,7 @@ AudioPlayer.prototype = {
   changeTrack: function(filename, loop) {
     this.stop();
     if (this._preloads[filename]) {
-      this.preloads[filename].currentTime = 0;
+      this._preloads[filename].currentTime = 0;
     }
     this.play(filename, loop);
   },
