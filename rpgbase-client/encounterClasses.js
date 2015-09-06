@@ -1239,10 +1239,24 @@ MonsterType.prototype = {
   }
 };
 
+// Prototype hackery! Allows us to set a default function for every class that uses
+// BattlerMixin:
+var Battler = {
+  _subClassPrototypes: [],
+  
+  setDefault: function(propertyName, value) {
+    for (var i = 0; i < this._subClassPrototypes.length; i++) {
+      this._subClassPrototypes[i][propertyName] = value;
+    }
+  }
+};
 var BattlerMixin = function() {
   /* Used for Monsters and PlayerCharacters - anybody who can take
    * part in a battle. Syntax for using mixin:
    * BattlerMixin.call(class.prototype);  */
+
+  Battler._subClassPrototypes.push(this);
+
   this.battlerInit = function() {
     this._effectHandlers = {};
     this._statMods = [];

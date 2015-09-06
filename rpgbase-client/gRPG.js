@@ -115,7 +115,8 @@ var gRPG = (function(){
       // Let the mode know about the global settings:
       console.log("Adding mode " + name + ", will give it my htmlElem = " + this.settings.htmlElem);
       modeObject.engine = this;
-      modeObject.setOptions(this.settings);
+      modeObject.setOptions(this.settings); // TODO not good if setting options a second time
+      // has side-effects
     },
     
     getModeByName: function(name) {
@@ -609,7 +610,12 @@ var gRPG = (function(){
       // include spell menu? include item menu?
       // canvas vs css menus, and text style are set globally in game engine
       // but menu positions are set here
+      var self = this;
 
+      // TODO this setOptions function has side-effects, which is not what we want!
+      // especially since it may end up getting called multiple times, in which case
+      // the original field menu gets replaced by a new one!
+      // Switch to a lazy instantiation of the field menu
       this._realFieldMenu = new FieldMenu(this.settings.menuBaseElem, 
                                           null, this.settings.screenWidth,
                                           this.settings.screenHeight,
@@ -617,11 +623,9 @@ var gRPG = (function(){
 
       this._realFieldMenu.setMenuPositions(this.settings.menuPositions);
 
-      var self = this;
       this._realFieldMenu.onClose(function() {
         self.engine.closeMode();
       });
-
     },
 
     handleKey: function(key) {
