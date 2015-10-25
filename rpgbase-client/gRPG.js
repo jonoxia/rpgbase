@@ -48,6 +48,8 @@ var gRPG = (function(){
     this._mainMode = null;
     this._subMode = null; // TODO be a stack? Probably not.
 
+    this._canonicalSize = {width: width,
+                           height: height};
     var self = this;
     this._menuInputHandler = new NoRepeatKeyHandler(
       function(key) {
@@ -70,16 +72,51 @@ var gRPG = (function(){
     var ctx = this.canvas.getContext("2d");
     if (this.settings.scale && this.settings.scale != 1) {
       // Zoom in the canvas to given factor, without anti-aliasing:
-      ctx.scale(this.settings.scale, this.settings.scale);
       ctx.mozImageSmoothingEnabled = false;
       ctx.webkitImageSmoothingEnabled = false;
       ctx.imageSmoothingEnabled = false;
+      ctx.save();
+      if (this.settings.scale == "auto") {
+        this.scaleToWindow();
+      } else {
+        ctx.scale(this.settings.scale, this.settings.scale);
+      }
     }
 
     this.player = new Player();
   }
   GameEngine.prototype = {
     // TODO Needs to have mechanism for saving/loading globals
+
+    scaleToWindow: function() {
+      var windowSize = {width: $(window).width(),
+                        height: $(window).height()};
+      var gameSize = {width: this.settings.screenWidth,
+                      height: this.settings.screenHeight};
+
+      var ratios = {width: windowSize.width/gameSize.width,
+                    height: windowSize.height/gameSize.height};
+
+      var ratio = ratios.width < ratios.height ? ratios.width : ratios.height;
+      $("#mapscreen-canvas").attr("width", gameSize.width * ratio);
+      $("#mapscreen-canvas").attr("height", gameSize.height * ratio);
+      var ctx = this.canvas.getContext("2d");
+      ctx.scale(ratio, ratio);
+    },
+
+    rescale: function(newScale) {
+      // Does not work, do not use
+      var ctx = this.canvas.getContext("2d");
+      //ctx.restore();
+      //ctx.save();
+      this.settings.scale = newScale;
+      ctx.scale(this.settings.scale, this.settings.scale);
+      
+      this.settings.screenWidth = this._canonicalSize.width * newScale;
+      this.settings.screenHeight = this._canonicalSize.height * newScale;
+      this.canvas.setAttribute("width", this.settings.screenWidth);
+      this.canvas.setAttribute("height", this.settings.screenHeight);
+    },
 
     setOptions: function(options) {
       // Needs to support options like:
