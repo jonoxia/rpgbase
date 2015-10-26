@@ -279,8 +279,9 @@ BattleSystem.prototype = {
     var menu = this.pcMenus[index];
     this.pushMenu(menu);
     if (this._positioning.resetPerPC) {
-      menu.setPos(this._positioning.menuLeft,
-                  this._positioning.menuTop);
+      // Negative value means offset from bottom:
+      var pos = this.getScaledMenuPos();
+      menu.setPos(pos.x, pos.y);
     }
     this.saveStackDepth();
 

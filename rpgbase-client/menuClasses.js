@@ -530,6 +530,7 @@ function MenuSystemMixin(subClassPrototype) {
     if (htmlElem) {
       this.displayElem = this._htmlElem.find(".msg-display");
       this.menuImpl = "css";
+      this._calculatedScale = 1.0;
     } else {
       // If no html elem specified, use in-canvas menus:
       this.displayElem = null;
@@ -657,6 +658,45 @@ function MenuSystemMixin(subClassPrototype) {
   // TODO will need a function that instantiates fixed or scrolling text boxes
   // also according to this.menuImpl
 
+  subClassPrototype.getScaledMenuPos = function() {
+    return this._scalePositions(this._positioning.menuLeft,
+                                this._positioning.menuTop);
+  };
+
+  subClassPrototype.getScaledStatsPos = function() {
+    return this._scalePositions(this._positioning.statsLeft,
+                                this._positioning.statsTop);
+  };
+  
+  subClassPrototype._scalePositions = function(x, y) {
+    if (y > 0 && this.menuImpl == "css") {
+      y *= this._calculatedScale;
+    }
+    if (x > 0 && this.menuImpl == "css") {
+      x *= this._calculatedScale;
+    }
+    // TODO in the future we want to scale the position regardless of whether it's
+    // positive, but for now that causes too many problems.
+
+    if (y < 0) {
+      // negative value means offset from bottom
+      var offset = this._screenHeight - 20; // -20 is for margins/padding
+      if (this.menuImpl == "css") {
+        offset *= this._calculatedScale;
+      }
+      y += offset;
+    }
+    if (x < 0) {
+      offset= this._screenwidth - 20;
+      if (this.menuImpl == "css") {
+        offset *= this._calculatedScale;
+      }
+      x += offset;
+    }
+
+    return {x: x, y: y};
+  };
+
   subClassPrototype.pushMenu = function(newMenu) {
     var x, y;
     
@@ -666,8 +706,9 @@ function MenuSystemMixin(subClassPrototype) {
       x = pos.x + this._positioning.menuXOffset;
       y = pos.y + this._positioning.menuYOffset;
     } else {
-      x = this._positioning.menuLeft;
-      y = this._positioning.menuTop;
+      var pos = this.getScaledMenuPos();
+      x = pos.x;
+      y = pos.y;
     }
 
     newMenu.setPos(x, y);
@@ -768,8 +809,9 @@ function MenuSystemMixin(subClassPrototype) {
         this.canvasPartyStats = true;
     } else {
       this._htmlElem.find(".stats").remove();
-      var left = this._positioning.statsLeft;
-      var top = this._positioning.statsTop;
+      var pos = this.getScaledStatsPos();
+      var left = pos.x;
+      var top = pos.y;
       for (var i = 0; i < this._party.length; i++) {
         var statHtml = this._party[i].getStatDisplay(this._statDisplayType);
         var statBox = $("<div></div>").html(statHtml);

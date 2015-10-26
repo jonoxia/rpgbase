@@ -102,9 +102,16 @@ var gRPG = (function(){
       $("#mapscreen-canvas").attr("height", gameSize.height * ratio);
       var ctx = this.canvas.getContext("2d");
       ctx.scale(ratio, ratio);
+      
+      this._calculatedScale = ratio; // TODO pass this to all modes that are added...
+      // and if it changes, pass the change to all current modes.
+
+     /* var fontSize = Math.ceil( 18 * ratio);
+      $("body").css("font-size", fontSize + "pt");
+      console.log("Set font size to " + fontSize);*/
     },
 
-    rescale: function(newScale) {
+    /*rescale: function(newScale) {
       // Does not work, do not use
       var ctx = this.canvas.getContext("2d");
       //ctx.restore();
@@ -116,7 +123,7 @@ var gRPG = (function(){
       this.settings.screenHeight = this._canonicalSize.height * newScale;
       this.canvas.setAttribute("width", this.settings.screenWidth);
       this.canvas.setAttribute("height", this.settings.screenHeight);
-    },
+    },*/
 
     setOptions: function(options) {
       // Needs to support options like:
