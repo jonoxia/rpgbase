@@ -9,6 +9,7 @@ function Map(id, data, spritesheet, mapImplType) {
   this._stepHandlers = [];
   this._npcs = [];
   this._vehicles = [];
+  this._constructions = [];
   this._id = id;
   this._loadHandlers = [];
   this._unloadHandlers = [];
@@ -127,6 +128,13 @@ Map.prototype = {
     }
   },
 
+  addConstruction: function(construction, x, y) {
+    this._constructions.push(construction);
+    if (x != undefined && y != undefined) {
+      construction.setPos(x, y);
+    }
+  },
+
   removeNPC: function(npc) {
     var index = this._npcs.indexOf(npc);
     if (index > -1) {
@@ -140,6 +148,10 @@ Map.prototype = {
 
   removeAllVehicles: function() {
     this._vehicles = [];
+  },
+
+  removeAllConstructions: function() {
+    this._constructions = [];
   },
 
   removeVehicle: function(vehicle) {
@@ -177,6 +189,10 @@ Map.prototype = {
 
   getAllVehicles: function() {
     return this._vehicles;
+  },
+
+  getAllConstructedTiles: function() {
+    return this._constructions;
   },
 
   load: function() {
@@ -302,6 +318,9 @@ MapScreen.prototype = {
 
   getLandType: function( x, y ) {
     // x, y are world-coordinates, not screen-coordinates.
+    if (!this._currentDomain._mapData[y]) {
+      console.log("No match for y =" + y);
+    }
     return this._currentDomain._mapData[y][x];
   },
 
@@ -506,6 +525,12 @@ MapScreen.prototype = {
       break;
     case "tilemap": this._renderTileMap();
       break;
+    }
+
+    // If there are any constructed tiles on the map, render them now:
+    var tiles = this._currentDomain.getAllConstructedTiles();
+    for (var i = 0; i < tiles.length; i++) {
+      tiles[i].plot(this, this.scrollAdjustment);
     }
 
     // make an array of all player and NPC sprites:
