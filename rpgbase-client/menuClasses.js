@@ -1388,6 +1388,32 @@ Dialoglog.prototype = {
       this._occupiedNPC.wake();
       this._occupiedNPC = null;
     }
-  }
+  },
+
+  multipartTextDisplay: function(textSegments) {
+    console.log("The text segments are " + textSegments);
+    if (textSegments.length == 0) { return; }
+    var self = this;
+
+    var counter = 0;
+
+    var textBox = this.makeFixedTextBox([textSegments[0]]);
+    this.pushMenu(textBox);
+    textBox.setPos(this._positioning.msgLeft,
+                   this._positioning.msgTop);
+
+    textBox.onKey = function(key) {
+      console.log("text box got keypress");
+      counter ++;
+      if (counter < textSegments.length) {
+        var nextLine = textSegments[counter];
+        textBox.setText([nextLine]);
+        textBox.parentTag.html(textBox.textLines.join("<br>")); // should be part of setText?
+      } else {
+        self.handleKey(CANCEL_BUTTON);
+      }
+    };
+
+  },
 };
 MenuSystemMixin(Dialoglog.prototype);
