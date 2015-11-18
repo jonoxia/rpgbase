@@ -710,8 +710,7 @@ var gRPG = (function(){
       this._realDialog = new Dialoglog(this.settings.menuBaseElem, 
                                        null, this.settings.screenWidth,
                                        this.settings.screenHeight);
-      this._realDialog.setMenuPositions({msgLeft: 20,
-                                         msgTop: 128});
+      this._realDialog.setMenuPositions(this.settings.menuPositions);
 
       var self = this;
       this._realDialog.onClose(function() {
