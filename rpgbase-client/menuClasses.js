@@ -1359,9 +1359,48 @@ BackgroundImgBox.prototype = {
   },
   blacken: function(val) {
     this._black = val;
-  }
-  
+  }  
 };
+
+function CssFixedImgBox(img, menuSystem) {
+  //this._init();
+  this.container = menuSystem._htmlElem; //container;
+  //this.cursorHtml = "<blink>&#x25B6;</blink>";
+  //this.textLines = textLines;
+  this.imgUrl = img;
+}
+CssMixin(CssFixedImgBox.prototype);
+CssFixedImgBox.prototype.onKey = function(key) {
+  // do nothing
+};
+CssFixedImgBox.prototype.setImg = function(newImg, width, height) {
+  this.imgUrl = newImg; // takes URL of image, not Image object... for now.
+  this.imgTag.attr("src", newImg);
+  this.imgTag.attr("width", width);
+  this.imgTag.attr("height", height);
+};
+CssFixedImgBox.prototype.display = function() {
+  // Mostly copied from CssCmdMenu
+  this.parentTag = $("<div></div>");
+  this.parentTag.css("left", this.screenX);
+  this.parentTag.css("top", this.screenY);
+  this.container.append(this.parentTag);
+  this.imgTag = $("<img/>");
+  this.imgTag.attr("src", this.imgUrl);
+  this.parentTag.append(this.imgTag);
+
+  // TODO addClass("menu") and / or addClass("stats") ?
+};
+CssFixedImgBox.prototype.outsideWidth = function() {
+    // TODO implement me
+};
+CssFixedImgBox.prototype.hide = function() {
+  this.parentTag.hide();
+};
+CssFixedImgBox.prototype.show = function() {
+  this.parentTag.show();
+};
+
 
 
 function Dialoglog(htmlElem, cursorImg, width, height) {
@@ -1397,7 +1436,18 @@ Dialoglog.prototype = {
 
     var counter = 0;
 
-    var textBox = this.makeFixedTextBox([textSegments[0]]);
+    var portraitBox = new CssFixedImgBox("", this);
+    this.pushMenu(portraitBox);
+    portraitBox.setPos(this._positioning.msgLeft - 130,
+                       this._positioning.msgTop);
+    if (textSegments[0].img == null) {
+      portraitBox.hide();
+    } else {
+      portraitBox.show();
+      portraitBox.setImg(textSegments[0].img, 100, 100);
+    }
+
+    var textBox = this.makeFixedTextBox([textSegments[0].text]);
     this.pushMenu(textBox);
     textBox.setPos(this._positioning.msgLeft,
                    this._positioning.msgTop);
@@ -1407,9 +1457,18 @@ Dialoglog.prototype = {
       counter ++;
       if (counter < textSegments.length) {
         var nextLine = textSegments[counter];
-        textBox.setText([nextLine]);
+        textBox.setText([nextLine.text]);
         textBox.parentTag.html(textBox.textLines.join("<br>")); // should be part of setText?
+        if (nextLine.img == null) {
+          portraitBox.hide();
+        } else {
+          portraitBox.show();
+          portraitBox.setImg(nextLine.img, 100, 100);
+        }
       } else {
+        self.popMenu(); // to get rid of the portraitBox
+        // (TODO general-purpose solution for passive boxes that show up alongside the menu
+        // stack but never take input)
         self.handleKey(CANCEL_BUTTON);
       }
     };
