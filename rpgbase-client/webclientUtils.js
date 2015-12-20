@@ -109,6 +109,9 @@ AudioPlayer.prototype = {
     }
     if (loop) {
       this._loopAudio(this._preloads[filename]);
+    } else {
+      // when playing non-loop audio, reset it to 0 before starting:
+      this._preloads[filename].currentTime = 0;
     }
     this._preloads[filename].play();
   },
