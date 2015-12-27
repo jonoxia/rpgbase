@@ -168,6 +168,12 @@ function BattleSystem(htmlElem, canvas, options) {
     this.startBattleMsg = "";
   }
 
+  if (options.hasOwnProperty("retarget")) {
+    this._autoRetarget = options.retarget;
+  } else {
+    this._autoRetarget = true;
+  }
+
   if (options.defaultMonsterCmd) {
     this._defaultMonsterCmd = options.defaultMonsterCmd;
   } else {
@@ -805,6 +811,29 @@ BattleSystem.prototype = {
     var cmd = fightRecord.cmd;
     var target = fightRecord.target;
     this._whoseTurn = fighter;
+
+    if (this._autoRetarget) {
+      // If autoRetarget option is true, then if the target has died or
+      // fled before a single-target attack has resolved, a new random
+      // target is selected instead:
+      if (target.hasOwnProperty("_statBlock")) {
+        // meaning target is an individual ally/enemy and not a string code
+        if (target._dead || target.hasStatus("fled")) {
+          // no longer a valid target for most things;
+          // TODO EXCEPTION
+          // revive spells could target dead fighters
+
+          // If target was a monster, pick another monster; if target
+          // was a PC pick another PC.
+          if (this.monsters.indexOf(target) > -1 || this.deadMonsters.indexOf(target) > -1) {
+            target = "random_monster";
+          }
+          else if (this._party.indexOf(target) > -1) {
+            target = "random_pc";
+          }
+        }
+      }
+    }
 
     // choose random targets now, right before executing:
     if (target == "random_monster") {
