@@ -757,6 +757,8 @@ function MenuSystemMixin(subClassPrototype) {
       this.canvasStyleMsgText = msg;
       this.canvasStyleMsgLines = CanvasTextUtils.splitLines(msg);
     } else {
+      this.displayElem.css("left", this._positioning.msgLeft);
+      this.displayElem.css("top", this._positioning.msgTop);
       this.displayElem.append($("<span></span>").html(msg));
       this.displayElem.append($("<br>"));
       this.displayElem.show();
@@ -781,6 +783,7 @@ function MenuSystemMixin(subClassPrototype) {
     this.pushMenu(textBox);
     textBox.setPos(this._positioning.msgLeft,
                    this._positioning.msgTop);
+    return textBox;
   },
 
   subClassPrototype.chooseOne = function(title, set, callback) {

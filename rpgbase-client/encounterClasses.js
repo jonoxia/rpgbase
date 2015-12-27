@@ -942,8 +942,7 @@ BattleSystem.prototype = {
       endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
       break;
     }
-    var endBattleText = this.makeScrollingTextBox(endBattleMessage);
-    this.pushMenu(endBattleText);
+    var endBattleText = this.scrollText(endBattleMessage);
     var self = this;
     endBattleText.onClose(function() {
       self._freelyExit = true;
@@ -952,7 +951,7 @@ BattleSystem.prototype = {
         self._gameOverCallback();
       }
     });
-    endBattleText.setPos(16, 16);
+    //endBattleText.setPos(16, 16);
   },
 
   sendEffect: function(target, effectName, data) {
