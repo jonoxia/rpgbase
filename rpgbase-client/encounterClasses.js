@@ -351,6 +351,7 @@ BattleSystem.prototype = {
     var cmdMenu = this.makeMenu();
 
     var addOneCmd = function(name, cmd) {
+
       // if this command has a submenu, then choosing it
       // just opens the submenu:
       if (cmd.isContainer) {
@@ -361,6 +362,12 @@ BattleSystem.prototype = {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
         });
       } else {
+
+        // if pc has a cmdDisplayText function use that instead of name
+        if (pc.cmdDisplayText) {
+          name = pc.cmdDisplayText(cmd, true); // true = is in battle
+        }
+
         // but if it's a "leaf node", then next step is to see
         // whether you can use it right now...
         if (!cmd.canUse(pc)) {

@@ -320,6 +320,7 @@ var gRPG = (function(){
       // gets called
       this.loader.loadThemAll(function() {
         console.log("Loaded them all");
+        $("#loading-progress").hide();
         self.mainMode(startingMode);
         if (callback) {
           callback();
