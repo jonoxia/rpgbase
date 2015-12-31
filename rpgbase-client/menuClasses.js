@@ -1098,45 +1098,42 @@ FieldMenu.prototype = {
     this.pushMenu(menu);
   },
 
+  executeFieldSpell: function(character, spell) {
+    var self = this;
+    if (!spell.canUse(character)) {
+      self.showMsg("NOT ENOUGH MP."); // TODO maybe other reason?
+    } else if (spell.target == "ally") {
+      self.chooseCharacter("ON WHO?", function(target) {
+        self.popMenu();
+        self.popMenu();
+        spell.effect(self, character, target);
+	// update stats display to show effect of heal:
+	self.showPartyStats();
+      });
+    } else if (spell.target == "all_allies") {
+      var party = self._player.getAliveParty();
+      self.popMenu();
+      spell.effect(self, character, party);
+      self.showPartyStats();
+    } else {
+      // non-target spells:
+      self.popMenu();
+      spell.effect(self, character); // TODO pass party?
+      // update stats display to show effect of heal:
+      self.showPartyStats();
+    }
+  },
+
   showSpellMenu: function(character) {
     var self = this;
     var menu = this.makeMenu();
     menu.setTitle("SPELLS:");
     var fieldSpells = character._fieldSpells;
-    for (i = 0; i < fieldSpells.length; i++) {
-      (function(spell) {
-        if (!spell.canUse(character)) {
-          menu.addCommand(spell.name, function() {
-            self.showMsg("NOT ENOUGH MP."); // TODO maybe other reason?
-          });
-        } else if (spell.target == "ally") {
-          menu.addCommand(spell.name, function() {
-            self.chooseCharacter("ON WHO?", function(target) {
-              self.popMenu();
-              self.popMenu();
-              spell.effect(self, character, target);
-	      // update stats display to show effect of heal:
-	      self.showPartyStats();
-            });
-          });
-        } else if (spell.target == "all_allies") {
-          menu.addCommand(spell.name, function() {
-            var party = self._player.getAliveParty();
-            self.popMenu();
-            spell.effect(self, character, party);
-            self.showPartyStats();
-          });
-        } else {
-          // non-target spells:
-          menu.addCommand(spell.name, function() {
-            self.popMenu();
-            spell.effect(self, character); // TODO pass party?
-	    // update stats display to show effect of heal:
-	    self.showPartyStats();
-          });
-        }
-      })(fieldSpells[i]);
-    }
+    $.each(fieldSpells, function(i, spell) {
+      menu.addCommand(spell.name, function() {
+        self.executeFieldSpell(character, spell);
+      });
+    });
 
     // if no spells:
     if (fieldSpells.length == 0) {
