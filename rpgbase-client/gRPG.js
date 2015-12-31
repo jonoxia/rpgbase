@@ -324,7 +324,14 @@ var gRPG = (function(){
         if (callback) {
           callback();
         }
+      },
+      function(progress) {
+        // the progress bar callback function
+        $("#loading-progress").html("LOADING IMAGES " + Math.floor(progress * 100) + "% ..."); 
       });
+	window.setTimeout(function() {
+	    self.loader.listUnloaded(); // just for debug
+	}, 5000);
 
     }
 
