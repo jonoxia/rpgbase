@@ -18,6 +18,11 @@ function CmdMenuMixin(subClassProto) {
   };
     
   subClassProto.moveSelectionUp = function() {
+
+    if (g_gameEngine) {
+      // TODO HORRIBLE HACK
+      g_gameEngine.audioPlayer.playSfx("music/sounds/click.mp3");
+    }
     this.selectedIndex --;
     if (this.selectedIndex < 0) {
       this.selectedIndex = this.cmdList.length - 1;
@@ -26,6 +31,12 @@ function CmdMenuMixin(subClassProto) {
   };
   
   subClassProto.moveSelectionDown = function() {
+
+    if (g_gameEngine) {
+      // TODO HORRIBLE HACK
+      g_gameEngine.audioPlayer.playSfx("music/sounds/click.mp3");
+    }
+
     this.selectedIndex ++;
     if (this.selectedIndex >= this.cmdList.length) {
       this.selectedIndex = 0;
@@ -34,6 +45,10 @@ function CmdMenuMixin(subClassProto) {
   };
 
   subClassProto.chooseSelected =  function() {
+    if (g_gameEngine) {
+      // TODO HORRIBLE HACK
+      g_gameEngine.audioPlayer.playSfx("music/sounds/confirm.mp3");
+    }
     var cmd = this.cmdList[this.selectedIndex];
     cmd.execute();
   };
