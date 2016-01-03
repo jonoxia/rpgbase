@@ -840,6 +840,12 @@ function MenuSystemMixin(subClassPrototype) {
           return;
         }
       }
+
+      if (g_gameEngine) {
+        // TODO HORRIBLE HACK
+        g_gameEngine.audioPlayer.playSfx("music/sounds/cancel.mp3");
+      }
+
       if (this.menuStack.length > 0) {
         this.popMenu();
       }
