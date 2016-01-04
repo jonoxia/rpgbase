@@ -426,6 +426,7 @@ GenericRPG.prototype = {
     this.overworld.onStep({x: overworldX, y: overworldY},
       function(pc, x, y, landType) {
         // TODO CONSOLIDATE MODE SWITCHES
+        self.audioPlayer.playSfx("music/sounds/stairs.mp3");
         self._mainMode = "maze";
         self.inputDispatcher.mapMode("maze");
         self.mapScreen.stop();
@@ -442,7 +443,8 @@ GenericRPG.prototype = {
         // TODO CONSOLIDATE MODE SWITCHES
         function(pc, x, y) {
 	  // TODO pc argument is bogus, don't use it
-        self._mainMode = "map";
+          self.audioPlayer.playSfx("music/sounds/stairs.mp3");
+          self._mainMode = "map";
 	  self.inputDispatcher.mapMode("overworld");
 	  self.mazeScreen.stop();
           self.mapScreen.setNewDomain(self.overworld); // in case last domain was not overworld

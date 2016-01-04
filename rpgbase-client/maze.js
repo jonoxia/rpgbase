@@ -348,6 +348,7 @@ FirstPersonMaze.prototype = {
         self.processStep();
       });
     } else {
+      g_gameEngine.audioPlayer.playSfx("music/sounds/bonk.mp3");
       return new Animation(5); // and play bump noise!
     }
   },

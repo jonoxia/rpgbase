@@ -157,6 +157,7 @@ TreasureChest.prototype = {
         dialoglog.scrollText(receiver.name + " OBTAINED " + self._itemType._name + "!");
         self.makeEmpty();
         receiver.gainItem(self._itemType);
+        g_gameEngine.audioPlayer.playSfx("music/sounds/chestopen.mp3");
       });
     } else {
       dialoglog.scrollText("IT'S EMPTY.");
@@ -197,6 +198,7 @@ MoneyChest.prototype = {
       dialoglog.showPartyResources(player, this._resource);
       dialoglog.scrollText("YOU FOUND " + this._amount + " "
                            + this._resource + "!");
+      g_gameEngine.audioPlayer.playSfx("music/sounds/chestopen.mp3");
     } else {
       dialoglog.scrollText("IT'S EMPTY.");
     }
