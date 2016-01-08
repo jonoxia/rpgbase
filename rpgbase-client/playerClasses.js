@@ -801,7 +801,7 @@ PlayerCharacter.prototype.getEquipmentStat = function(statName) {
 PlayerCharacter.prototype.getStat = function(statName) {
   var statValue;
   if (this.hasStat(statName)) {
-    statValue = this.parentGetStat(statName); // Returning NAN????
+    statValue = this.parentGetStat(statName);
   } else {
     statValue = 0;
   }

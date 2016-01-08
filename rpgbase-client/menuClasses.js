@@ -1296,6 +1296,9 @@ CssFixedTextBox.prototype.onKey = function(key) {
 };
 CssFixedTextBox.prototype.setText = function(newTextLines) {
   this.textLines = newTextLines;
+  if (this.parentTag) {
+    this.parentTag.html(this.textLines.join("<br>"));
+  }
 };
 CssFixedTextBox.prototype.display = function() {
   // Mostly copied from CssCmdMenu
