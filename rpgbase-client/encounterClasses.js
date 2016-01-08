@@ -69,7 +69,7 @@ EncounterTable.prototype = {
       }
     }
     var encounter = this._data[matchIndex];
-
+    
     if (encounter.special) {
       return encounter.special;
     }
@@ -312,7 +312,7 @@ BattleSystem.prototype = {
     } else {
       // Otherwise, show menu for next alive party member!
       this.showMenuForPC(nextPC); 
-   }
+    }
   },
 
   chooseWholePartyCmd: function(cmd, skipPCTurns) {
@@ -449,6 +449,21 @@ BattleSystem.prototype = {
   // deprecated
     this.endBattleCallbacks.push(callback);
   },*/ 
+
+  _instantiateMonsters: function(encounterGroups) {
+    // Instantiate monsters from monters types and give each monster a letter for a name:
+    var monsters = [];
+    $.each(encounterGroups, function(i, group) {
+      for (var i = 0; i < group.number; i++) {
+        var monster = group.type.instantiate();
+        // name them e.g. "Biteworm A", "Biteworm B" etc.
+        var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        monster.setName(group.type.name + " " + letters[i]);
+        monsters.push(monster);
+      }
+    });
+    return monsters;
+  },
   
   startBattle: function(player, encounter, landType) {
     // TODO this is similar to MenuSystemMixin.open() but not quite
@@ -467,6 +482,10 @@ BattleSystem.prototype = {
     this._attackSFX = null;
     this._whoseTurn = null; // currently only used to target counters
     this.encounter = encounter;
+    this._fixedDisplayBoxes = [];
+    this.peacefulResolutionText = null;
+    this.monsters = [];
+
 
     var encounterGroups = null;
     // A mixed-type encounter could look like this:
@@ -475,42 +494,34 @@ BattleSystem.prototype = {
     // {number: 3, type: wolf}
 
     if (encounter.groups) {
-      encounterGroups = encounter.groups
+      // Option where we pass in groups, each containing monster type and number
+      this.monsters = this._instantiateMonsters(encounter.groups);
+    } else if (encounter.monsters) {
+      // Option where we pass in already-instantiated monster list:
+      this.monsters = encounter.monsters;
     } else {
-      encounterGroups = [encounter]; // backwards compatibility
+      // backwards compatibility: single type and number (moonserpent uses this one)
+      this.monsters = this._instantiateMonsters([encounter]);
+      var monsterTypeTitle = encounter.type.name;
     }
-
-    this._fixedDisplayBoxes = [];
-    this.peacefulResolutionText = null;
 
     // Monster name box: (TODO should this be moved out to moonserpent actually?)
-    this._monsterNameBox = this.makeFixedTextBox([encounterGroups[0].type.name]);
-    // Right-align option...
-    if (this._positioning.monsterNameX == "right") {
+    if (monsterTypeTitle) {
+      this._monsterNameBox = this.makeFixedTextBox(monsterTypeTitle);
+      // Right-align option...
+      if (this._positioning.monsterNameX == "right") {
         this._monsterNameBox.setPos(this._screenWidth - this._monsterNameBox.outsideWidth(),
                                     this._positioning.monsterNameY);
-    } else {
+      } else {
         this._monsterNameBox.setPos(this._positioning.monsterNameX, this._positioning.monsterNameY);
-    }
-    // TODO create right-align option?
-    this._fixedDisplayBoxes.push(this._monsterNameBox);
-
-    // Give each monster a letter for a name:
-    var monsterStatLines = [];
-    this.monsters = [];
-
-    $.each(encounterGroups, function(i, group) {
-      for (var i = 0; i < group.number; i++) {
-        var monster = group.type.instantiate();
-        // name them e.g. "Biteworm A", "Biteworm B" etc.
-        var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        monster.setName(group.type.name + " " + letters[i]);
-        self.monsters.push(monster);
-        monsterStatLines.push("   ");
       }
-    });
+      // TODO create right-align option?
+      this._fixedDisplayBoxes.push(this._monsterNameBox);
+    }
 
-    // Monster HP display:
+    // Monster HP display: (TODO should be moved out to moonserpent, or made an option?)
+    var monsterStatLines = [];
+    $.each(this.monsters, function(i,x) { monsterStatLines.push("   "); });
     // (Note repeates a lot of code from monster name box. TODO refactor!
     this._monsterHitPoints = this.makeFixedTextBox(monsterStatLines);
     // Right-align option...
@@ -523,6 +534,7 @@ BattleSystem.prototype = {
     }
     this._fixedDisplayBoxes.push(this._monsterHitPoints);
 
+    // Show start of battle message:
     if (this.startBattleMsg && this.startBattleMsg != "") {
       this.showMsg(this.startBattleMsg);
     }
