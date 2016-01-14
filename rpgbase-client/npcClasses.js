@@ -147,7 +147,7 @@ TreasureChest.prototype = {
   },
   sleep: function() {
   },
-  
+
   talk: function(dialoglog, player) {
     if (!this._taken) {
       // give it to first character with open inventory slot...
@@ -157,16 +157,20 @@ TreasureChest.prototype = {
         dialoglog.scrollText(receiver.name + " OBTAINED " + self._itemType._name + "!");
         self.makeEmpty();
         receiver.gainItem(self._itemType);
-        g_gameEngine.audioPlayer.playSfx("music/sounds/chestopen.mp3");
       });
     } else {
       dialoglog.scrollText("IT'S EMPTY.");
     }
   },
 
+  onTake: function() {
+    // called when taken. Override this to do anything.
+  },
+
   makeEmpty: function() {
     this._taken = true;
     this.setSprite(1, 0);
+    this.onTake();
   },
 
   setFacing: function(dir) {
@@ -198,15 +202,20 @@ MoneyChest.prototype = {
       dialoglog.showPartyResources(player, this._resource);
       dialoglog.scrollText("YOU FOUND " + this._amount + " "
                            + this._resource + "!");
-      g_gameEngine.audioPlayer.playSfx("music/sounds/chestopen.mp3");
     } else {
       dialoglog.scrollText("IT'S EMPTY.");
     }
   },
+
   // TODO duplicated code from TreasureChest, refactor!
+  onTake: function() {
+    // called when taken. Override this to do anything.
+  },
+
   makeEmpty: function() {
     this._taken = true;
     this.setSprite(1, 0);
+    this.onTake();
   },
 
   setFacing: function(dir) {

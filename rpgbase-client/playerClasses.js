@@ -157,6 +157,11 @@ Player.prototype = {
         }
       }
     } else {
+      // case where we cannot move
+      if (mainChar.onHitWall) {
+        // if a wall bonk handler is defined:
+        mainChar.onHitWall();
+      }
       if (this.inVehicle) { // on vehicle, can't move
         // show the vehicle wiggling in place
         animation.onFrame(function(currFrame) {
@@ -486,10 +491,6 @@ function MapSpriteMixin(subClassPrototype) {
     if (this.canCross) { // i.e. if method has been defined
       var nextStepLandType = mapScreen.getLandType(newX, newY);
       if (!this.canCross(nextStepLandType)) {
-
-        g_gameEngine.audioPlayer.playSfx("music/sounds/bonk.mp3");
-        // TODO don't have this in playerClasses. Also maybe make it map-dependent
-        // so it won't play on overworld only in towns and caves.
         return false;
       }
     }
@@ -771,6 +772,11 @@ PlayerCharacter.prototype = {
     if (useInField) {
       this._fieldSpells.push(spellCmd);
     }
+  },
+
+  onHitWall: function() {
+    // called when you bump into a wall. Does nothing, override this to play a sound
+    // or whatever.
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

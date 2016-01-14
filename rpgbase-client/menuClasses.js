@@ -1,4 +1,16 @@
+
+var CmdMenu = {
+  _subClassPrototypes: [],
+  
+  setDefault: function(propertyName, value) {
+    for (var i = 0; i < this._subClassPrototypes.length; i++) {
+      this._subClassPrototypes[i][propertyName] = value;
+    }
+  }
+};
 function CmdMenuMixin(subClassProto) {
+  CmdMenu._subClassPrototypes.push(subClassProto);
+
   subClassProto._init = function() {
     this.cmdList = [];
     this.selectedIndex = 0;
@@ -19,10 +31,7 @@ function CmdMenuMixin(subClassProto) {
     
   subClassProto.moveSelectionUp = function() {
 
-    if (g_gameEngine) {
-      // TODO HORRIBLE HACK
-      g_gameEngine.audioPlayer.playSfx("music/sounds/click.mp3");
-    }
+    this.playSfx("up");
     this.selectedIndex --;
     if (this.selectedIndex < 0) {
       this.selectedIndex = this.cmdList.length - 1;
@@ -32,11 +41,7 @@ function CmdMenuMixin(subClassProto) {
   
   subClassProto.moveSelectionDown = function() {
 
-    if (g_gameEngine) {
-      // TODO HORRIBLE HACK
-      g_gameEngine.audioPlayer.playSfx("music/sounds/click.mp3");
-    }
-
+    this.playSfx("down");
     this.selectedIndex ++;
     if (this.selectedIndex >= this.cmdList.length) {
       this.selectedIndex = 0;
@@ -45,10 +50,7 @@ function CmdMenuMixin(subClassProto) {
   };
 
   subClassProto.chooseSelected =  function() {
-    if (g_gameEngine) {
-      // TODO HORRIBLE HACK
-      g_gameEngine.audioPlayer.playSfx("music/sounds/confirm.mp3");
-    }
+    this.playSfx("confirm");
     var cmd = this.cmdList[this.selectedIndex];
     cmd.execute();
   };
@@ -88,6 +90,10 @@ function CmdMenuMixin(subClassProto) {
     return names;
   };
 
+  subClassProto.playSfx = function(eventType) {
+    // Does nothing in base class
+    // Override this if you want menus to play sounds
+  };
 }
 
 var CanvasTextUtils = {
@@ -841,12 +847,11 @@ function MenuSystemMixin(subClassPrototype) {
         }
       }
 
-      if (g_gameEngine) {
-        // TODO HORRIBLE HACK
-        g_gameEngine.audioPlayer.playSfx("music/sounds/cancel.mp3");
-      }
-
       if (this.menuStack.length > 0) {
+        var topMenu = this.menuStack[ this.menuStack.length - 1];
+        if (topMenu.playSfx) {  // i.e. if function is defined
+          topMenu.playSfx("cancel");
+        }
         this.popMenu();
       }
       if (this.menuStack.length == 0) {

@@ -348,8 +348,13 @@ FirstPersonMaze.prototype = {
         self.processStep();
       });
     } else {
-      g_gameEngine.audioPlayer.playSfx("music/sounds/bonk.mp3");
-      return new Animation(5); // and play bump noise!
+      // cannot advance.
+      // if a wall bonk handler is defined, trigger it (e.g. bump noise)
+      var leadChar = this.player.party[0];
+      if (leadChar.onHitWall) {
+        leadChar.onHitWall();
+      }
+      return new Animation(5);
     }
   },
 
