@@ -1202,6 +1202,9 @@ var BattlerMixin = function() {
   };
   this.die = function() {
     this._dead = true;
+    // this counts as taking the effect "die" so trigger any
+    // effect handlers for that effect
+    this.takeEffect("die");
   };
   this.revive = function() {
     this._dead = false;
