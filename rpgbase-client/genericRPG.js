@@ -326,7 +326,7 @@ GenericRPG.prototype = {
   },
 
   makeChurch: function(spriteSheet, spriteX, spriteY, price) {
-
+    // TODO take a dictionary of the strings to use
     var priest = this.makeNPC(spriteSheet);
     priest.setSprite(spriteX, spriteY);
     priest.onTalk(function(dialog, player) {
@@ -372,35 +372,55 @@ GenericRPG.prototype = {
   makeInn: function(spriteSheet, spriteX, spriteY, pricePer) {
     var innkeeper = this.makeNPC(spriteSheet);
     innkeeper.onTalk(function(dialog, player) {
-	    dialog.open(player);
-	    dialog.showPartyResources(player, "~");
-	    var totalPrice = pricePer * player.getAliveParty().length;
-	    dialog.showMsg("FOR YOU TO STAY THE NIGHT WILL BE " + totalPrice + "~.");
+      dialog.open(player);
+      dialog.showPartyResources(player, "~");
+      var totalPrice = pricePer * player.getAliveParty().length;
+      dialog.showMsg("FOR YOU TO STAY THE NIGHT WILL BE " + totalPrice + "~.");
 
-	    dialog.yesOrNo(function(answer) {
-		    if (answer) {
-			if (player.hasResource("~", totalPrice)) {
-			    player.forEachAliveMember(function(pc) {
-				    pc.takeEffect("fullheal", {});
-				    // see moonserpent-party for where "fullheal" is
-				    // defined
-				});
-			    // TODO black out screen and play lullaby
-			    player.spendResource("~", totalPrice);
-			    dialog.popMenu();
-			    dialog.scrollText("THANK YOU, COME AGAIN.");
-			} else {
-			    dialog.popMenu();
-			    dialog.scrollText("YOU CAN'T AFFORD THAT, SORRY.");
-			}
-		    } else {
-			dialog.popMenu();
-			dialog.scrollText("HOPE TO SEE YOU AGAIN!");
-		    }
-		});
-	});
+      dialog.yesOrNo(function(answer) {
+	if (answer) {
+	  if (player.hasResource("~", totalPrice)) {
+	    player.forEachAliveMember(function(pc) {
+	      pc.takeEffect("fullheal", {});
+	      // see moonserpent-party for where "fullheal" is
+	      // defined
+	    });
+	    // TODO black out screen and play lullaby
+	    player.spendResource("~", totalPrice);
+	    dialog.popMenu();
+	    dialog.scrollText("THANK YOU, COME AGAIN.");
+	  } else {
+	    dialog.popMenu();
+	    dialog.scrollText("YOU CAN'T AFFORD THAT, SORRY.");
+	  }
+	} else {
+	  dialog.popMenu();
+	  dialog.scrollText("HOPE TO SEE YOU AGAIN!");
+	}
+      });
+    });
     innkeeper.setSprite(spriteX, spriteY);
     return innkeeper;
+  },
+
+  makeSavePoint: function(spriteSheet, spriteX, spriteY, message, saveFunction) {
+    var savePointGuy = this.makeNPC(spriteSheet);
+    savePointGuy.onTalk(function(dialog, player) {
+      dialog.open(player);
+      dialog.showMsg(message);
+      dialog.yesOrNo(function(answer) {
+	if (answer) {
+          dialog.popMenu();
+          saveFunction();
+	  dialog.scrollText("OK I SAVED YOUR GAME!");
+	} else {
+	  dialog.popMenu();
+	  dialog.scrollText("HOPE TO SEE YOU AGAIN!");
+	}
+      });
+    });
+    savePointGuy.setSprite(spriteX, spriteY);
+    return savePointGuy;
   },
 
   connectMazeToOverworld: function(maze, overworldX, overworldY,
