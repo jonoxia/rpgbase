@@ -1,15 +1,14 @@
 describe("Spreadsheet", function() {
-  // Note that the following URL is NOT the same as the 'edit' link for
-  // the spreadsheet.
-  //
-  // For more details, see:
-  //
-  //   * http://labs.toolness.com/temp/gsheets_pub_to_web.png
-  //   * https://support.google.com/docs/answer/37579
-
-  var URL = "https://docs.google.com/spreadsheets/d/1EguVrU7noAf8a9BnHk6F7i-OMi4Q9Mh3aElm0e5N_ns/pubhtml";
-
   it("should work", function() {
+    // Note that the following URL is NOT the same as the 'edit' link for
+    // the spreadsheet.
+    //
+    // For more details, see:
+    //
+    //   * http://labs.toolness.com/temp/gsheets_pub_to_web.png
+    //   * https://support.google.com/docs/answer/37579
+
+    var URL = document.getElementById('published-url').href;
     var sheet;
     var spreadsheetLoaded = false;
 
