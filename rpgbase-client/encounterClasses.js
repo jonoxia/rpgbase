@@ -209,6 +209,10 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onDefeat) {
     this._defeatCallback = options.onDefeat;
   }
+  this._peacefulCallback = null;
+  if (options.onPeace) {
+    this._peacefulCallback = options.onPeace;
+  }
   this._randomTargetCallback = null;
 
   this._endRoundCallback = null;
@@ -626,6 +630,10 @@ BattleSystem.prototype = {
   onDefeat: function(callback) {
     this._defeatCallback = callback;
   },
+
+  onPeace: function(callback) {
+    this._peacefulCallback = callback;
+  },
   
   onGameOver: function(callback) {
     this._gameOverCallback = callback;
@@ -987,7 +995,17 @@ BattleSystem.prototype = {
       endBattleMessage = "YOU BRAVELY RAN AWAY, AWAY!";
       break;
     case "peace":
-      endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
+      // A "victory" where the player successfully negotiated a peaceful resolution instead
+      // of killing all monsters.
+      if (this._peacefulCallback) {
+        // there can be some dead and some alive monsters in this case, so pass both
+        // lists to the callback:
+        endBattleMessage = this._peacefulCallback(this.player,
+                                                  this.monsters,
+                                                  this.deadMonsters);
+      } else {
+        endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
+      }
       break;
     }
     var endBattleText = this.scrollText(endBattleMessage);
