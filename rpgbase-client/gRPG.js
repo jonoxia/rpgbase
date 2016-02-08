@@ -7,11 +7,6 @@
  * start method for engine
  * registerMap, getCurrentMapId, 
 
- * probably apply GameModeMixin directly to BattleSystem, FieldMenu, MapScreen,
- * MazeScreen instead of having these awkward mode classes that are just thin wrappers around
- * them. We could even apply the mixin here, in this file, so that if you don't include gRPG
- * then the basic classes remain un-mixed.
-
  * onSerialize, onDeserialize:
  *     allow each game mode to do whatever serialization/deserialization it wants
  *     and then record which mode is currently the main
@@ -144,13 +139,6 @@ var gRPG = (function(){
           self.settings[fieldName] = options[fieldName];
         }
       });
-
-      // Propagate to already-registered modes:
-      for (var mode in self._modeRegistry) {
-        if (self._modeRegistry.hasOwnProperty(mode)) {
-          self._modeRegistry[mode].setOptions(options);
-        }
-      }
     },
     
     addMode: function(name, modeObject) {
@@ -159,8 +147,6 @@ var gRPG = (function(){
       // Let the mode know about the global settings:
       console.log("Adding mode " + name + ", will give it my htmlElem = " + this.settings.htmlElem);
       modeObject.engine = this;
-      modeObject.setOptions(this.settings); // TODO not good if setting options a second time
-      // has side-effects
     },
     
     getModeByName: function(name) {
@@ -174,6 +160,12 @@ var gRPG = (function(){
         return this._mainMode;
       }
     },
+    /* TODO implement this as a stack of modes instead?
+     * menu, battle, or dialog gets pushed onto the top of the stack and then popped off?
+     * map mode is usually the base, maze mode gets pushed on top of map mode when you enter
+     * maze, popped off when you exit maze, etc.
+     * i suppose at the very bottom would go the system menu mode, then?
+     */
 
     mainMode: function(name) {
       // TODO raise an exception if the named mode cannot be
@@ -342,83 +334,78 @@ var gRPG = (function(){
     // send player to ('mapname', x, y) ?
   };
 
-  function GameModeMixin(subclassPrototype) {
-    /* All game modes need to have:
-     * - an input interpreter
-     * - either their own animator or to piggyback on another mode's renderer
-     * - functions for switching into and out of the mode */
 
-    subclassPrototype.saveNamedOptions = function(options, fieldNames){
-      if (!options) {
-        // nothing to do here
-        return;
-      }
-      var self = this;
-      if (!self.settings) {
-        self.settings = {};
-      }
-      $(fieldNames).each(function(index, fieldName) {
-        if (options.hasOwnProperty(fieldName)) {
-          self.settings[fieldName] = options[fieldName];
-        }
-      });
-    };
-  }
+  /* The Input Mode interface:
+   * to be an input mode, an object must implement:
+
+   * handleKey(keyCode)
+   * start()
+   * stop()
+   * hasOwnAnimator (true or false)
+   * getAnimator()*/
 
   
-  function MapMode(options) {
-    // Defaults:
-    this.settings = {scale: 1.0,
-                     pixelsPerSquare: 16,
-                     widthSquares: 20,
-                     heightSquares: 18,
-                     mapAnimFrameTime: 40,
-                     tileOffset: {x: 0, y: 0},
-                     spriteDimensions: {width: 16, height: 16,
-                                        offsetX: 0, offsetY: 0},
-                     walkAnimationFrames: 5,
-                     scrollMargins: {left: 6, top: 5, right: 6, bottom: 5},
-                     animationCallback: function() {}
-                    };
-    this.setOptions(options);
-    this.hasOwnAnimator = true;
-    this.engine = null;
-    this.animator = new Animator(this.settings.mapAnimFrameTime);
+  function overrideDefaults(settings, engine, options) {
+    // first override default settings with engine settings
+    // then override default settings with options
 
-    this._mapRegistry = {};
-
-  }
-  MapMode.prototype = {
-    setOptions: function(options) {
-      this.saveNamedOptions(options, ["htmlElem", "screenWidth", "screenHeight",
-                                      "scale", "widthSquares", "heightSquares",
-                                      "pixelsPerSquare", "mapAnimFrameTime",
-                                      "tileOffset", "walkAnimationFrames",
-                                      "spriteDimensions",
-                                      "scrollMargins", "animationCallback"]);
-      // TODO maybe better to read this list from my own defaults?
-
-      if (this.settings.htmlElem) {
-        // i'm assuming this gets called only once...
-        this._realMapScreen = new MapScreen(this.settings.htmlElem[0],
-                                            this.settings.widthSquares,
-                                            this.settings.heightSquares,
-                                            this.settings.pixelsPerSquare,
-                                            this.settings.pixelsPerSquare,
-                                            this.settings.mapAnimFrameTime
-                                           );
-        
-        this._realMapScreen.setTileOffset(this.settings.tileOffset);
-        this._realMapScreen.setScrollMargins(this.settings.scrollMargins);
-        
-        MapSprite.setDefault("spriteDimensions", this.settings.spriteDimensions);
-        MapSprite.setDefault("walkAnimationFrames", this.settings.walkAnimationFrames);
-        MapSprite.setDefault("_animationCallback", this.settings.animationCallback);
-
+    for (var key in settings) {
+      if (settings.hasOwnProperty(key)) {
+        if (options.hasOwnProperty(key)) {
+          settings[key] = options[key];
+        }
+        else if (engine.settings.hasOwnProperty(key)) {
+          settings[key] = engine.settings[key];
+        }
       }
-    },
+    }
+    return settings;
+  }
 
-    handleKey: function(key) {
+
+  function makeMapMode(engine, options) {
+    // factory method: returns a MapScreen
+
+    // defaults:
+    var settings = {htmlElem: null,
+                    screenWidth: 800,
+                    screenHeight: 600,
+                    scale: 1.0,
+                    pixelsPerSquare: 16,
+                    widthSquares: 20,
+                    heightSquares: 18,
+                    mapAnimFrameTime: 40,
+                    tileOffset: {x: 0, y: 0},
+                    spriteDimensions: {width: 16, height: 16,
+                                       offsetX: 0, offsetY: 0},
+                    walkAnimationFrames: 5,
+                    scrollMargins: {left: 6, top: 5, right: 6, bottom: 5},
+                    animationCallback: function() {}
+                   };
+
+    settings = overrideDefaults(settings, engine, options);
+
+    var mapScreen =  new MapScreen(settings.htmlElem[0],
+                                   settings.widthSquares,
+                                   settings.heightSquares,
+                                   settings.pixelsPerSquare,
+                                   settings.pixelsPerSquare,
+                                   settings.mapAnimFrameTime);
+
+    mapScreen.hasOwnAnimator = true;
+    mapScreen._mapRegistry = {};
+    mapScreen.engine = engine;
+        
+    mapScreen.setTileOffset(settings.tileOffset);
+    mapScreen.setScrollMargins(settings.scrollMargins);
+        
+    MapSprite.setDefault("spriteDimensions", settings.spriteDimensions);
+    MapSprite.setDefault("walkAnimationFrames", settings.walkAnimationFrames);
+    MapSprite.setDefault("_animationCallback", settings.animationCallback);
+
+    // Make mapScreen implement the InputMode interface!!
+
+    mapScreen.handleKey = function(key) {
       var self = this;
 
       var delX = 0, delY =0;
@@ -444,201 +431,160 @@ var gRPG = (function(){
         // Animate the player moving, wait for animation to finish:
         var anim = self.player.move(delX, delY);
         self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
-        self._realMapScreen.animate(anim); // ??
+        self.animate(anim); // ??
       }
-    },
+    };
 
-    getAnimator: function() {
-      return this._realMapScreen._animator;
-    },
+    mapScreen.getAnimator = function() {
+      return this._animator; // TODO are animator and _animator different?
+      //return this._realMapScreen._animator;
+    };
 
-    start: function() {
-      //this.animator.start();
-      this._realMapScreen.start();
-    },
-
-    stop: function() {
-      //this.animator.stop();
-      this._realMapScreen.stop();
-    },
-
-    addMap: function(name, map) {
+    mapScreen.addMap = function(name, map) {
       this._mapRegistry[name] = map;
-    },
+    };
 
-    getMap: function(name) {
+    mapScreen.getMap = function(name) {
       return this._mapRegistry[name];
-    },
+    };
     
-    putPlayerAt: function(player, mapName, x, y) {
+    mapScreen.putPlayerAt = function(player, mapName, x, y) {
       this.player = player;
-      this._realMapScreen.setNewDomain(this.getMap(mapName)._realMap);
-      player.enterMapScreen(this._realMapScreen, x, y);
-    },
+      this.setNewDomain(this.getMap(mapName));
+      player.enterMapScreen(this, x, y);
+    };
 
-    switchTo: function(mapName, x, y) {
-      this._realMapScreen.setNewDomain(this.getMap(mapName)._realMap);
-      this.player.enterMapScreen(this._realMapScreen, x, y);
-    }
+    mapScreen.switchTo = function(mapName, x, y) {
+      this.setNewDomain(this.getMap(mapName));
+      this.player.enterMapScreen(this, x, y);
+    };
 
+    return mapScreen;
+  }
 
-    // Figure out the best place to set which land types are crossable
-    // (on foot and in each vehicle)
-  };
-  GameModeMixin(MapMode.prototype);
+  function makeBattleMode(engine, options) {
+    // factory function, returns BattleMode
 
-
-  function BattleMode(options) {
-    // Defaults:
-    this.settings = {
+    var settings = {
       menuBaseElem: null,
       menuImpl: "css",
-      battleCmdSet: [],
+      screenWidth: 800,
+      screenHeight: 600,
+      stdBattleCmds: [],
+      retarget: false,
+      //battleCmdSet: [],
       menuPositions: {msgLeft: 10,
                       msgTop: 100,
                       menuLeft: 100,
                       menuTop: 100,
                       menuXOffset: 25},
       menuTextStyles: {
-      }
+      },
+      startBattleMsg: "Your Start Battle Message Here"
     };
-    this.startBattleMsg = null;
-    this.setOptions(options);
-    this.hasOwnAnimator = true;
-  }
-  BattleMode.prototype = {
-    setOptions: function(options) {
-      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
-                                      "screenWidth", "screenHeight",
-                                      "stdBattleCmds", "menuPositions",
-                                      "menuTextStyles", "startBattleMsg"]);
 
-      // Should support options like:
-      // animation frame rate
-      // defaultCmdSet -- just a list of command NAMES which refer to command registry
-      // onDrawBattle
-      // canvas or css menus?
-      // menuPositions
-      // if these are "options" then they should have sensible defaults!
+    settings = overrideDefaults(settings, engine, options);
 
-      if (this.engine && !this._realBattleSystem) {
-        this._realBattleSystem = new BattleSystem(this.settings.menuBaseElem,
-                                                  this.engine.canvas,
-                                                  {defaultCmdSet: this.settings.stdBattleCmds,
-                                                   width: this.settings.screenWidth,
-                                                   height: this.settings.screenHeight,
-                                                   startBattleMsg: this.settings.startBattleMsg
-                                                  });
-        this._realBattleSystem.setMenuPositions(this.settings.menuPositions);
-        var self = this;
-        this._realBattleSystem.onClose(function() {
-          self.engine.closeMode();
-        });
-      }
+    var battleSystem = new BattleSystem(settings.menuBaseElem,
+                                        engine.canvas,
+                                      {defaultCmdSet: settings.stdBattleCmds,
+                                       width: settings.screenWidth,
+                                       height: settings.screenHeight,
+                                       startBattleMsg: settings.startBattleMsg,
+                                       retarget: settings.retarget
+                                      });
+    battleSystem.hasOwnAnimator = true;
+    battleSystem.setMenuPositions(settings.menuPositions);
+    battleSystem.engine = engine;
+
+    battleSystem.onClose(function() {
+      battleSystem.engine.closeMode();
+    });
+
+    // Make Battle System implement the Input Mode interface:
+    battleSystem.getAnimator = function() {
+      return this._animator;
     },
 
-    getAnimator: function() {
-      return this._realBattleSystem._animator;
-    },
-
-    start: function() {
+    battleSystem.start = function() {
       //this._realBattleSystem._animator.start();
-    },
+    };
 
-    stop: function() {
+    battleSystem.stop = function() {
       //this._realBattleSystem._animator.stop();
-    },
-
-    startBattle: function(player, encounter, landType) {
-      this._realBattleSystem.startBattle(player, encounter, landType);
-    },
-
-    onDrawBattle: function(callback) {
-      this._realBattleSystem.onDrawBattle(callback);
-    },
-
-    onStartBattle: function(callback) {
-      this._realBattleSystem.onStartBattle(callback);
-    },
-
-    handleKey: function(key) {
-      this._realBattleSystem.handleKey(key);
-    }
-  };
-  GameModeMixin(BattleMode.prototype);
+    };
 
 
-  function MazeMode(options) {
+    return battleSystem;
+  }
+
+
+  function makeMazeMode(engine, options) {
     // Defaults:
-    this.settings = {
+    var settings = {
+      screenWidth: 800,
+      screenHeight: 600,
       mazeAnimFrameTime: 100
     };
-    this.setOptions(options);
-    this.hasOwnAnimator = true;
-    this.engine = null;
-    this.animator = new Animator(this.settings.mazeAnimFrameTime);
 
-    this._mapRegistry = {};
-  }
-  MazeMode.prototype = {
-    setOptions: function(options) {
-      this.saveNamedOptions(options, ["mazeAnimFrameTime"]);
-    },
+    settings = overrideDefaults(settings, engine, options);
 
-    handleKey: function(key) {
+    var mazeMode = new FirstPersonMaze(settings.htmlElem[0].getContext("2d"),
+                                       settings.screenWidth,
+                                       settings.screenHeight,
+                                       settings.mazeAnimFrameTime);
+
+    mazeMode.hasOwnAnimator = true;
+    mazeMode.engine = null;
+    mazeMode._mapRegistry = {};
+
+    mazeMode.handleKey = function(key) {
       var self = this;
       var anim;
       switch (key) {
       case DOWN_ARROW:
-        anim = self.mazeScreen.goBackward();
+        anim = self.goBackward();
         break;
       case LEFT_ARROW:
-        anim = self.mazeScreen.turnLeft();
+        anim = self.turnLeft();
         break;
       case UP_ARROW:
-        anim = self.mazeScreen.goForward();
+        anim = self.goForward();
         break;
       case RIGHT_ARROW:
-        anim = self.mazeScreen.turnRight();
+        anim = self.turnRight();
         break;
       default:
-        this.engine.handleKey(key);
+        self.engine.handleKey(key);
         break;
       }
       if (anim) {
         self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
         self.animator.runAnimation(anim);
       }
-    },
+    };
 
-    getAnimator: function() {
+    // already has start and stop functions
+    mazeMode.getAnimator = function() {
       return this.animator;
-    },
+    };
 
-    start: function() {
-      this.animator.start();
-    },
-
-    stop: function() {
-      this.animator.stop();
-    },
-
-    addMap: function(name, map) {
+    mazeMode.addMap = function(name, map) {
       this._mapRegistry[name] = map;
-    },
+    };
 
-    getMap: function(name, map) {
+    mazeMode.getMap = function(name, map) {
       return this._mapRegistry[name];
-    }
-  };
-  GameModeMixin(MazeMode.prototype);
+    };
+    return mazeMode;
+  }
 
-  
-  function MenuMode(options) {
-    // Defaults:
-    this.settings = {
+  function makeMenuMode(engine, options) {
+    var settings = {
       menuBaseElem: null,
       menuImpl: "css",
+      screenWidth: 800,
+      screenHeight: 600,
       defaultCmdSet: [],
       menuPositions: {msgLeft: 10,
                       msgTop: 100,
@@ -648,152 +594,75 @@ var gRPG = (function(){
       menuTextStyles: {
       }
     };
-    this.setOptions(options);
-    this.hasOwnAnimator = false;
+
+    settings = overrideDefaults(settings, engine, options);
+    var menuMode = new FieldMenu(settings.menuBaseElem, 
+                                 null, settings.screenWidth,
+                                 settings.screenHeight,
+                                 settings.defaultCmdSet);
+
+    menuMode.setMenuPositions(settings.menuPositions);
+    menuMode.engine = engine;
+    menuMode.onClose(function() {
+      menuMode.engine.closeMode();
+    });
+    menuMode.hasOwnAnimtor = false;
+
+    menuMode.start = function() {
+      this.open(this.engine.player);
+    };
+
+    menuMode.stop = function() {
+    };
+
+    return menuMode;
   }
-  MenuMode.prototype = {
-    setOptions: function(options) {
-      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
-                                      "screenWidth", "screenHeight",
-                                      "defaultCmdSet", "menuPositions",
-                                      "menuTextStyles"]);
-      // Should support options like:
-      // default command set (do these go in the command registry or not?)
-      // include spell menu? include item menu?
-      // canvas vs css menus, and text style are set globally in game engine
-      // but menu positions are set here
-      var self = this;
-
-      // TODO this setOptions function has side-effects, which is not what we want!
-      // especially since it may end up getting called multiple times, in which case
-      // the original field menu gets replaced by a new one!
-      // Switch to a lazy instantiation of the field menu
-      this._realFieldMenu = new FieldMenu(this.settings.menuBaseElem, 
-                                          null, this.settings.screenWidth,
-                                          this.settings.screenHeight,
-                                          this.settings.defaultCmdSet);
-
-      this._realFieldMenu.setMenuPositions(this.settings.menuPositions);
-
-      this._realFieldMenu.onClose(function() {
-        self.engine.closeMode();
-      });
-    },
-
-    handleKey: function(key) {
-      this._realFieldMenu.handleKey(key);
-    },
-
-    start: function() {
-      this._realFieldMenu.open(this.engine.player);
-    },
-
-    stop: function() {
-
-    }
-  };
-  GameModeMixin(MenuMode.prototype);
-
-
-  function DialogMode(options) {
-    // Defaults:
-    this.settings = {
+ 
+  function makeDialogMode(engine, options) {
+    var settings = {
       menuBaseElem: null,
       menuImpl: "css",
+      screenWidth: 800,
+      screenHeight: 600,
       defaultCmdSet: [],
-      menuPositions: {msgLeft: 20,
-                      msgTop: 128},
+      menuPositions: {msgLeft: 10,
+                      msgTop: 100,
+                      menuLeft: 100,
+                      menuTop: 100,
+                      menuXOffset: 25},
       menuTextStyles: {
       }
     };
-    this.setOptions(options);
-    this.hasOwnAnimator = false;
+
+    settings = overrideDefaults(settings, engine, options);
+
+    var dialogMode = new Dialoglog(settings.menuBaseElem, 
+                                   null, settings.screenWidth,
+                                   settings.screenHeight);
+    dialogMode.setMenuPositions(settings.menuPositions);
+
+    dialogMode.engine = engine;
+    dialogMode.onClose(function() {
+      dialogMode.engine.closeMode();
+    });
+    dialogMode.hasOwnAnimtor = false;
+
+    dialogMode.start = function() {
+      this.open(this.engine.player);
+    };
+
+    dialogMode.stop = function() {
+    };
+
+    return dialogMode;
   }
-  DialogMode.prototype = {
-    setOptions: function(options) {
-      this.saveNamedOptions(options, ["menuBaseElem", "menuImpl",
-                                      "screenWidth", "screenHeight",
-                                      "menuPositions", "menuTextStyles"]);
-
-      this._realDialog = new Dialoglog(this.settings.menuBaseElem, 
-                                       null, this.settings.screenWidth,
-                                       this.settings.screenHeight);
-      this._realDialog.setMenuPositions(this.settings.menuPositions);
-
-      var self = this;
-      this._realDialog.onClose(function() {
-        self.engine.closeMode();
-      });
-
-    },
-
-    handleKey: function(key) {
-      this._realDialog.handleKey(key);
-    },
-
-    start: function() {
-      this._realDialog.open(this.engine.player);
-    },
-
-    stop: function() {
-
-    }
-    
-  };
-  GameModeMixin(DialogMode.prototype);
-
-
-
-  function MapMixin(subclassPrototype) {
-  }
-
-
-  function TileMap(mapname, data, tileset) {
-    this._mapData = data;
-    this._tileset = tileset;
-    this._realMap = new Map(mapname, data, tileset, "tilemap");
-  }
-  TileMap.prototype = {
-
-    drawMap: function(ctx, drawX, drawY) {
-    },
-
-    onStep: function(trigger, callback) {
-      this._realMap.onStep(trigger, callback);
-    }
-  };
-  MapMixin(TileMap.prototype);
-
-
-  function SingleImageMap(mapname, data, imagefile) {
-    this._mapData = data;
-    this._imagefile = imagefile;
-
-    this._realMap = new Map(mapname, data, imagefile, "singleImage");
-    // TODO:
-    // Maybe just delete these two classes and make the changes in 
-    // worldMapClasses.Map ?
-  }
-  SingleImageMap.prototype = {
-    drawMap: function(ctx, drawX, drawY) {
-    },
-
-    onStep: function(trigger, callback) {
-      this._realMap.onStep(trigger, callback);
-    }
-  };
-  MapMixin(SingleImageMap.prototype);
-
-
 
   return { GameEngine: GameEngine,
-           MapMode: MapMode,
-           BattleMode: BattleMode,
-           MazeMode: MazeMode,
-           MenuMode: MenuMode,
-           DialogMode: DialogMode,
-           TileMap: TileMap,
-           SingleImageMap: SingleImageMap
+           makeMapMode: makeMapMode,
+           makeBattleMode: makeBattleMode,
+           makeMazeMode: makeMazeMode,
+           makeMenuMode: makeMenuMode,
+           makeDialogMode: makeDialogMode,
          };
 
 })();
