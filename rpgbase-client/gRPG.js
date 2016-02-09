@@ -60,7 +60,8 @@ var gRPG = (function(){
         }
       });
     
-    this.loader = new AssetLoader()
+    this.loader = new AssetLoader();
+    this.audioPlayer = new AudioPlayer();
 
     // implement scaling:
     this.canvas = this.settings.htmlElem[0];
