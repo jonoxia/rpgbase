@@ -20,6 +20,26 @@
 
 var gRPG = (function(){
 /* gRPG Namepsace */
+
+
+  function overrideDefaults(settings, engine, options) {
+    // first override default settings with engine settings
+    // then override default settings with options
+
+    for (var key in settings) {
+      if (settings.hasOwnProperty(key)) {
+        if (options.hasOwnProperty(key)) {
+          settings[key] = options[key];
+        }
+        else if (engine.settings.hasOwnProperty(key)) {
+          settings[key] = engine.settings[key];
+        }
+      }
+    }
+    return settings;
+  }
+
+
   
   function GameEngine(canvasElem, width, height, options) {
 
@@ -62,6 +82,7 @@ var gRPG = (function(){
     
     this.loader = new AssetLoader();
     this.audioPlayer = new AudioPlayer();
+    this.csvLoader = new CSVLoader(this.settings.basePath, []);
 
     // implement scaling:
     this.canvas = this.settings.htmlElem[0];
@@ -305,6 +326,14 @@ var gRPG = (function(){
       // (player object probably belongs to session)
     },
 
+    addDataFiles: function(fileList) {
+      this.csvLoader.addFiles(fileList);
+    },
+
+    loadDataFiles: function(callback) {
+      this.csvLoader.loadAll(callback);
+    },
+
     start: function(startingMode, callback) {
       var self = this;
       console.log("Gonna loadThemAll");
@@ -327,343 +356,333 @@ var gRPG = (function(){
 	    self.loader.listUnloaded(); // just for debug
 	}, 5000);
 
-    }
+    },
 
     // do save?
     // do load?
-
     // send player to ('mapname', x, y) ?
-  };
 
 
-  /* The Input Mode interface:
-   * to be an input mode, an object must implement:
+    /* The Input Mode interface:
+     * to be an input mode, an object must implement:
 
-   * handleKey(keyCode)
-   * start()
-   * stop()
-   * hasOwnAnimator (true or false)
-   * getAnimator()*/
+     * handleKey(keyCode)
+     * start()
+     * stop()
+     * hasOwnAnimator (true or false)
+     * getAnimator()*/
 
-  
-  function overrideDefaults(settings, engine, options) {
-    // first override default settings with engine settings
-    // then override default settings with options
+    makeMapMode: function(modeName, options) {
+      // factory method: returns a MapScreen
 
-    for (var key in settings) {
-      if (settings.hasOwnProperty(key)) {
-        if (options.hasOwnProperty(key)) {
-          settings[key] = options[key];
+      // defaults:
+      var settings = {htmlElem: null,
+                      screenWidth: 800,
+                      screenHeight: 600,
+                      scale: 1.0,
+                      pixelsPerSquare: 16,
+                      widthSquares: 20,
+                      heightSquares: 18,
+                      mapAnimFrameTime: 40,
+                      tileOffset: {x: 0, y: 0},
+                      spriteDimensions: {width: 16, height: 16,
+                                         offsetX: 0, offsetY: 0},
+                      walkAnimationFrames: 5,
+                      scrollMargins: {left: 6, top: 5, right: 6, bottom: 5},
+                      animationCallback: function() {}
+                     };
+
+      settings = overrideDefaults(settings, this, options);
+
+      var mapScreen =  new MapScreen(settings.htmlElem[0],
+                                     settings.widthSquares,
+                                     settings.heightSquares,
+                                     settings.pixelsPerSquare,
+                                     settings.pixelsPerSquare,
+                                     settings.mapAnimFrameTime);
+
+      mapScreen.hasOwnAnimator = true;
+      mapScreen._mapRegistry = {};
+      mapScreen.engine = this;
+      
+      mapScreen.setTileOffset(settings.tileOffset);
+      mapScreen.setScrollMargins(settings.scrollMargins);
+      
+      MapSprite.setDefault("spriteDimensions", settings.spriteDimensions);
+      MapSprite.setDefault("walkAnimationFrames", settings.walkAnimationFrames);
+      MapSprite.setDefault("_animationCallback", settings.animationCallback);
+
+      // Make mapScreen implement the InputMode interface!!
+
+      mapScreen.handleKey = function(key) {
+        var self = this;
+
+        var delX = 0, delY =0;
+        switch (key) {
+        case DOWN_ARROW:
+          delX = 0; delY = 1;
+          break;
+        case LEFT_ARROW:
+          delX = -1; delY = 0;
+          break;
+        case UP_ARROW:
+          delX = 0; delY = -1;
+          break;
+        case RIGHT_ARROW:
+          delX = 1; delY = 0;
+          break;
+        default:
+          this.engine.handleKey(key);
+          break;
         }
-        else if (engine.settings.hasOwnProperty(key)) {
-          settings[key] = engine.settings[key];
+
+        if (delX != 0 || delY != 0) {
+          // Animate the player moving, wait for animation to finish:
+          var anim = self.player.move(delX, delY);
+          self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
+          self.animate(anim); // ??
         }
-      }
-    }
-    return settings;
-  }
+      };
 
+      mapScreen.getAnimator = function() {
+        return this._animator; // TODO are animator and _animator different?
+        //return this._realMapScreen._animator;
+      };
 
-  function makeMapMode(engine, options) {
-    // factory method: returns a MapScreen
+      mapScreen.addMap = function(name, map) {
+        this._mapRegistry[name] = map;
+      };
 
-    // defaults:
-    var settings = {htmlElem: null,
-                    screenWidth: 800,
-                    screenHeight: 600,
-                    scale: 1.0,
-                    pixelsPerSquare: 16,
-                    widthSquares: 20,
-                    heightSquares: 18,
-                    mapAnimFrameTime: 40,
-                    tileOffset: {x: 0, y: 0},
-                    spriteDimensions: {width: 16, height: 16,
-                                       offsetX: 0, offsetY: 0},
-                    walkAnimationFrames: 5,
-                    scrollMargins: {left: 6, top: 5, right: 6, bottom: 5},
-                    animationCallback: function() {}
-                   };
+      mapScreen.getMap = function(name) {
+        return this._mapRegistry[name];
+      };
+      
+      mapScreen.putPlayerAt = function(player, mapName, x, y) {
+        this.player = player;
+        this.setNewDomain(this.getMap(mapName));
+        player.enterMapScreen(this, x, y);
+      };
 
-    settings = overrideDefaults(settings, engine, options);
+      mapScreen.switchTo = function(mapName, x, y) {
+        this.setNewDomain(this.getMap(mapName));
+        this.player.enterMapScreen(this, x, y);
+      };
 
-    var mapScreen =  new MapScreen(settings.htmlElem[0],
-                                   settings.widthSquares,
-                                   settings.heightSquares,
-                                   settings.pixelsPerSquare,
-                                   settings.pixelsPerSquare,
-                                   settings.mapAnimFrameTime);
-
-    mapScreen.hasOwnAnimator = true;
-    mapScreen._mapRegistry = {};
-    mapScreen.engine = engine;
-        
-    mapScreen.setTileOffset(settings.tileOffset);
-    mapScreen.setScrollMargins(settings.scrollMargins);
-        
-    MapSprite.setDefault("spriteDimensions", settings.spriteDimensions);
-    MapSprite.setDefault("walkAnimationFrames", settings.walkAnimationFrames);
-    MapSprite.setDefault("_animationCallback", settings.animationCallback);
-
-    // Make mapScreen implement the InputMode interface!!
-
-    mapScreen.handleKey = function(key) {
-      var self = this;
-
-      var delX = 0, delY =0;
-      switch (key) {
-      case DOWN_ARROW:
-        delX = 0; delY = 1;
-        break;
-      case LEFT_ARROW:
-        delX = -1; delY = 0;
-        break;
-      case UP_ARROW:
-        delX = 0; delY = -1;
-        break;
-      case RIGHT_ARROW:
-        delX = 1; delY = 0;
-        break;
-      default:
-        this.engine.handleKey(key);
-        break;
-      }
-
-      if (delX != 0 || delY != 0) {
-        // Animate the player moving, wait for animation to finish:
-        var anim = self.player.move(delX, delY);
-        self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
-        self.animate(anim); // ??
-      }
-    };
-
-    mapScreen.getAnimator = function() {
-      return this._animator; // TODO are animator and _animator different?
-      //return this._realMapScreen._animator;
-    };
-
-    mapScreen.addMap = function(name, map) {
-      this._mapRegistry[name] = map;
-    };
-
-    mapScreen.getMap = function(name) {
-      return this._mapRegistry[name];
-    };
-    
-    mapScreen.putPlayerAt = function(player, mapName, x, y) {
-      this.player = player;
-      this.setNewDomain(this.getMap(mapName));
-      player.enterMapScreen(this, x, y);
-    };
-
-    mapScreen.switchTo = function(mapName, x, y) {
-      this.setNewDomain(this.getMap(mapName));
-      this.player.enterMapScreen(this, x, y);
-    };
-
-    return mapScreen;
-  }
-
-  function makeBattleMode(engine, options) {
-    // factory function, returns BattleMode
-
-    var settings = {
-      menuBaseElem: null,
-      menuImpl: "css",
-      screenWidth: 800,
-      screenHeight: 600,
-      stdBattleCmds: [],
-      retarget: false,
-      //battleCmdSet: [],
-      menuPositions: {msgLeft: 10,
-                      msgTop: 100,
-                      menuLeft: 100,
-                      menuTop: 100,
-                      menuXOffset: 25},
-      menuTextStyles: {
-      },
-      startBattleMsg: "Your Start Battle Message Here"
-    };
-
-    settings = overrideDefaults(settings, engine, options);
-
-    var battleSystem = new BattleSystem(settings.menuBaseElem,
-                                        engine.canvas,
-                                      {defaultCmdSet: settings.stdBattleCmds,
-                                       width: settings.screenWidth,
-                                       height: settings.screenHeight,
-                                       startBattleMsg: settings.startBattleMsg,
-                                       retarget: settings.retarget
-                                      });
-    battleSystem.hasOwnAnimator = true;
-    battleSystem.setMenuPositions(settings.menuPositions);
-    battleSystem.engine = engine;
-
-    battleSystem.onClose(function() {
-      battleSystem.engine.closeMode();
-    });
-
-    // Make Battle System implement the Input Mode interface:
-    battleSystem.getAnimator = function() {
-      return this._animator;
+      this.addMode(modeName, mapScreen);
+      return mapScreen;
     },
 
-    battleSystem.start = function() {
-      //this._realBattleSystem._animator.start();
-    };
+    makeBattleMode: function(modeName, options) {
+      // factory function, returns BattleMode
 
-    battleSystem.stop = function() {
-      //this._realBattleSystem._animator.stop();
-    };
+      var settings = {
+        menuBaseElem: null,
+        menuImpl: "css",
+        screenWidth: 800,
+        screenHeight: 600,
+        stdBattleCmds: [],
+        retarget: false,
+        //battleCmdSet: [],
+        menuPositions: {msgLeft: 10,
+                        msgTop: 100,
+                        menuLeft: 100,
+                        menuTop: 100,
+                        menuXOffset: 25},
+        menuTextStyles: {
+        },
+        startBattleMsg: "Your Start Battle Message Here"
+      };
+
+      settings = overrideDefaults(settings, this, options);
+
+      var battleSystem = new BattleSystem(settings.menuBaseElem,
+                                          this.canvas,
+                                          {defaultCmdSet: settings.stdBattleCmds,
+                                           width: settings.screenWidth,
+                                           height: settings.screenHeight,
+                                           startBattleMsg: settings.startBattleMsg,
+                                           retarget: settings.retarget
+                                          });
+      battleSystem.hasOwnAnimator = true;
+      battleSystem.setMenuPositions(settings.menuPositions);
+      battleSystem.engine = this;
+
+      battleSystem.onClose(function() {
+        battleSystem.engine.closeMode();
+      });
+
+      // Make Battle System implement the Input Mode interface:
+      battleSystem.getAnimator = function() {
+        return this._animator;
+      },
+
+      battleSystem.start = function() {
+        //this._realBattleSystem._animator.start();
+      };
+
+      battleSystem.stop = function() {
+        //this._realBattleSystem._animator.stop();
+      };
+
+      /* TODO the following line is supposed to scale the menu system to match
+       * the scale of the game engine as a whole. Would probably be better
+       * to make part of the InputMode interface be a function updateScale or something
+       * like that, which we can call whenever the window size changes. */
+      battleSystem._calculatedScale = this._calculatedScale;
+      this.addMode(modeName, battleSystem);
+      return battleSystem;
+    },
 
 
-    return battleSystem;
-  }
+    makeMazeMode: function(modeName, options) {
+      // Defaults:
+      var settings = {
+        screenWidth: 800,
+        screenHeight: 600,
+        mazeAnimFrameTime: 100
+      };
 
+      settings = overrideDefaults(settings, this, options);
 
-  function makeMazeMode(engine, options) {
-    // Defaults:
-    var settings = {
-      screenWidth: 800,
-      screenHeight: 600,
-      mazeAnimFrameTime: 100
-    };
+      var mazeMode = new FirstPersonMaze(settings.htmlElem[0].getContext("2d"),
+                                         settings.screenWidth,
+                                         settings.screenHeight,
+                                         settings.mazeAnimFrameTime);
 
-    settings = overrideDefaults(settings, engine, options);
+      mazeMode.hasOwnAnimator = true;
+      mazeMode.engine = this;
+      mazeMode._mapRegistry = {};
 
-    var mazeMode = new FirstPersonMaze(settings.htmlElem[0].getContext("2d"),
-                                       settings.screenWidth,
-                                       settings.screenHeight,
-                                       settings.mazeAnimFrameTime);
+      mazeMode.handleKey = function(key) {
+        var self = this;
+        var anim;
+        switch (key) {
+        case DOWN_ARROW:
+          anim = self.goBackward();
+          break;
+        case LEFT_ARROW:
+          anim = self.turnLeft();
+          break;
+        case UP_ARROW:
+          anim = self.goForward();
+          break;
+        case RIGHT_ARROW:
+          anim = self.turnRight();
+          break;
+        default:
+          self.engine.handleKey(key);
+          break;
+        }
+        if (anim) {
+          self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
+          self.animator.runAnimation(anim);
+        }
+      };
 
-    mazeMode.hasOwnAnimator = true;
-    mazeMode.engine = null;
-    mazeMode._mapRegistry = {};
+      // already has start and stop functions
+      mazeMode.getAnimator = function() {
+        return this.animator;
+      };
 
-    mazeMode.handleKey = function(key) {
-      var self = this;
-      var anim;
-      switch (key) {
-      case DOWN_ARROW:
-        anim = self.goBackward();
-        break;
-      case LEFT_ARROW:
-        anim = self.turnLeft();
-        break;
-      case UP_ARROW:
-        anim = self.goForward();
-        break;
-      case RIGHT_ARROW:
-        anim = self.turnRight();
-        break;
-      default:
-        self.engine.handleKey(key);
-        break;
-      }
-      if (anim) {
-        self.engine._mapInputHandler.waitForAnimation(anim); // encapsulation breaky
-        self.animator.runAnimation(anim);
-      }
-    };
+      mazeMode.addMap = function(name, map) {
+        this._mapRegistry[name] = map;
+      };
 
-    // already has start and stop functions
-    mazeMode.getAnimator = function() {
-      return this.animator;
-    };
+      mazeMode.getMap = function(name, map) {
+        return this._mapRegistry[name];
+      };
+      this.addMode(modeName, mazeMode);
+      return mazeMode;
+    },
 
-    mazeMode.addMap = function(name, map) {
-      this._mapRegistry[name] = map;
-    };
+    makeMenuMode: function(modeName, options) {
 
-    mazeMode.getMap = function(name, map) {
-      return this._mapRegistry[name];
-    };
-    return mazeMode;
-  }
+      var settings = {
+        menuBaseElem: null,
+        menuImpl: "css",
+        screenWidth: 800,
+        screenHeight: 600,
+        defaultCmdSet: [],
+        menuPositions: {msgLeft: 10,
+                        msgTop: 100,
+                        menuLeft: 100,
+                        menuTop: 100,
+                        menuXOffset: 25},
+        menuTextStyles: {
+        }
+      };
 
-  function makeMenuMode(engine, options) {
-    var settings = {
-      menuBaseElem: null,
-      menuImpl: "css",
-      screenWidth: 800,
-      screenHeight: 600,
-      defaultCmdSet: [],
-      menuPositions: {msgLeft: 10,
-                      msgTop: 100,
-                      menuLeft: 100,
-                      menuTop: 100,
-                      menuXOffset: 25},
-      menuTextStyles: {
-      }
-    };
-
-    settings = overrideDefaults(settings, engine, options);
-    var menuMode = new FieldMenu(settings.menuBaseElem, 
-                                 null, settings.screenWidth,
-                                 settings.screenHeight,
-                                 settings.defaultCmdSet);
-
-    menuMode.setMenuPositions(settings.menuPositions);
-    menuMode.engine = engine;
-    menuMode.onClose(function() {
-      menuMode.engine.closeMode();
-    });
-    menuMode.hasOwnAnimtor = false;
-
-    menuMode.start = function() {
-      this.open(this.engine.player);
-    };
-
-    menuMode.stop = function() {
-    };
-
-    return menuMode;
-  }
- 
-  function makeDialogMode(engine, options) {
-    var settings = {
-      menuBaseElem: null,
-      menuImpl: "css",
-      screenWidth: 800,
-      screenHeight: 600,
-      defaultCmdSet: [],
-      menuPositions: {msgLeft: 10,
-                      msgTop: 100,
-                      menuLeft: 100,
-                      menuTop: 100,
-                      menuXOffset: 25},
-      menuTextStyles: {
-      }
-    };
-
-    settings = overrideDefaults(settings, engine, options);
-
-    var dialogMode = new Dialoglog(settings.menuBaseElem, 
+      settings = overrideDefaults(settings, this, options);
+      var menuMode = new FieldMenu(settings.menuBaseElem, 
                                    null, settings.screenWidth,
-                                   settings.screenHeight);
-    dialogMode.setMenuPositions(settings.menuPositions);
+                                   settings.screenHeight,
+                                   settings.defaultCmdSet);
 
-    dialogMode.engine = engine;
-    dialogMode.onClose(function() {
-      dialogMode.engine.closeMode();
-    });
-    dialogMode.hasOwnAnimtor = false;
+      menuMode.setMenuPositions(settings.menuPositions);
+      menuMode.engine = this;
+      menuMode.onClose(function() {
+        menuMode.engine.closeMode();
+      });
+      menuMode.hasOwnAnimtor = false;
 
-    dialogMode.start = function() {
-      this.open(this.engine.player);
-    };
+      menuMode.start = function() {
+        this.open(this.engine.player);
+      };
 
-    dialogMode.stop = function() {
-    };
+      menuMode.stop = function() {
+      };
 
-    return dialogMode;
-  }
+      /* TODO the following line is supposed to scale the menu system to match
+       * the scale of the game engine as a whole. Would probably be better
+       * to make part of the InputMode interface be a function updateScale or something
+       * like that, which we can call whenever the window size changes. */
+      menuMode._calculatedScale = this._calculatedScale;
 
-  return { GameEngine: GameEngine,
-           makeMapMode: makeMapMode,
-           makeBattleMode: makeBattleMode,
-           makeMazeMode: makeMazeMode,
-           makeMenuMode: makeMenuMode,
-           makeDialogMode: makeDialogMode,
-         };
+      this.addMode(modeName, menuMode);
+      return menuMode;
+    },
+    
+    makeDialogMode: function(modeName, options) {
+      var settings = {
+        menuBaseElem: null,
+        menuImpl: "css",
+        screenWidth: 800,
+        screenHeight: 600,
+        defaultCmdSet: [],
+        menuPositions: {msgLeft: 10,
+                        msgTop: 100,
+                        menuLeft: 100,
+                        menuTop: 100,
+                        menuXOffset: 25},
+        menuTextStyles: {
+        }
+      };
+
+      settings = overrideDefaults(settings, this, options);
+
+      var dialogMode = new Dialoglog(settings.menuBaseElem, 
+                                     null, settings.screenWidth,
+                                     settings.screenHeight);
+      dialogMode.setMenuPositions(settings.menuPositions);
+
+      dialogMode.engine = this;
+      dialogMode.onClose(function() {
+        dialogMode.engine.closeMode();
+      });
+      dialogMode.hasOwnAnimtor = false;
+
+      dialogMode.start = function() {
+        this.open(this.engine.player);
+      };
+
+      dialogMode.stop = function() {
+      };
+
+      this.addMode(modeName, dialogMode);
+      return dialogMode;
+    }
+  };
+
+  return { GameEngine: GameEngine };
 
 })();
