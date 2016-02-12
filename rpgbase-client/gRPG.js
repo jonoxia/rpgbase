@@ -53,15 +53,15 @@ var gRPG = (function(){
     console.log("Now htmlElem is " + this.settings.htmlElem);
 
     this._modeRegistry = {};
-    this._monsterRegistry = {};
-    this._characterRegistry = {};
-    this._itemRegistry = {};
-    this._commandRegistry = {};
-    this._vehicleRegistry = {};
-    this._keypressCallbacks = {};
+
+    // All-purpose storage for standard game objects (monsters, spells, items, etc)
+    this.library = {};
+
+    this._keypressCallbacks = {}; // TODO do i use this anywhere???
+
 
     this._mainMode = null;
-    this._subMode = null; // TODO be a stack? Probably not.
+    this._subMode = null; // TODO make the modes a stack?
 
     this._canonicalSize = {width: width,
                            height: height};
@@ -250,43 +250,20 @@ var gRPG = (function(){
     loadImage: function(filename) {
       return this.loader.add(filename);
     },
-    
-    addMap: function(name, map) {
-    },
-    
-    getMap: function(name) {
+
+    librarySave: function(typeName, instanceName, object) {
+      /* all-purpose method for storing "game library" objects
+       * (monsters, spells, items, characters, etc. etc.) for easy
+       * retrieval later without using global scope */
+      if (!this.library.hasOwnProperty(typeName)) {
+        this.library[typeName] = {};
+      }
+      this.library[typeName][instanceName] = object;
     },
 
-    addMonster: function(name, monster) {
-    },
-
-    getMonster: function(name) {
-    },
-
-    addCharacter: function(name, character) {
-      // doesn't immediately add them to your party,
-      // just stores their data for now
-    },
-
-    getCharacter: function(name) {
-    },
-
-    addItem: function(name, item) {
-    },
-
-    getItem: function(name) {
-    },
-
-    addCommand: function(name, command) {
-    },
-
-    getCommand: function(name) {
-    },
-
-    addVehicle: function(name, vehicle) {
-    },
-
-    getVehicle: function(name) {
+    libraryLoad: function(typeName, instanceName) {
+      /* retrieves an object stored earlier by librarySave */
+      return this.library[typeName][instanceName];
     },
     
     mainMenu: function(callback) {
