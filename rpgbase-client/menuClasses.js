@@ -1019,55 +1019,55 @@ FieldMenu.prototype = {
     subMenu.setTitle("DO WHAT?");
 
     for (var i = 0; i < this._itemSubMenuCmdNames.length; i++) {
-	switch (this._itemSubMenuCmdNames[i]) {
-	case "USE":
-    subMenu.addCommand("USE", function() {
-      if (item.target == "ally") {
-        // If using it requires selecting a target...
-        self.chooseCharacter("USE ON?", function(target) {
-          self.returnToRoot();
-          item.effect(self, character, target);
+      switch (this._itemSubMenuCmdNames[i]) {
+      case "USE":
+        subMenu.addCommand("USE", function() {
+          if (item.target == "ally") {
+            // If using it requires selecting a target...
+            self.chooseCharacter("USE ON?", function(target) {
+              self.returnToRoot();
+              item.effect(self, character, target);
+            });
+          } else {
+            // TODO are there other target types?
+            // e.g. target type "environment" means that
+            // item.effect should be passed the map/maze screen
+            self.returnToRoot();
+            item.effect(self, character, null);
+          }
         });
-      } else {
-        // TODO are there other target types?
-        // e.g. target type "environment" means that
-        // item.effect should be passed the map/maze screen
-        self.returnToRoot();
-        item.effect(self, character, null);
+	break;
+      case "EQUIP":
+        subMenu.addCommand("EQUIP", function() {
+          if (character.canEquipItem(item.reference)) {
+            self.showMsg(character.name + " EQUIPS "
+                         + item.name);
+            character.equipItem(item.reference);
+          } else {
+            self.showMsg(character.name + " CAN'T EQUIP "
+                         + item.name);
+          }
+          //self.returnToRoot();
+        });
+	break;
+      case "GIVE":
+        subMenu.addCommand("GIVE", function() {
+          self.chooseCharacter("GIVE TO?", function(target) {
+            self.showMsg(character.name + " GIVES THE " + item.name
+                         + " TO " + target.name);
+            target.receiveItemFrom(item.reference, character);
+            self.returnToRoot();
+          });
+        });
+	break;
+      case "DROP":
+        subMenu.addCommand("DROP", function() {
+          self.showMsg(character.name + " DROPS THE " + item.name);
+          character.loseItem(item.reference);
+          self.returnToRoot();
+        });
+	break;
       }
-    });
-	    break;
-	case "EQUIP":
-    subMenu.addCommand("EQUIP", function() {
-      if (character.canEquipItem(item.reference)) {
-        self.showMsg(character.name + " EQUIPS "
-                     + item.name);
-        character.equipItem(item.reference);
-      } else {
-        self.showMsg(character.name + " CAN'T EQUIP "
-                     + item.name);
-      }
-      self.returnToRoot();
-    });
-	    break;
-	case "GIVE":
-    subMenu.addCommand("GIVE", function() {
-      self.chooseCharacter("GIVE TO?", function(target) {
-        self.showMsg(character.name + " GIVES THE " + item.name
-                    + " TO " + target.name);
-        target.receiveItemFrom(item.reference, character);
-        self.returnToRoot();
-      });
-    });
-	    break;
-	case "DROP":
-    subMenu.addCommand("DROP", function() {
-      self.showMsg(character.name + " DROPS THE " + item.name);
-      character.loseItem(item.reference);
-      self.returnToRoot();
-    });
-	    break;
-	}
     }
     this.pushMenu(subMenu);
   },
@@ -1218,6 +1218,10 @@ CssMixin(CssScrollingTextBox.prototype);
 CssScrollingTextBox.prototype.display = function() {
   // Mostly copied from CssCmdMenu
   this.parentTag = $("<div></div>");
+  this.parentTag.addClass("msg-display"); // TODO don't hard-code class name?
+  // use CSS to force .msg-display to the front using z-index
+  // if you want scrollingTextBoxes to display in front of other menus
+  // (which you probably do)
   this.parentTag.css("left", this.screenX);
   this.parentTag.css("top", this.screenY);
   //this.parentTag.append(this.table);
