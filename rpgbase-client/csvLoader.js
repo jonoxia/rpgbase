@@ -52,15 +52,49 @@ CSVLoader.prototype = {
   },
 
   getDicts: function (filename) {
-    var rawCSV = this.data[filename];
-    var results = Papa.parse(rawCSV, {header: true});
-    // TODO use dynamicParsing! then I don't have to parseInt everywhere
-    return results.data;
+    if (this.data[filename]) {
+      var rawCSV = this.data[filename];
+      var results = Papa.parse(rawCSV, {header: true});
+      // TODO use dynamicParsing! then I don't have to parseInt everywhere
+      return results.data;
+    } else if (this.spreadsheets[filename]) {
+      return this.spreadsheets[filename].getWorksheetAsDicts(filename);
+    }
   },
 
   getArrays: function (filename) {
-    var rawCSV = this.data[filename];
-    var results = Papa.parse(rawCSV, {header: false});
-    return results.data;
+    if (this.data[filename]) {
+      var rawCSV = this.data[filename];
+      var results = Papa.parse(rawCSV, {header: false});
+      return results.data;
+    } else if (this.spreadsheets[filename]) {
+      return this.spreadsheets[filename].getWorksheetAsArrays(filename);
+    }
+  },
+
+  loadFromGoogleDocs: function(googleDocsData, callback) {
+
+    var numGoogleDocs = 0;
+    var numGot = 0;
+    
+    for (var key in googleDocsData) {
+      if (googleDocsData.hasOwnProperty(key)) {
+        numGoogleDocs++;
+      }
+    }
+    for (var key in googleDocsData) {
+      if (googleDocsData.hasOwnProperty(key)) {
+        var url = googleDocsData[key];
+        console.log("Tryin to load google doc from " + url);
+
+        this.spreadsheets[key] = new Spreadsheet.create(url, function() {
+          numGot ++;
+          if (numGot >= numGoogleDocs) {
+            callback();
+          }
+        });
+      }
+    }
   }
+
 };
