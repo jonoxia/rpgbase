@@ -73,6 +73,19 @@ CSVLoader.prototype = {
   },
 
   loadFromGoogleDocs: function(googleDocsData, callback) {
+    // TODO instead of checking self.offline, use the offline
+    // data fallback in the case where google docs cannot be
+    // accessed -- try and catch the exception from Tabletop.
+    var self = this;
+    if (self.offline && self.offlineData != null) {
+      for (var key in googleDocsData) {
+        if (googleDocsData.hasOwnProperty(key)) {
+          self.data[key] = self.offlineData[key];
+        }
+      }
+      callback();
+      return;
+    }
 
     var numGoogleDocs = 0;
     var numGot = 0;
@@ -96,5 +109,6 @@ CSVLoader.prototype = {
       }
     }
   }
+
 
 };
