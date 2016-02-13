@@ -994,18 +994,41 @@ function MenuSystemMixin(subClassPrototype) {
 
 }
 
-function FieldMenu(htmlElem, cursorImg, width, height, commandSet) {
+function FieldMenu(htmlElem, cursorImg, width, height, commandSet, uiText) {
   this._init(htmlElem, cursorImg, width, height);
   this._rootMenu = this.menuFromCmdSet("", commandSet);
   this._freelyExit = true;
   // field menu can always be exited with cancel button,
   // unlike battle menu.
-  this._itemSubMenuCmdNames = ["USE", "EQUIP", "GIVE", "DROP"];
+  this._itemSubMenuCmds = ["USE", "EQUIP", "GIVE", "DROP"];
   this._resourceNames = [];
+
+  if (uiText) {
+    this._uiText = uiText;
+  } else {
+    this._uiText = {
+      itemSubMenuTitle: "DO WHAT?",
+      useCmdName: "USE",
+      useTarget: "USE ON?",
+      equipCmdName: "EQUIP",
+      equipSuccess: "{1} EQUIPS {2}.",
+      equipFail: "{1} CAN'T EQUIP {2}",
+      giveCmdName: "GIVE",
+      giveTarget: "GIVE TO?",
+      giveSuccess: "{1} GIVES THE {2} TO {3}.",
+      dropCmdName: "DROP",
+      dropSuccess: "{1} DROPS THE {2}.",
+      spellMenuTitle: "SPELLS:",
+      spellMenuEmpty: "NO MAGIC",
+      spellTarget: "ON WHO?",
+      itemMenuTitle: "ITEMS:",
+      itemMenuEmpty: "NO ITEMS"
+    };
+  }
 }
 FieldMenu.prototype = {
   customizeItemSubMenu: function(cmds) {
-    this._itemSubMenuCmdNames = cmds;
+    this._itemSubMenuCmds = cmds;
   },
 
   customizeResourceDisplay: function(resources) {
@@ -1016,15 +1039,15 @@ FieldMenu.prototype = {
     // do what with this item?
     var self = this;
     var subMenu = this.makeMenu();
-    subMenu.setTitle("DO WHAT?");
+    subMenu.setTitle(this._uiText.itemSubMenuTitle);
 
-    for (var i = 0; i < this._itemSubMenuCmdNames.length; i++) {
-      switch (this._itemSubMenuCmdNames[i]) {
+    for (var i = 0; i < self._itemSubMenuCmds.length; i++) {
+      switch (self._itemSubMenuCmds[i]) {
       case "USE":
-        subMenu.addCommand("USE", function() {
+        subMenu.addCommand(self._uiText.useCmdName, function() {
           if (item.target == "ally") {
             // If using it requires selecting a target...
-            self.chooseCharacter("USE ON?", function(target) {
+            self.chooseCharacter(self._uiText.useTarget, function(target) {
               self.returnToRoot();
               item.effect(self, character, target);
             });
@@ -1038,33 +1061,38 @@ FieldMenu.prototype = {
         });
 	break;
       case "EQUIP":
-        subMenu.addCommand("EQUIP", function() {
+        subMenu.addCommand(self._uiText.equipCmdName, function() {
           if (character.canEquipItem(item.reference)) {
-            self.showMsg(character.name + " EQUIPS "
-                         + item.name);
+            var msg = self._uiText.equipSuccess.replace("{1}", character.name)
+              .replace("{2}", item.name);
+            self.showMsg(msg);
             character.equipItem(item.reference);
           } else {
-            self.showMsg(character.name + " CAN'T EQUIP "
-                         + item.name);
+            var msg = self._uiText.equipFail.replace("{1}", character.name)
+              .replace("{2}", item.name);
+            self.showMsg(msg);
           }
           //self.returnToRoot();
         });
 	break;
       case "GIVE":
-        subMenu.addCommand("GIVE", function() {
-          self.chooseCharacter("GIVE TO?", function(target) {
-            self.showMsg(character.name + " GIVES THE " + item.name
-                         + " TO " + target.name);
-            target.receiveItemFrom(item.reference, character);
+        subMenu.addCommand(self._uiText.giveCmdName, function() {
+          self.chooseCharacter(self._uiText.giveTarget, function(target) {
             self.returnToRoot();
+            var msg = self._uiText.giveSuccess.replace("{1}", character.name)
+              .replace("{2}", item.name).replace("{3}", target.name);
+            self.showMsg(msg);
+            target.receiveItemFrom(item.reference, character);
           });
         });
 	break;
       case "DROP":
-        subMenu.addCommand("DROP", function() {
-          self.showMsg(character.name + " DROPS THE " + item.name);
-          character.loseItem(item.reference);
+        subMenu.addCommand(self._uiText.dropCmdName, function() {
           self.returnToRoot();
+          var msg = self._uiText.dropSuccess.replace("{1}", character.name)
+            .replace("{2}", item.name);
+          self.showMsg(msg);
+          character.loseItem(item.reference);
         });
 	break;
       }
@@ -1077,7 +1105,7 @@ FieldMenu.prototype = {
     // outside of battle.
     var self = this;
     var menu = this.makeMenu();
-    menu.setTitle("ITEMS:");
+    menu.setTitle(this._uiText.itemMenuTitle);
 
     // After selecting an item, give options of
     // Use, Equip, Give, or Drop.
@@ -1092,7 +1120,7 @@ FieldMenu.prototype = {
     }
     // if item menu is empty:
     if (itemCmds.length == 0) {
-      menu.addCommand("NO ITEMS", function() {});
+      menu.addCommand(this._uiText.itemMenuEmpty, function() {});
     }
 
     this.pushMenu(menu);
@@ -1103,7 +1131,7 @@ FieldMenu.prototype = {
     if (!spell.canUse(character)) {
       self.showMsg("NOT ENOUGH MP."); // TODO maybe other reason?
     } else if (spell.target == "ally") {
-      self.chooseCharacter("ON WHO?", function(target) {
+      self.chooseCharacter(self._uiText.spellTarget, function(target) {
         self.popMenu();
         self.popMenu();
         spell.effect(self, character, target);
@@ -1127,7 +1155,8 @@ FieldMenu.prototype = {
   showSpellMenu: function(character) {
     var self = this;
     var menu = this.makeMenu();
-    menu.setTitle("SPELLS:");
+    menu.setTitle(this._uiText.spellMenuTitle);
+
     var fieldSpells = character._fieldSpells;
     $.each(fieldSpells, function(i, spell) {
       menu.addCommand(spell.name, function() {
@@ -1137,7 +1166,7 @@ FieldMenu.prototype = {
 
     // if no spells:
     if (fieldSpells.length == 0) {
-      menu.addCommand("NO MAGIC", function() {});
+      menu.addCommand(this._uiText.spellMenuEmpty, function() {});
     }
 
     this.pushMenu(menu);

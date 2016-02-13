@@ -586,14 +586,16 @@ var gRPG = (function(){
                         menuTop: 100,
                         menuXOffset: 25},
         menuTextStyles: {
-        }
+        },
+        uiText: null
       };
 
       settings = overrideDefaults(settings, this, options);
       var menuMode = new FieldMenu(settings.menuBaseElem, 
                                    null, settings.screenWidth,
                                    settings.screenHeight,
-                                   settings.defaultCmdSet);
+                                   settings.defaultCmdSet,
+                                   settings.uiText);
 
       menuMode.setMenuPositions(settings.menuPositions);
       menuMode.engine = this;
