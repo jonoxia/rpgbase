@@ -1062,6 +1062,7 @@ FieldMenu.prototype = {
 	break;
       case "EQUIP":
         subMenu.addCommand(self._uiText.equipCmdName, function() {
+          self.returnToRoot();
           if (character.canEquipItem(item.reference)) {
             var msg = self._uiText.equipSuccess.replace("{1}", character.name)
               .replace("{2}", item.name);
@@ -1072,7 +1073,6 @@ FieldMenu.prototype = {
               .replace("{2}", item.name);
             self.showMsg(msg);
           }
-          //self.returnToRoot();
         });
 	break;
       case "GIVE":

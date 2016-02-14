@@ -876,7 +876,11 @@ BattleSystem.prototype = {
       target = this.getEnemies(fighter);
       console.log("All enemies of " + fighter.name + " is array: "+ target);
     }
-        
+    else if (target == "self") {
+      // target yourself
+      target = fighter;
+    }
+
     if (cmd) {
       cmd.effect(this, fighter, target);
     } else {

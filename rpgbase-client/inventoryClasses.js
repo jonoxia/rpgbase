@@ -159,6 +159,8 @@ function ItemType(name, numUses, defaultPrice) {
   } else {
     this._defaultPrice = 0;
   }
+  this._battleTarget = "self"; // default target type if no other is set
+  // (prevent errors from having undefined target)
   this._battleEffect = null;
   //this._fieldEffect = null;
   this._equipSlot = null;
@@ -170,10 +172,10 @@ function ItemType(name, numUses, defaultPrice) {
 ItemType.prototype = {
   instantiate: function() {
     var instance = new ItemInstance(this._name, this._numUses,
-                            this._battleEffect, this._battleTarget,
-                            this._fieldEffect,
-                            this._equipSlot, this._equipType,
-                            this._equipStats, this._defaultPrice);
+                                    this._battleEffect, this._battleTarget,
+                                    this._fieldEffect,
+                                    this._equipSlot, this._equipType,
+                                    this._equipStats, this._defaultPrice);
     return instance;
   },
 
