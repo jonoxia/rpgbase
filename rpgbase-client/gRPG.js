@@ -265,6 +265,17 @@ var gRPG = (function(){
       /* retrieves an object stored earlier by librarySave */
       return this.library[typeName][instanceName];
     },
+
+    libraryGetKeys: function(typeName) {
+      var keys = [];
+      for (var key in this.library[typeName]) {
+        if (this.library[typeName].hasOwnProperty(key)) {
+          keys.push(key);
+          // if this was python i could just say g_PCdict.keys()
+        }
+      }
+      return keys;
+    },
     
     mainMenu: function(callback) {
     },
