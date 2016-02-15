@@ -16,6 +16,9 @@ function Map(id, data, spritesheet, mapImplType) {
 
   if (mapImplType) {
     this._mapImpl = mapImplType;
+    if (mapImplType === "singleImage") {
+      this.backgroundImgs = [{offsetX: 0, offsetY: 0, img: spritesheet}];
+    }
   } else {
     this._mapImpl = "tilemap"; // default
   }
@@ -251,6 +254,11 @@ Map.prototype = {
         newY -= this._dimY;
     }
     return {x: newX, y: newY};
+  },
+
+  addBackgroundImg: function(newBackgroundImg) {
+    // behavior undefined if this is not a singleIMageMap
+    this.backgroundImgs.push(newBackgroundImg);
   }
 }
 
@@ -508,15 +516,16 @@ MapScreen.prototype = {
   },
   
   _renderSingleImgMap: function() {
-    var drawX = 0 - (this._scrollX * this.tilePixelsX);
-    var drawY = 0 - (this._scrollY * this.tilePixelsY);
-    if (this.scrollAdjustment) {
-      drawX += this.scrollAdjustment.x;
-      drawY += this.scrollAdjustment.y;
-    }
-    
-    var img = this._currentDomain._img;
-    this._ctx.drawImage(img, drawX, drawY);
+    var self = this;
+    $.each(this._currentDomain.backgroundImgs, function(i, background) {
+      var drawX = self.tilePixelsX * (background.offsetX - self._scrollX );
+      var drawY = self.tilePixelsY * (background.offsetY - self._scrollY );
+      if (self.scrollAdjustment) {
+        drawX += self.scrollAdjustment.x;
+        drawY += self.scrollAdjustment.y;
+      }
+      self._ctx.drawImage(background.img, drawX, drawY);
+    });
   },
 
   render: function() {
