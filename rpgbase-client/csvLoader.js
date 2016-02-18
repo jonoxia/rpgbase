@@ -66,10 +66,19 @@ CSVLoader.prototype = {
     if (this.data[filename]) {
       var rawCSV = this.data[filename];
       var results = Papa.parse(rawCSV, {header: false});
-      return results.data;
+      results = results.data;
     } else if (this.spreadsheets[filename]) {
-      return this.spreadsheets[filename].getWorksheetAsArrays(filename);
+      var results = this.spreadsheets[filename].getWorksheetAsArrays(filename);
     }
+
+    // Strip out spaces from values:
+    for (var row = 0; row < results.length; row++) {
+      for (var col = 0; col < results[row].length; col++) {
+        results[row][col] = results[row][col].replace(" ", "");
+      }
+    }
+
+    return results;
   },
 
   loadFromGoogleDocs: function(googleDocsData, callback) {
