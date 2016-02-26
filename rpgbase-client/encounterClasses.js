@@ -757,9 +757,10 @@ BattleSystem.prototype = {
 
     // Choose actions for each monster
     for (i = 0; i < this.monsters.length; i++) {
-      if (this.monsters[i].canAct()) {
-        var name = this.monsters[i].name;
-        this.monsters[i].defaultAI(this);
+      var monster = this.monsters[i];
+      if (monster.canAct()) {
+        var name = monster.name;
+        this.monsters[i].pickAction(this);
       }
     }
 
@@ -1279,6 +1280,7 @@ function MonsterType(img, name, statBlock, commandList) {
   this._effectHandlers = {};
 
   this._loot = null; // loot table
+  this._aiCallback = null;
 }
 MonsterType.prototype = {
   onEffect: function(effectName, callback) {
@@ -1293,6 +1295,10 @@ MonsterType.prototype = {
     this._loot = lootTable;
   },
 
+  setAI: function(aiCallback) {
+    this._aiCallback = aiCallback;
+  },
+
   instantiate: function() {
     // return a Monster instance
     var cloneStats = {};
@@ -1301,7 +1307,7 @@ MonsterType.prototype = {
     }
     var cloneCmds = this._commandList.slice();
     var instance = new Monster(this.img, cloneStats, cloneCmds,
-                               this._effectHandlers);
+                               this._effectHandlers, this._aiCallback);
     if (this._loot) {
       instance.loot = this._loot;
     }
@@ -1429,7 +1435,7 @@ var BattlerMixin = function() {
   };
 }
 
-function Monster(img, statBlock, cmdList, effectHandlers) {
+function Monster(img, statBlock, cmdList, effectHandlers, aiCallback) {
   this.battlerInit();
   this.img = img;
   this._statBlock = statBlock;
@@ -1438,6 +1444,7 @@ function Monster(img, statBlock, cmdList, effectHandlers) {
   this.name = "A Monster";
   this._commands = cmdList;
   this._effectHandlers = effectHandlers; // shallow copy, not cloned
+  this._aiCallback = aiCallback;
 };
 Monster.prototype = {
   setName: function(name) {
@@ -1462,8 +1469,17 @@ Monster.prototype = {
     } else if (target == "random_enemy") {
       target = "random_pc";
     }
-    
-    this.lockInCmd(cmd, target);
+    return {cmd: cmd, target: target};
+  },
+  pickAction: function(battleSystem) {
+    var choice;
+    if (this._aiCallback) {
+      var pcTeam = battleSystem.getEnemies(this);
+      choice = this._aiCallback(this, battleSystem, pcTeam);
+    } else {
+      choice = this.defaultAI(battleSystem);
+    }
+    this.lockInCmd(choice.cmd, choice.target);
   }
 };
 BattlerMixin.call(Monster.prototype);
