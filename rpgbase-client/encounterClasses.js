@@ -1336,7 +1336,7 @@ var BattlerMixin = function() {
   this.battlerInit = function() {
     this._effectHandlers = {};
     this._statMods = [];
-    this._stati = [];
+    this._stati = {};
     this._lockedAction = null;
     this._dead = false;
   };
