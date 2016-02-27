@@ -55,6 +55,7 @@ function rollDice(number, type) {
   for (var i = 0; i < number; i++) {
     total += Math.floor(Math.random() * type + 1);
   }
+  debugLog(number + "d" + type + " result = " + total);
   return total;
 }
 
