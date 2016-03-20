@@ -482,6 +482,7 @@ function CssMixin(subclassPrototype) {
    };
   
   subclassPrototype.close = function() {
+    console.log("Close called on a CSS menu");
     this.parentTag.remove();
   };
 
@@ -1194,6 +1195,7 @@ function ScrollingTextBoxMixin(subclassPrototype) {
       for (var i = 0; i < this._closeCallbacks.length; i++) {
         this._closeCallbacks[i]();
       }
+      this.close();
     }
   },
 
@@ -1245,6 +1247,7 @@ function CssScrollingTextBox(text, menuSystem) {
 ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
 CssScrollingTextBox.prototype.display = function() {
+  console.log("CssScrollingTextBox created.");
   // Mostly copied from CssCmdMenu
   this.parentTag = $("<div></div>");
   this.parentTag.addClass("msg-display"); // TODO don't hard-code class name?
@@ -1349,13 +1352,15 @@ CssFixedTextBox.prototype.outsideWidth = function() {
 
 function BackgroundImgBox(width, height) {
   this.x = this.y = 0;
-  this._img = null;
+  this._img = null; // single background image, centered
   this._width = width;
   this._height = height;
+  this._panels = []; // multiple manga panels, positioned
+  // (you can use just _img, just _panels, or both)
 }
 BackgroundImgBox.prototype = {
   // Satisfies same interface as a CmdMenu, so it can go on
-  // the menu stack.
+  // the menu stack, but takes up the whole screen and shows cutscene images.
   onKey: function(key) {
   },
   setPos: function(x, y) {
@@ -1369,11 +1374,14 @@ BackgroundImgBox.prototype = {
     if (this._black) {
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, this._width, this._height);
-      if (this._img != null) {
-          ctx.drawImage(this._img,
-                        this._imgXOffset, this._imgYOffset);
-      }
     }
+    if (this._img != null) {
+      ctx.drawImage(this._img,
+                    this._imgXOffset, this._imgYOffset);
+    }
+    $.each(this._panels, function(i, panel) {
+      ctx.drawImage(panel.img, panel.x, panel.y);
+    });
   },
   close: function() {
     // serves as root menu for scripted events' menu system,
@@ -1384,11 +1392,16 @@ BackgroundImgBox.prototype = {
     this._img = null;
   },
   setImg: function(img, width, height) {
+    // automatically centers the image, replaces any other image
     this._img = img;
     this._imgWidth = width;
     this._imgHeight = height;
     this._imgXOffset = (this._width - width)/2;
     this._imgYOffset = (this._height - height)/2;
+  },
+  stackPanel: function(img, x, y) {
+    // draws the given panel at the given x, y on top of already present images, manga-panel
+    this._panels.push({img: img, x: x, y: y});
   },
   clearImg: function() {
     this._img = null;
@@ -1472,7 +1485,7 @@ Dialoglog.prototype = {
 
     var counter = 0;
 
-    var portraitBox = new CssFixedImgBox("", this);
+    var portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
     this.pushMenu(portraitBox);
     portraitBox.setPos(this._positioning.msgLeft - 130,
                        this._positioning.msgTop);

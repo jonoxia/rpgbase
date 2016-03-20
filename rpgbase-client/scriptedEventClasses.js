@@ -66,19 +66,37 @@ function PlotDialogSystem(htmlElem, cursorImg, width, height) {
   this._init(htmlElem, cursorImg, width, height);
   this._rootMenu = new BackgroundImgBox(width, height);
   this._freelyExit = false;
+
+  this._portraitBox = new CssFixedImgBox("", this);
 }
 MenuSystemMixin(PlotDialogSystem.prototype);
 PlotDialogSystem.prototype.handleKey = function(keyCode) {
-    if (keyCode == CANCEL_BUTTON) {
-        // Ignore cancel button - plot points cannot be canceled.
-        return;
-    }
-    if (this.menuStack.length > 0) {
-        var topMenu = this.menuStack[ this.menuStack.length - 1];
-        topMenu.onKey(keyCode);
-    }
-
+  if (keyCode == CANCEL_BUTTON) {
+    // Ignore cancel button - plot points cannot be canceled.
+    return;
+  }
+  if (this.menuStack.length > 0) {
+    var topMenu = this.menuStack[ this.menuStack.length - 1];
+    topMenu.onKey(keyCode);
+  }
 };
+PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
+  
+  //this.pushMenu(this._portraitBox);
+  if (!this._portraitBox.parentTag) {
+    this._portraitBox.setPos(this._positioning.msgLeft - 130,
+                             this._positioning.msgTop);
+    this._portraitBox.display();
+  }
+  if (!portrait) {
+    this._portraitBox.hide();
+  } else {
+    this._portraitBox.show();
+    this._portraitBox.setImg(portrait, 100, 100);
+  }
+};
+
+
 
 
 // dialoglog needs to hold the input focus until scripted event
@@ -103,17 +121,16 @@ ScriptedEvent.prototype = {
   },
 
   scrollText: function(text, callback) {
-      var dlg = this._dialoglog;
-      // This code is duplicated from Dialoglog.scrollText()
-      dlg.clearMsg();
-      var textBox = new ScrollingTextBox(text, dlg);
-      dlg.pushMenu(textBox);
-      textBox.setPos(dlg._positioning.msgLeft,
-                     dlg._positioning.msgTop);
-      textBox.onClose(function() {
-        dlg.popMenu();
-        callback();
-      });
+    var dlg = this._dialoglog;
+    // This code is duplicated from Dialoglog.scrollText()
+    dlg.clearMsg();
+    var textBox = dlg.scrollText(text);
+    textBox.onClose(function() {
+      //textBox.close();
+      //textBox.parentTag.hide();
+      dlg.popMenu(); // needed?
+      callback();
+    });
   },
 
   // could make a new menu system just for holding the keyboard
@@ -172,16 +189,31 @@ ScriptedEvent.prototype = {
           });
         });
       });
-      // TODO what do we do with the progression of the plot
-      // point if player doesn't accept the item?
+    // TODO what do we do with the progression of the plot
+    // point if player has a full inventory and doesn't discard something
+    // to take the item? if it's a story-critical item that could leave the
+    // game in an unwinnable state.
   },
 
   pcSpeak: function(pc, text) {
+    // TODO pc arg is unused
     var self = this;
     this._addStep(function() {
         self.scrollText(text, function() {
             self.nextStep();
         });
+    });
+    return this;
+  },
+
+  pcSpeakWithPortrait: function(text, portrait) {
+    var self = this;
+    var dlg = this._dialoglog;
+    this._addStep(function() {
+      dlg.showPortraitBox(portrait);
+      self.scrollText(text, function() {
+        self.nextStep();
+      });
     });
     return this;
   },
@@ -356,7 +388,20 @@ ScriptedEvent.prototype = {
     return this; // for daisy-chaining
   },
 
+  stackPanel: function(img, x, y) {
+    // stacks the given manga panel image on top of other images already there, manga-style
+    var self = this;
+    this._addStep(function() {
+      self._dialoglog._rootMenu.blacken(true);
+      self._dialoglog._rootMenu.stackPanel(img, x, y);
+      window.setTimeout(function() {
+        self.nextStep();
+      }, 500);
+    });
+  },
+
   showPicture: function(img, width, height) {
+    // displays the image alone and centered
     var self = this;
     this._addStep(function() {
       self._dialoglog._rootMenu.blacken(true);

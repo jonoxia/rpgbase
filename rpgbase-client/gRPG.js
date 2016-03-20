@@ -670,6 +670,46 @@ var gRPG = (function(){
 
       this.addMode(modeName, dialogMode);
       return dialogMode;
+    },
+
+    makePlotMode: function(modeName, options) {
+      var settings = {
+        menuBaseElem: null,
+        menuImpl: "css",
+        screenWidth: 800,
+        screenHeight: 600,
+        defaultCmdSet: [],
+        menuPositions: {msgLeft: 10,
+                        msgTop: 100,
+                        menuLeft: 100,
+                        menuTop: 100,
+                        menuXOffset: 25},
+        menuTextStyles: {
+        }
+      };
+
+      settings = overrideDefaults(settings, this, options);
+
+      var plotMode = new PlotDialogSystem(settings.menuBaseElem, 
+                                            null, settings.screenWidth,
+                                            settings.screenHeight);
+      plotMode.setMenuPositions(settings.menuPositions);
+
+      plotMode.engine = this;
+      plotMode.onClose(function() {
+        plotMode.engine.closeMode();
+      });
+      plotMode.hasOwnAnimtor = false;
+
+      plotMode.start = function() {
+        this.open(this.engine.player);
+      };
+
+      plotMode.stop = function() {
+      };
+
+      this.addMode(modeName, plotMode);
+      return plotMode;
     }
   };
 
