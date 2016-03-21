@@ -1268,7 +1268,6 @@ function MonsterType(img, name, statBlock, commandList) {
   this.img = img;
   this.statBlock = statBlock;
   this.name = name;
-  // TODO: monster AI callback
   // TODO: need a way to set some generic functions, like, default monster
   // AI, default monster on-die handler, etc. I guess we set those on
   // the battle system?
@@ -1280,6 +1279,7 @@ function MonsterType(img, name, statBlock, commandList) {
   this._effectHandlers = {};
 
   this._loot = null; // loot table
+  this._resistances = null; // damage type weakenesses/resistances
   this._aiCallback = null;
 }
 MonsterType.prototype = {
@@ -1292,7 +1292,11 @@ MonsterType.prototype = {
   },
   
   setLootTable: function(lootTable) {
-    this._loot = lootTable;
+    this._loot = lootTable; // or should this be in userland?
+  },
+
+  setResistances: function(resistances) {
+    this._resistances = resistances; // or should this be in userland?
   },
 
   setAI: function(aiCallback) {
@@ -1310,6 +1314,9 @@ MonsterType.prototype = {
                                this._effectHandlers, this._aiCallback);
     if (this._loot) {
       instance.loot = this._loot;
+    }
+    if (this._resistances) {
+      instance.resistances = this._resistances;
     }
     return instance;
   }
