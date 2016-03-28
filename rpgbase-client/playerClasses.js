@@ -718,6 +718,8 @@ PlayerCharacter.prototype = {
     return html;
   },
 
+  // LONGTERM TODO maybe all these functions related to equipping items could go
+  // in some kind of EquipmentUserMixin and move it to inventory.js ?
   setEquippableTypes: function(typeList) {
     // takes an array of strings
     this._equippableTypes = typeList;
@@ -797,6 +799,20 @@ PlayerCharacter.prototype.getEquipmentStat = function(statName) {
     }
   }
   return statValue;
+};
+PlayerCharacter.prototype.getEquipmentQuality = function(qualityName) {
+  // this can return an array of values, if the PC has multiple equipped items
+  // with values for the same quality.
+  var values = [];
+  for (var slot in this._equippedItems) {
+    if (this._equippedItems[slot]) {
+      var value = this._equippedItems[slot].getEquipQuality(qualityName);
+      if (value != null) {
+        values.push(value);
+      }
+    }
+  }
+  return values;
 };
 PlayerCharacter.prototype.getStat = function(statName) {
   var statValue;

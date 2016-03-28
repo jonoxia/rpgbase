@@ -165,6 +165,7 @@ function ItemType(name, numUses, defaultPrice) {
   //this._fieldEffect = null;
   this._equipSlot = null;
   this._equipStats = null;
+  this._equipQualities = null;
 
   // register item type globally
   g_inventoryHack[name] = this;
@@ -175,7 +176,8 @@ ItemType.prototype = {
                                     this._battleEffect, this._battleTarget,
                                     this._fieldEffect,
                                     this._equipSlot, this._equipType,
-                                    this._equipStats, this._defaultPrice);
+                                    this._equipStats, this._equipQualities,
+                                    this._defaultPrice);
     return instance;
   },
 
@@ -210,6 +212,15 @@ ItemType.prototype = {
     // equip stats must be a stat block. Other two are strings.
   },
 
+  setEquipQuality: function(qualityName, qualityValue) {
+    // this could be rolled into .equippable() but i'm leaving it separate for now
+    // for backwards compatibility.
+    if (! this._equipQualities) {
+      this._equipQualities = {};
+    }
+    this._equipQualities[qualityName] = qualityValue;
+  },
+
   getName: function() {
     return this._name;
   }
@@ -217,7 +228,7 @@ ItemType.prototype = {
 
 function ItemInstance(name, numUses, battleEffect, battleTarget,
                       fieldEffect,
-                      equipSlot, equipType, equipStats,
+                      equipSlot, equipType, equipStats, equipQualities,
                       defaultPrice) {
   this._name = name;
   this._defaultPrice = defaultPrice;
@@ -231,16 +242,22 @@ function ItemInstance(name, numUses, battleEffect, battleTarget,
   // 1. equip slot
   // 2. who can equip  (item defines itself as "axe", PC says "i can use axes")
   // 3. stat modifiers
+  // 4. equip qualities (like "gain immunity to poison" or whatever)
   if (equipSlot) {
     this._equipSlot = equipSlot;
     this._equipType = equipType;
     this._equipStats = equipStats;
+    this._equipQualities = equipQualities;
   } else {
     this._equipSlot = null;
     this._equipType = null;
     this._equipStats = null;
+    this._equipQualities = null;
   }
-  
+  /* LONGTERM TODO rather than having itemType and itemInstance, and all this logic
+   * that copies data from the former to the latter, maybe itemInstance could just have
+   * its prototype set to the itemType instance and override only the stateful data
+   * (numUses) ? */
 }
 ItemInstance.prototype = {
   serializableClassName: "Item",
@@ -333,11 +350,22 @@ ItemInstance.prototype = {
   },
 
   getEquipStat: function(statName) {
-    if (this._equipStats[statName] != undefined) {
+    if (this._equipStats.hasOwnProperty(statName)) {
       return this._equipStats[statName];
     } else {
       return 0;
     }
+  },
+
+  getEquipQuality: function(qualityName) {
+    // equip qualities are a key-value store for things like "does fire type damage" or
+    // "makes you immune to poison"
+    if (this._equipQualities) {
+      if (this._equipQualities.hasOwnProperty(qualityName)) {
+        return this._equipQualities[qualityName];
+      }
+    }
+    return null;
   }
 };
 SerializableMixin(ItemInstance);
