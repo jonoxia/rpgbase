@@ -156,6 +156,18 @@ AudioPlayer.prototype = {
   disable: function() {
     this._enabled = false;
     this.stop();
+  },
+
+  playSfx: function(filename) {
+    if (!this._preloads[filename]) {
+      this.preload(filename);
+    }
+    if (this._currentPlayingSfx) {
+      this._currentPlayingSfx.pause();
+      this._currentPlayingSfx.currentTime = 0;
+    }
+    this._preloads[filename].play();
+    this._currentPlayingSfx = this._preloads[filename];
   }
 };
 
