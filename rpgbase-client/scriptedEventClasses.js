@@ -68,6 +68,12 @@ function PlotDialogSystem(htmlElem, cursorImg, width, height) {
   this._freelyExit = false;
 
   this._portraitBox = new CssFixedImgBox("", this);
+  
+  var self = this;
+  this.onClose(function() {
+    self._portraitBox.hide();
+    self._rootMenu.clearPanelStack();
+  });
 }
 MenuSystemMixin(PlotDialogSystem.prototype);
 PlotDialogSystem.prototype.handleKey = function(keyCode) {
@@ -388,11 +394,14 @@ ScriptedEvent.prototype = {
     return this; // for daisy-chaining
   },
 
-  stackPanel: function(img, x, y) {
+  stackPanel: function(img, x, y, doClear) {
     // stacks the given manga panel image on top of other images already there, manga-style
     var self = this;
     this._addStep(function() {
       self._dialoglog._rootMenu.blacken(true);
+      if (doClear) {
+        self._dialoglog._rootMenu.clearPanelStack();
+      }
       self._dialoglog._rootMenu.stackPanel(img, x, y);
       window.setTimeout(function() {
         self.nextStep();

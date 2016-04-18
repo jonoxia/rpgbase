@@ -1371,6 +1371,9 @@ BackgroundImgBox.prototype = {
     return {x: this.x, y: this.y};
   },
   display: function(ctx) {
+    if (!ctx) {
+      return;
+    } // TODO why i need this? why it get called with null ctx sometimes?
     if (this._black) {
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, this._width, this._height);
@@ -1380,6 +1383,16 @@ BackgroundImgBox.prototype = {
                     this._imgXOffset, this._imgYOffset);
     }
     $.each(this._panels, function(i, panel) {
+      // Border around the panel (TODO make this customizable):
+      ctx.strokeStyle = "black";
+      ctx.strokeWidth = 1;
+      ctx.strokeRect(panel.x - 4, panel.y - 4, panel.img.width+8, panel.img.height+8);
+      ctx.strokeStyle = "white";
+      ctx.strokeWidth = 2;
+      ctx.strokeRect(panel.x - 2.5, panel.y - 2.5, panel.img.width+5, panel.img.height+5);
+      ctx.strokeStyle = "black";
+      ctx.strokeWidth = 1;
+      ctx.strokeRect(panel.x - 1, panel.y - 1, panel.img.width+2, panel.img.height+2);
       ctx.drawImage(panel.img, panel.x, panel.y);
     });
   },
@@ -1402,6 +1415,9 @@ BackgroundImgBox.prototype = {
   stackPanel: function(img, x, y) {
     // draws the given panel at the given x, y on top of already present images, manga-panel
     this._panels.push({img: img, x: x, y: y});
+  },
+  clearPanelStack: function() {
+    this._panels = [];
   },
   clearImg: function() {
     this._img = null;
