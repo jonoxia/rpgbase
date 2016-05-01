@@ -1504,7 +1504,7 @@ Dialoglog.prototype = {
     var portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
     this.pushMenu(portraitBox);
     portraitBox.setPos(this._positioning.msgLeft - 130,
-                       this._positioning.msgTop);
+                       this._positioning.msgTop - 40);
     if (textSegments[0].img == null) {
       portraitBox.hide();
     } else {

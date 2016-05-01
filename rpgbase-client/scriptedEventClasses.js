@@ -89,9 +89,12 @@ PlotDialogSystem.prototype.handleKey = function(keyCode) {
 PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
   
   //this.pushMenu(this._portraitBox);
-  if (!this._portraitBox.parentTag) {
-    this._portraitBox.setPos(this._positioning.msgLeft - 130,
-                             this._positioning.msgTop);
+    if (!this._portraitBox.parentTag) {
+    // TODO don't hardcode these offsets -- they should depend on size
+    // of portrait image
+    // TODO also this duplicates logic from dialoglog.multiPartTextDisplay.
+    this._portraitBox.setPos(this._positioning.msgLeft - 140,
+                             this._positioning.msgTop - 35);
     this._portraitBox.display();
   }
   if (!portrait) {
