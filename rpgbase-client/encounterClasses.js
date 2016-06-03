@@ -882,30 +882,47 @@ BattleSystem.prototype = {
       target = fighter;
     }
 
-    if (cmd) {
-      cmd.effect(this, fighter, target);
-    } else {
-      this.showMsg(fighter.name + " has no idea what to do!");
-    }
-    // update stats display so we can see effects of action
-    this.updateStats();
-
-    // run animation for this action, then go on to execute next action.
+    // here's what to do after animation -- apply the effect of command,
+    // update stats, and go on to next fighter action.
     var self = this;
+    var proceed = function() {
+      self._attackSFX = null; // clear the attack sfx if any
+
+      if (cmd) {
+        cmd.effect(self, fighter, target);
+      } else {
+        self.showMsg(fighter.name + " has no idea what to do!");
+      }
+      // update stats display so we can see effects of action
+      self.updateStats();
+
+      if (self._animator) {
+        // delay so you can read effects of attack:
+        var readDelay = new Animation(12);
+        readDelay.onFinish(function(){
+          self.executeNextFighterAction();
+        });
+        self._animator.runAnimation(readDelay);
+      } else {
+        self.executeNextFighterAction();
+      }
+    };
+    // Show the action name during animation:
+    self.showMsg(fighter.name + ": " + cmd.name);  // TODO not all games want this
+
+    // run animation for this action, then apply its effects, then 
+    // go on to execute next action.
     if (this._animator) {
       if (cmd.animate) {
         this._attackSFX = cmd.animate(this, fighter, target);
       } else {
         this._attackSFX = new Animation(10);
       }
-      this._attackSFX.onFinish(function() {
-        self._attackSFX = null; // clear the attack sfx
-        self.executeNextFighterAction();
-      });
+      this._attackSFX.onFinish(proceed);
       this._animator.runAnimation(this._attackSFX);
     } else {
       // if animation disabled, just go to next fighter action now:
-      self.executeNextFighterAction();
+      proceed();
     }
   },
 
@@ -1188,7 +1205,7 @@ BatCmd.prototype = {
     return true;
   },
   effect: function(system, user, target) {
-    if (!this.canUse) {
+    if (!this.canUse(user)) {
       system.showMsg(user.name + " can't use " + this.name);
       return; // can happen if e.g. you REPEAT a spell when out of MP
     }
