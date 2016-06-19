@@ -907,8 +907,6 @@ BattleSystem.prototype = {
         self.executeNextFighterAction();
       }
     };
-    // Show the action name during animation:
-    self.showMsg(fighter.name + ": " + cmd.name);  // TODO not all games want this
 
     // run animation for this action, then apply its effects, then 
     // go on to execute next action.
