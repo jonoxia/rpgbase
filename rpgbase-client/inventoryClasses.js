@@ -159,7 +159,7 @@ function ItemType(name, numUses, defaultPrice) {
   } else {
     this._defaultPrice = 0;
   }
-  this._battleTarget = "self"; // default target type if no other is set
+  this._targetType = "self"; // default target type if no other is set
   // (prevent errors from having undefined target)
   this._battleEffect = null;
   //this._fieldEffect = null;
@@ -173,7 +173,7 @@ function ItemType(name, numUses, defaultPrice) {
 ItemType.prototype = {
   instantiate: function() {
     var instance = new ItemInstance(this._name, this._numUses,
-                                    this._battleEffect, this._battleTarget,
+                                    this._battleEffect, this._targetType,
                                     this._fieldEffect,
                                     this._equipSlot, this._equipType,
                                     this._equipStats, this._equipQualities,
@@ -186,12 +186,15 @@ ItemType.prototype = {
   },
 
   inBattleEffect: function(options) {
-    this._battleTarget = options.target;
+    this._targetType = options.target;
     this._battleEffect = options.effect;
   },
 
-  outOfBattleEffect: function(cmd) {
-    this._fieldEffect = cmd;
+  outOfBattleEffect: function(options) {
+    if (options.target) {
+      this._targetType = options.target;
+    }
+    this._fieldEffect = options.effect;
   },
 
   useEffect: function(options) {
@@ -201,7 +204,7 @@ ItemType.prototype = {
       this.inBattleEffect(options);
     }
     if (options.outOfBattle) {
-      this.outOfBattleEffect(options.effect);
+      this.outOfBattleEffect(options);
     }
   },
 
@@ -226,7 +229,7 @@ ItemType.prototype = {
   }
 };
 
-function ItemInstance(name, numUses, battleEffect, battleTarget,
+function ItemInstance(name, numUses, battleEffect, targetType,
                       fieldEffect,
                       equipSlot, equipType, equipStats, equipQualities,
                       defaultPrice) {
@@ -237,7 +240,7 @@ function ItemInstance(name, numUses, battleEffect, battleTarget,
   
   this._battleEffect = battleEffect;
   this._fieldEffect = fieldEffect;
-  this._target = battleTarget;
+  this._target = targetType;
   // actually equippability is three things:
   // 1. equip slot
   // 2. who can equip  (item defines itself as "axe", PC says "i can use axes")
@@ -386,3 +389,8 @@ crummySword.equippable("1hand", "sword", {attack: 5});
 
 pc.canEquip(["sword", "knife", "axe", "leather", "chain", "plate", "shield"]);
 */
+
+/* TODO may need to rewrite the equip rules slightly so that
+ * instead of telling an item "go into the slot you like going into", we can instead say
+ * "hey item, can you go into this slot?" and if the itme says "yes" then we can say
+ * "put item into slot x". */
