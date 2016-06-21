@@ -1,6 +1,6 @@
 describe("Event Service (PubSub)", function() {
 
-  var pubSubHub = new GenericEventService();
+  var pubSubHub;
   
   function BattleBot(name) {
     this.name = name;
@@ -12,7 +12,7 @@ describe("Event Service (PubSub)", function() {
   var eventLog = [];
 
   beforeEach(function() {
-    pubSubHub.gameEventServiceInit();
+    pubSubHub = new GameEventService();
     eventLog = [];
   });
 
@@ -423,6 +423,235 @@ describe("Event Service (PubSub)", function() {
     expect(BattleBot.prototype._classEventHandlers["punch-resolve"].length).toEqual(0);
   });
 });
+
+
+describe("Event-service-based battle system", function() {
+  var battleSystem;
+
+  function BattleSystem() {
+    this.eventService = new GameEventService();
+    this.team1 = [];
+    this.team2 = [];
+  }
+  BattleSystem.prototype = {
+    startBattle: function(team1, team2) {
+      this.team1 = team1;
+      this.team2 = team2;
+    },
+
+    startRound: function() {
+      var self = this;
+      this.eventService.queueGameEvent("start-round", {});
+      $.each(this.team1, function(i, battler) {
+        var attack = {source: battler, cmd: battler.cmdsKnown[0], target: self.team2[0]};
+        self.eventService.queueGameEvent("attack-targeted", attack);
+        self.eventService.queueGameEvent("attack", attack);
+        self.eventService.queueGameEvent("attack-resolved", attack);
+      });
+      $.each(this.team2, function(i, battler) {
+        var attack = {source: battler, cmd: battler.cmdsKnown[0], target: self.team1[0]};
+        self.eventService.queueGameEvent("attack-targeted", attack);
+        self.eventService.queueGameEvent("attack", attack);
+        self.eventService.queueGameEvent("attack-resolved", attack);
+      });
+      this.eventService.queueGameEvent("end-round", {});
+
+      this.eventService.procAllEvents();
+    }
+
+  };
+  
+  function BatCmd(name, targetType, effect) {
+    this.name = name;
+    this.targetType = targetType;
+    this.effect = effect;
+  }
+
+  var fight = new BatCmd("Fight", "enemy", function(system, user, target) {
+    system.eventService.stackGameEvent("damage", {source: user, target: target, amount: 2});
+  });
+  
+  function Battler(name) {
+    this.name = name;
+    this.gameEventSubscriberInit();
+    this.lockedInCmd = null;
+    this.cmdsKnown = [];
+  }
+  Battler.prototype = {
+    knowsCmd: function(cmd) {
+      this.cmdsKnown.push(cmd);
+    }
+  };
+  GameEventSubscriberMixin(Battler.prototype);
+
+  function Listener() {
+    this.gameEventSubscriberInit();
+  }
+  Listener.prototype = {};
+  GameEventSubscriberMixin(Listener.prototype);
+
+  var eventLog = [];
+
+  beforeEach(function() {
+    eventLog = [];
+    battleSystem = new BattleSystem();
+
+    battleSystem.eventService.subscribeClass(Battler, "attack", function(eventData) {
+      if (eventData.source === this) {
+        var cmd = eventData.cmd;
+        var target = eventData.target;
+        eventLog.push(this.name + " uses " + cmd.name);
+        eventData.cmd.effect.call(cmd, battleSystem, this, target);
+      }
+    });
+    battleSystem.eventService.subscribeClass(Battler, "damage", function(eventData) {
+      if (eventData.target === this) {
+        eventLog.push(this.name + " takes " + eventData.amount + " damage.");
+      }
+    });
+  });
+
+  afterEach(function() {
+    battleSystem.eventService.unsubscribeClass(Battler, "attack");
+    battleSystem.eventService.unsubscribeClass(Battler, "damage");
+  });
+
+
+  it("Should basically work", function() {
+    var b1 = new Battler("B1");
+    var b2 = new Battler("B2");
+    b1.knowsCmd(fight);
+    b2.knowsCmd(fight);
+
+    battleSystem.startBattle([b1], [b2]);
+    battleSystem.startRound();
+
+    expect(eventLog.length).toEqual(4);
+    expect(eventLog[0]).toEqual("B1 uses Fight");
+    expect(eventLog[1]).toEqual("B2 takes 2 damage.");
+    expect(eventLog[2]).toEqual("B2 uses Fight");
+    expect(eventLog[3]).toEqual("B1 takes 2 damage.");
+
+  });
+
+  it("Should notify a listener when a round starts or ends", function() {
+    var listener = new Listener();
+
+    listener.subscribeEvent(battleSystem.eventService, "start-round", function(eventData) {
+      eventLog.push("I notice a round started");
+    });
+    listener.subscribeEvent(battleSystem.eventService, "end-round", function(eventData) {
+      eventLog.push("I notice a round ended");
+    });
+
+    var b1 = new Battler("B1");
+    var b2 = new Battler("B2");
+    b1.knowsCmd(fight);
+    b2.knowsCmd(fight);
+
+    battleSystem.startBattle([b1], [b2]);
+    battleSystem.startRound();
+
+    expect(eventLog.length).toEqual(6);
+    expect(eventLog[0]).toEqual("I notice a round started");
+    expect(eventLog[1]).toEqual("B1 uses Fight");
+    expect(eventLog[2]).toEqual("B2 takes 2 damage.");
+    expect(eventLog[3]).toEqual("B2 uses Fight");
+    expect(eventLog[4]).toEqual("B1 takes 2 damage.");
+    expect(eventLog[5]).toEqual("I notice a round ended");
+  });
+
+  it("Should let an instance handler modify incoming damage", function() {
+    var b1 = new Battler("B1");
+    var b2 = new Battler("B2");
+    b1.knowsCmd(fight);
+    b2.knowsCmd(fight);
+
+    // b2 has damage resistance:
+    b2.subscribeEvent(battleSystem.eventService, "damage", function(eventData) {
+      if (eventData.target === this) {
+        eventData.amount -= 1;
+        eventLog.push(this.name + " blocks 1 damage with armor");
+      }
+      return true; // to pass modified event along
+    });
+
+    battleSystem.startBattle([b1], [b2]);
+    battleSystem.startRound();
+
+    expect(eventLog.length).toEqual(5);
+    expect(eventLog[0]).toEqual("B1 uses Fight");
+    expect(eventLog[1]).toEqual("B2 blocks 1 damage with armor");
+    expect(eventLog[2]).toEqual("B2 takes 1 damage.");
+    expect(eventLog[3]).toEqual("B2 uses Fight");
+    expect(eventLog[4]).toEqual("B1 takes 2 damage.");
+  });
+
+  it("Should let an instance handler counterattack", function() {
+    var b1 = new Battler("B1");
+    var b2 = new Battler("B2");
+    b1.knowsCmd(fight);
+    b2.knowsCmd(fight);
+
+    var counterAttack = new BatCmd("Counterattack", "enemy", function(system, user, target) {
+      system.eventService.stackGameEvent("damage", {source: user, target: target, amount: 1});
+    });
+
+    // b2 counterattacks when taking damage:
+    b2.subscribeEvent(battleSystem.eventService, "attack-resolved", function(eventData) {
+      if (eventData.target === this) {
+        var attack = {source: this, cmd: counterAttack, target: eventData.source};
+        battleSystem.eventService.stackGameEvent("attack", attack);
+        // here i'm not stacking "attack-targeted" or "attack-resolved" events...
+        // this means counterattacks can't be responded to, which prevents infinite loops
+        // of counter-counter-attacking.
+      }
+      return true;
+    });
+
+    battleSystem.startBattle([b1], [b2]);
+    battleSystem.startRound();
+
+    expect(eventLog.length).toEqual(6);
+    expect(eventLog[0]).toEqual("B1 uses Fight");
+    expect(eventLog[1]).toEqual("B2 takes 2 damage.");
+    expect(eventLog[2]).toEqual("B2 uses Counterattack");
+    expect(eventLog[3]).toEqual("B1 takes 1 damage.");
+    expect(eventLog[4]).toEqual("B2 uses Fight");
+    expect(eventLog[5]).toEqual("B1 takes 2 damage.");
+  });
+
+  it("Should let an instance handler change target of attack", function() {
+    var b1 = new Battler("B1");
+    var b2 = new Battler("B2");
+    var b3 = new Battler("B3");
+    b1.knowsCmd(fight);
+    b2.knowsCmd(fight);
+    b3.knowsCmd(fight);
+
+    // b2 bodyguards b1 against attacks from b3:
+    b2.subscribeEvent(battleSystem.eventService, "attack-targeted", function(eventData) {
+      if (eventData.target.name === "B1") {
+        eventLog.push("I'll save you B1!");
+        eventData.target = this;
+      }
+      return true;
+    });
+
+    battleSystem.startBattle([b1, b2], [b3]);
+    battleSystem.startRound();
+    expect(eventLog.length).toEqual(7);
+    expect(eventLog[0]).toEqual("B1 uses Fight");
+    expect(eventLog[1]).toEqual("B3 takes 2 damage.");
+    expect(eventLog[2]).toEqual("B2 uses Fight");
+    expect(eventLog[3]).toEqual("B3 takes 2 damage.");
+    expect(eventLog[4]).toEqual("I'll save you B1!");
+    expect(eventLog[5]).toEqual("B3 uses Fight");
+    expect(eventLog[6]).toEqual("B2 takes 2 damage.");
+  });
+  
+});
+
 
 /* TODO a way to subscribe all instances of a "class" to an event
  * like... sign up the prototype, somehow?

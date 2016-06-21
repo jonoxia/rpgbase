@@ -1,12 +1,11 @@
 
-function GameEventServiceMixin(prototype) {
-  prototype.gameEventServiceInit = function() {
-    this._subscribers = {}; // keys will be event names, values will be arrays of subscribers
-    this._classSubscribers = {}; // same, but class prototype references not instances
-    this._eventQueue = [];
-  };
-
-  prototype.subscribe = function(eventName, subscriber) {
+function GameEventService() {
+  this._subscribers = {}; // keys will be event names, values will be arrays of subscribers
+  this._classSubscribers = {}; // same, but class prototype references not instances
+  this._eventQueue = [];
+}
+GameEventService.prototype = {
+  subscribe: function(eventName, subscriber) {
     // subscriber must be an object implementing the GameEventSubscriber interface
     if (!this._subscribers[eventName]) {
       this._subscribers[eventName] = [];
@@ -14,9 +13,9 @@ function GameEventServiceMixin(prototype) {
     if (this._subscribers[eventName].indexOf(subscriber) === -1) {
       this._subscribers[eventName].push(subscriber);
     }
-  };
+  },
 
-  prototype.unsubscribe = function(eventName, subscriber) {
+  unsubscribe: function(eventName, subscriber) {
     if (!this._subscribers[eventName]) {
       return;
     }
@@ -25,20 +24,20 @@ function GameEventServiceMixin(prototype) {
       return;
     }
     this._subscribers[eventName].splice(index, 1);
-  };
+  },
 
-  prototype.queueGameEvent = function(eventName, eventData) {
+  queueGameEvent: function(eventName, eventData) {
     // This method doesn't process the event, it just queues it for processing.
     // This puts the new event on the end, so it will be processed last.
     this._eventQueue.push({name: eventName, data: eventData});
-  };
+  },
 
-  prototype.stackGameEvent = function(eventName, eventData) {
+  stackGameEvent: function(eventName, eventData) {
     // This puts the new event on the beginning, so it will be processed first.
     this._eventQueue.unshift({name: eventName, data: eventData});
-  };
+  },
 
-  prototype.processGameEvent = function() {
+  processGameEvent: function() {
     if (this.queueIsEmpty()) {
       return;
     }
@@ -74,19 +73,19 @@ function GameEventServiceMixin(prototype) {
         });
       });
     }*/
-  };
+  },
 
-  prototype.queueIsEmpty = function() {
+  queueIsEmpty: function() {
     return (this._eventQueue.length == 0);
-  };
+  },
 
-  prototype.procAllEvents = function() {
+  procAllEvents: function() {
     while (!this.queueIsEmpty()) {
       this.processGameEvent();
     }
-  };
+  },
 
-  prototype.subscribeClass = function(constructor, eventName, callback) {
+  subscribeClass: function(constructor, eventName, callback) {
     var prototype = constructor.prototype;
     // is this remotely legal? am i gonna get in trouble for this?
 
@@ -104,21 +103,15 @@ function GameEventServiceMixin(prototype) {
       this._classSubscribers[eventName] = [];
     }
     this._classSubscribers[eventName].push(prototype);*/
-  };
+  },
 
-  prototype.unsubscribeClass = function(constructor, eventName) {
+  unsubscribeClass: function(constructor, eventName) {
     var prototype = constructor.prototype;
     if (prototype._classEventHandlers[eventName]) {
       prototype._classEventHandlers[eventName] = [];
     }
-  };
-}
-// TODO i don't think this should be a mixin, actually. I think there should always
-// be exactly one global instance. A singleton.
-function GenericEventService() {
-}
-GenericEventService.prototype = {};
-GameEventServiceMixin(GenericEventService.prototype);
+  }
+};
 
 
 
