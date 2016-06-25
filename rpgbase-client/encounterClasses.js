@@ -231,7 +231,7 @@ function BattleSystem(htmlElem, canvas, options) {
   }
 
   var frameDelay = 50; // default (very fast)
-  if (options.frameDelay) {
+  if (options.hasOwnProperty("frameDelay")) {
     frameDelay = options.frameDelay;
   }
   if (options.metaCmdSet) {
@@ -1174,7 +1174,7 @@ function BatCmd(options) {
     this.cost = options.cost;
   }
   if (options.canUse) {
-    this._canUse = canUse;
+    this._canUse = options.canUse;
   }
   if (options.animate) {
     this.animate = options.animate;
