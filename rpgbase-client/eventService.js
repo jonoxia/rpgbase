@@ -61,6 +61,9 @@ GameEventService.prototype = {
     }
     if (event.data.target) { // not all events have targets
       if (receivers.indexOf( event.data.target ) === -1) { // don't notify twice
+        if (!event.data.target.takeEvent) {
+          console.log("Target with no takeEvent function is " + event.data.target);
+        }
         event.data.target.takeEvent(event.name, event.data);
       }
     }
@@ -77,6 +80,10 @@ GameEventService.prototype = {
 
   queueIsEmpty: function() {
     return (this._eventQueue.length == 0);
+  },
+
+  clearQueue: function() {
+    this._eventQueue = [];
   },
 
   procAllEvents: function() {

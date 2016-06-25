@@ -150,9 +150,11 @@ EncounterTableSet.prototype = {
   }
 };
 
-
-function BattleSystem(htmlElem, canvas, options) {
+function BattleSystem(htmlElem, canvas, eventService, options) {
   var self = this;
+  this.eventService = eventService;
+  this.gameEventSubscriberInit();
+
   this._init(htmlElem, options.cursorImg, options.width, options.height);
   this._ctx = canvas.getContext("2d");
   this.hide();
@@ -197,9 +199,10 @@ function BattleSystem(htmlElem, canvas, options) {
   if (options.onRollInitiative) {
     this._initiativeCallback = options.onRollInitiative;
   }
-  this._startBattleCallback = null;
+  //this._startBattleCallback = null;
   if (options.onStartBattle) {
-    this._startBattleCallback = options.onStartBattle;
+    this.onStartBattle(options.onStartBattle);
+    //this._startBattleCallback = options.onStartBattle;
   }
   this._victoryCallback = null;
   if (options.onVictory) {
@@ -215,15 +218,17 @@ function BattleSystem(htmlElem, canvas, options) {
   }
   this._randomTargetCallback = null;
 
-  this._endRoundCallback = null;
+  //this._endRoundCallback = null;
   if (options.onEndRound) {
-    this._endRoundCallback = options.onEndRound;
+    this.onEndRound(options.onEndRound);
+    //this._endRoundCallback = options.onEndRound;
   }
   // TODO refactor to have a general purpose event listener
   // registry instead of all these specific named methods!
-  this._beginRoundCallback = null;
+  //this._beginRoundCallback = null;
   if (options.onBeginRound) {
-    this._beginRoundCallback = options.onBeginRound;
+    this.onBeginRound(options.onBeginRound);
+    //this._beginRoundCallback = options.onBeginRound;
   }
   this._showMenuCallback = null;
   if (options.onShowMenu) {
@@ -433,16 +438,17 @@ BattleSystem.prototype = {
   },
  
   onStartBattle: function(callback) {
-    this._startBattleCallback = callback;
+    this.subscribeEvent(this.eventService, "start-battle", callback);
   },
 
   onEndRound: function(callback) {
-    // TODO allow more than one callback for some of these events?
-    this._endRoundCallback = callback;
+    this.subscribeEvent(this.eventService, "end-round", callback);
+    //this._endRoundCallback = callback;
   },
 
   onBeginRound: function(callback) {
-    this._beginRoundCallback = callback;
+    this.subscribeEvent(this.eventService, "begin-round", callback);
+    //this._beginRoundCallback = callback;
   },
 
   onShowMenu: function(callback) {
@@ -557,7 +563,7 @@ BattleSystem.prototype = {
     }
 
     // startBattleCallback needs to itself take a callback!
-    var afterAnimation = function() {
+    /*var afterAnimation = function() {
       if (encounter.start) {
         encounter.start(self, self.player);
       }
@@ -570,7 +576,21 @@ BattleSystem.prototype = {
     } else {
       // just start the round!
       afterAnimation();
+    }*/
+    this.eventService.queueGameEvent("start-battle", {});
+    /* will probably have to do some kind of do-se-do here where the start-battle handler
+     * kicks off an animation, and when the animation's done it fires back a
+     * "start-battle-animation-done" event that the game engine listens for...
+     * maybe we want something like a processGameEventWhenAnimationDone ?
+     * or an animation-linked event-pump that waits for animation to be done, then
+     * processes the next game event, indefinitely?
+     */
+    
+    this.eventService.processGameEvent();
+    if (encounter.start) {
+      encounter.start(self, self.player); // this could also be a "start-battle" listener?
     }
+    self.showStartRoundMenu();
   },
 
   updateStats: function() {
@@ -745,9 +765,12 @@ BattleSystem.prototype = {
     var fighters = activeParty.concat(this.monsters); //everyone
     var i;
 
-    if (this._beginRoundCallback) {
-      this._beginRoundCallback(this, fighters);
-    }
+    this.eventService.queueGameEvent("begin-round", {});
+    this.eventService.processGameEvent(); // should we have a "fireGameEvent"?
+
+    //if (this._beginRoundCallback) {
+    //  this._beginRoundCallback(this, fighters);
+    //}
 
     // Tick down all temporary stat mods - they expire now if
     // their duration has run out
@@ -791,23 +814,116 @@ BattleSystem.prototype = {
     // hide menus
     this.emptyMenuStack();
     // build list of {fighter, cmd, target} objects:
-    this._fightQueue = [];
+    //this._fightQueue = [];
     for (i = 0; i < fighters.length; i++) {
       if (fighters[i].canAct()) {
         var action = fighters[i].getLockedInCmd();
-        this._fightQueue.push({fighter: fighters[i],
+
+        var attackEventData = {source: fighters[i],
                                cmd: action.cmd,
-                               target: action.target});
+                               target: action.target}; // may not be final target
+        this.eventService.queueGameEvent("attack-targeted", attackEventData);
+        this.eventService.queueGameEvent("attack", attackEventData);
+        this.eventService.queueGameEvent("attack-resolved", attackEventData);
+        //this._fightQueue.push({fighter: fighters[i],
+        //                       cmd: action.cmd,
+        //                       target: action.target});
       }
     }
-    this.executeNextFighterAction();
+    this.eventService.procAllEvents();
+    this.finishRound();
+    // this.executeNextFighterAction();
   },
 
   outOfSequenceAction: function(fighter, cmd, target) {
     // stick this on beginning of fight queue
-    this._fightQueue.unshift({fighter: fighter,
-                              cmd: cmd,
-                              target: target});
+    //this._fightQueue.unshift({fighter: fighter,
+    //                          cmd: cmd,
+    //                          target: target});
+    this.eventService.stackEvent("attack", {source: fighter, cmd: cmd, target: target});
+  },
+
+  
+  onAttackEvent: function(eventData) {
+    if (eventData.source.canAct() && !this._battleOver) {
+      if (this.menuImpl == "css") {
+        this.displayElem.empty();// clear the message
+      }
+      
+      if (eventData.cmd) {
+        eventData.cmd.effect(this, eventData.source, eventData.target);
+      } else {
+        this.showMsg(eventData.source.name + " has no idea what to do!");
+      }
+      // update stats display so we can see effects of action
+      this.updateStats();
+
+      //if (self._animator) {
+        // delay so you can read effects of attack:
+     //   var readDelay = new Animation(12);
+     //   readDelay.onFinish(function(){
+     // this.executeNextFighterAction();
+     //   });
+    }
+  },
+  
+  onAttackTargetedEvent: function(eventData) {
+    var target = eventData.target;
+    if (this._autoRetarget) {
+      // If autoRetarget option is true, then if the target has died or
+      // fled before a single-target attack has resolved, a new random
+      // target is selected instead:
+      if (target.hasOwnProperty("_statBlock")) {
+        // meaning target is an individual ally/enemy and not a string code
+        if (target._dead || target.hasStatus("fled")) {
+          // no longer a valid target for most things;
+          // TODO EXCEPTION
+          // revive spells could target dead fighters
+
+          // If target was a monster, pick another monster; if target
+          // was a PC pick another PC.
+          if (this.monsters.indexOf(target) > -1 || this.deadMonsters.indexOf(target) > -1) {
+            console.log("AUTO RETARGETED TO random_monster");
+            target = "random_monster";
+          }
+          else if (this._party.indexOf(target) > -1) {
+            target = "random_pc";
+          }
+        }
+      }
+    }
+
+    // choose random targets now, right before executing:
+    if (target == "random_monster") {
+      target = this.chooseRandomEnemy("monster");
+      console.log("RANDOM MONSTER resulted in choice of " + target.name);
+    } else if (target == "random_pc") {
+      target = this.chooseRandomEnemy("pc");
+    }
+    // Turn "all allies" and "all enemies" target types into
+    // arrays:
+    else if (target == "all_allies") {
+      target = this.getAllies(eventData.source);
+    } else if (target == "all_enemies") {
+      target = this.getEnemies(eventData.source);
+      console.log("All enemies of " + eventData.source.name + " is array: "+ target);
+    }
+    else if (target == "self") {
+      // target yourself
+      target = eventData.source;
+    }
+
+    eventData.target = target;
+    // EVENT TODO fire a new attack-targeted event specifying the new target!!!
+  },
+
+  onAttackResolvedEvent: function(eventData) {
+    if (this.checkBattleEndConditions()) {
+      this.eventService.clearQueue();
+      // this.finishRound();
+      // What we want to do here is clear out all events still pending in the queue!
+      // (and then push on a new end of battle event? maybe?
+    }
   },
 
   executeNextFighterAction: function() {
@@ -818,16 +934,16 @@ BattleSystem.prototype = {
       this.finishRound();
       return;
     }
-    if (this.menuImpl == "css") {
-      this.displayElem.empty();// clear the message
-    }
+    //if (this.menuImpl == "css") {
+    //  this.displayElem.empty();// clear the message
+    //}
     // Skip any dead or otherwise incapacitated people
     // (they may have died, fled, etc. during the round before their
     // turn came up)
-    while (this._fightQueue.length > 0 && 
+    /*while (this._fightQueue.length > 0 && 
            !this._fightQueue[0].fighter.canAct()) {
       this._fightQueue.shift();
-    }
+    }*/
     
     // If fight queue is empty, then round is done
     if (this._fightQueue.length == 0) {
@@ -840,7 +956,7 @@ BattleSystem.prototype = {
     var target = fightRecord.target;
     this._whoseTurn = fighter;
 
-    if (this._autoRetarget) {
+    /*if (this._autoRetarget) {
       // If autoRetarget option is true, then if the target has died or
       // fled before a single-target attack has resolved, a new random
       // target is selected instead:
@@ -880,11 +996,11 @@ BattleSystem.prototype = {
     else if (target == "self") {
       // target yourself
       target = fighter;
-    }
+    }*/
 
     // here's what to do after animation -- apply the effect of command,
     // update stats, and go on to next fighter action.
-    var self = this;
+    /*var self = this;
     var proceed = function() {
       self._attackSFX = null; // clear the attack sfx if any
 
@@ -921,7 +1037,7 @@ BattleSystem.prototype = {
     } else {
       // if animation disabled, just go to next fighter action now:
       proceed();
-    }
+    }*/
   },
 
   finishRound: function() {
@@ -933,9 +1049,11 @@ BattleSystem.prototype = {
       // any special end-of-round effects (e.g. poison damage)
     }
 
-    if (this._endRoundCallback) {
+    this.eventService.queueGameEvent("end-round", {});
+    this.eventService.processGameEvent();
+    /*if (this._endRoundCallback) {
       this._endRoundCallback(this, fighters);
-    }
+    }*/
 
     if (this._wholePartyCmd) {
       if (this._wholePartyCmd.onEndRound) {
@@ -1066,7 +1184,8 @@ BattleSystem.prototype = {
 
   removeFromBattle: function(target) {
     // dead fighters will be skipped during command input and execution
-    target.die();
+    target.die(); // TODO is there any other reason we might remove from battle
+    // when not dead? what do we do with fled enemies for isntance?
     
     var index = this.monsters.indexOf(target);
     if (index > -1) {
@@ -1163,6 +1282,7 @@ BattleSystem.prototype = {
   }
 };
 MenuSystemMixin(BattleSystem.prototype);
+GameEventSubscriberMixin(BattleSystem.prototype);
 
 // name-> instance map, 
 // for recovering spell references after game reload
@@ -1355,7 +1475,10 @@ var BattlerMixin = function() {
 
   Battler._subClassPrototypes.push(this);
 
+  GameEventSubscriberMixin(this);
+
   this.battlerInit = function() {
+    this.gameEventSubscriberInit();
     this._effectHandlers = {};
     this._statMods = [];
     this._stati = {};
