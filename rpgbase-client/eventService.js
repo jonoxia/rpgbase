@@ -37,6 +37,8 @@ GameEventService.prototype = {
     this._eventQueue.unshift({name: eventName, data: eventData});
   },
 
+  // TODO a fireGameEvent where it just happens immediately?
+
   processGameEvent: function() {
     if (this.queueIsEmpty()) {
       return;
@@ -84,6 +86,16 @@ GameEventService.prototype = {
 
   clearQueue: function() {
     this._eventQueue = [];
+  },
+
+  cancelEvent: function(eventName) {
+    // only does anything if the next event matches event name
+    if (this.queueIsEmpty()) {
+      return;
+    }
+    if (this._eventQueue[0].name === eventName) {
+      this._eventQueue.shift(); // discard it
+    }
   },
 
   procAllEvents: function() {
@@ -189,55 +201,4 @@ function GameEventSubscriberMixin(prototype) {
 // an additional handler for just playerCharacters responding to "damage" event
 // an additional handler for a player character with a specific ability responding to "damage" event.
 
-// usage example (Where attack-targeted is a different event from attack):
-
-/*battleSystem.subscribe("attack-targeted", zaan);
-zaan.onEvent("attack-targeted", function(eventData) {
-  var attack = eventData.attack;
-  if (attack.target.name === "Alaqai") {
-    attack.target = zaan;
-
-    // Wait What does Zaan do about mutli-target attacks?  like, attack.target could be
-    // an array here? can she still take alaqai's hit in that case? does she get hit
-    // twice, then?
-  }
-});*/
-
-// I think i'm getting confused about whether "target" is a property of all Events
-// or whether it's specifically for attack events.
-// If it's the latter, then the event.data can be an Attack object
-// I think it's specifically for attack events; i'm not sure where else it would be used. So it's part of event.data.
-
-// wait are there 3 separate events:  attack-targeted, attack, and attack-resolved ?
-
-
-// is the "attack" part actually an event handler or does it just happen? If it's an 
-// event handler, who responds to it? is it processed by the attacker? the battleSystem
-// itself? The battle system subscribes to its own events?
-
-/*var attack = {cmd: deadlyWhatever, user: badguy, target: alaqai};
-
-battleSystem.queueGameEvent("attack-targeted", attack);
-battleSystem.queueGameEvent("attack", attack);
-battleSystem.queueGameEvent("attack-resolved", attack);
-
-while (!battleSystem.queueIsEmpty()) {
-  battleSystem.procEvent();
-}*/
-
-// or...
-
-/*var attack = {cmd: deadlyWhatever, user: badguy, target: alaqai};
-
-battleSystem.queueGameEvent("attack-targeted", attack);
-battleSystem.procAllEvents();
-
-battleSystem.execAttack(attack);
-// further complicated by the fact that the attack needs to wait for the animation
-// to be done
-
-battleSystem.queueGameEvent("attack-resolved", attack);
-battleSystem.procAllEvents();*/
-
-
-
+// Add tests: for clearQueue, cancelEvent, and fireEvent.

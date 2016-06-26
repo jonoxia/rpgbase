@@ -24,7 +24,7 @@ describe("Battle system", function() {
   var fight;
   var bs;
   var stubPlayer;
-  var slime;
+  var sworm;
   var eventLog;
   var g_eventService;
 
@@ -48,12 +48,12 @@ describe("Battle system", function() {
     g_eventService = new GameEventService();
     bs = new BattleSystem($("#test-menus"), $("#test-canvas")[0], g_eventService, {
       defaultCmdSet: defaultCmdSet,
-      frameDelay: 0 // to skip all animation
+      frameDelay: 10 // make it real fast
     });
     bs.onDrawBattle(function() {}); // don't draw anything
 
     bs.subscribeEvent(bs.eventService, "attack", bs.onAttackEvent);
-    bs.subscribeEvent(bs.eventService, "attack-targeted", bs.onAttackTargetedEvent);
+    bs.subscribeEvent(bs.eventService, "attack-declared", bs.onAttackDeclaredEvent);
     bs.subscribeEvent(bs.eventService, "attack-resolved", bs.onAttackResolvedEvent);
 
     var hero = new StubPC("Hero");
@@ -66,11 +66,15 @@ describe("Battle system", function() {
     };
 
     // we're using a null image -- override any function where it would try to draw it
-    slime = new MonsterType(null, "slime", {"hp": 1}, [fight]);
+    sworm = new MonsterType(null, "sworm", {"hp": 1}, [fight]);
 
     eventLog = [];
 
 
+  });
+
+  afterEach(function() {
+    bs.close(); // mostly to stop the battle system animator if it's running
   });
 
   it("Should fire messages for start/end of battle/round", function() {
@@ -91,7 +95,7 @@ describe("Battle system", function() {
       // any text it wants onto some kind of battle system display queue.
     });
 
-    bs.startBattle(stubPlayer, {number: 1, type: slime}, 0); // 0 is land type, don't care
+    bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0); // 0 is land type, don't care
 
     expect(bs.monsters.length).toEqual(1);
 
@@ -102,8 +106,8 @@ describe("Battle system", function() {
     expect(eventLog.length).toEqual(6);
     expect(eventLog[0]).toEqual("Battle started.");
     expect(eventLog[1]).toEqual("Round started.");
-    expect(eventLog[2]).toEqual("Hero fights slime A");
-    expect(eventLog[3]).toEqual("slime A is slain.");
+    expect(eventLog[2]).toEqual("Hero fights sworm A");
+    expect(eventLog[3]).toEqual("sworm A is slain.");
     expect(eventLog[4]).toEqual("Hero won battle."); // TODO is sayng this twice
     expect(eventLog[5]).toEqual("Round ended.");
     // interesting that roundEnded still gets called even if hero wins first...
@@ -116,33 +120,33 @@ describe("Battle system", function() {
       return monsters.concat(party);
     });
 
-    bs.startBattle(stubPlayer, {number: 1, type: slime}, 0); // 0 is land type, don't care
+    bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0); // 0 is land type, don't care
 
     // pretend the player chose "fight" (Not that they have any other choice)
     bs.choosePCCommand(stubPlayer.getParty()[0], fight, "random_monster");
     // this will trigger "fightOneRound" which should trigger a beginRoundCallback
 
     expect(eventLog.length).toEqual(3);
-    expect(eventLog[0]).toEqual("slime A fights Hero");
-    expect(eventLog[1]).toEqual("Hero fights slime A");
-    expect(eventLog[2]).toEqual("slime A is slain.");
+    expect(eventLog[0]).toEqual("sworm A fights Hero");
+    expect(eventLog[1]).toEqual("Hero fights sworm A");
+    expect(eventLog[2]).toEqual("sworm A is slain.");
 
   });
 
   it("Should obey choice of targets by player", function() {
     // this also serves as a test of multi-round battle:
 
-    bs.startBattle(stubPlayer, {number: 2, type: slime}, 0); // 0 is land type, don't care
+    bs.startBattle(stubPlayer, {number: 2, type: sworm}, 0); // 0 is land type, don't care
 
     var target = bs.monsters[1]; // non-random choice of monster
     bs.choosePCCommand(stubPlayer.getParty()[0], fight, target);
     // this will trigger "fightOneRound" which should trigger a beginRoundCallback
 
     expect(eventLog.length).toEqual(3);
-    expect(eventLog[0]).toEqual("Hero fights slime B");
-    expect(eventLog[1]).toEqual("slime B is slain.");
-    expect(eventLog[2]).toEqual("slime A fights Hero");
-    // This also tests that we skip slime B's attack since it was slain before
+    expect(eventLog[0]).toEqual("Hero fights sworm B");
+    expect(eventLog[1]).toEqual("sworm B is slain.");
+    expect(eventLog[2]).toEqual("sworm A fights Hero");
+    // This also tests that we skip sworm B's attack since it was slain before
     // its turn came
     expect(stubPlayer.getParty()[0].getStat("hp")).toEqual(9); // i took 1 damage
 
@@ -150,8 +154,8 @@ describe("Battle system", function() {
     target = bs.monsters[0]; // non-random choice of monster
     bs.choosePCCommand(stubPlayer.getParty()[0], fight, target);
     expect(eventLog.length).toEqual(5);
-    expect(eventLog[3]).toEqual("Hero fights slime A");
-    expect(eventLog[4]).toEqual("slime A is slain.");
+    expect(eventLog[3]).toEqual("Hero fights sworm A");
+    expect(eventLog[4]).toEqual("sworm A is slain.");
   });
 
   it("Should retarget your attack if original target died before your turn", function() {
@@ -161,37 +165,160 @@ describe("Battle system", function() {
     sidekick.setStats({"hp": 10});
     stubPlayer.getParty = function() { return [hero, sidekick] };
 
-    bs.startBattle(stubPlayer, {number: 2, type: slime}, 0); // 0 is land type, don't care
 
-    // both attack slime A:
+    // watch who receives the "targeted" event:
+    bs.subscribeEvent(bs.eventService, "attack-targeted", function(eventData) {
+      eventLog.push(eventData.source.name + " targets " + eventData.target.name);
+    });
+
+
+    bs.startBattle(stubPlayer, {number: 2, type: sworm}, 0); // 0 is land type, don't care
+
+    // both attack sworm A:
     bs.choosePCCommand(stubPlayer.getParty()[0], fight, bs.monsters[0]);
     bs.choosePCCommand(stubPlayer.getParty()[1], fight, bs.monsters[0]);
     
     // locking these both in should start a round...
-    expect(eventLog.length).toEqual(4);
+    expect(eventLog.length).toEqual(6);
 
-    expect(eventLog[0]).toEqual("Hero fights slime A");
-    expect(eventLog[1]).toEqual("slime A is slain.");
-    expect(eventLog[2]).toEqual("Sidekick fights slime B");
-    expect(eventLog[3]).toEqual("slime B is slain.");
+    expect(eventLog[0]).toEqual("Hero targets sworm A");
+    expect(eventLog[1]).toEqual("Hero fights sworm A");
+    expect(eventLog[2]).toEqual("sworm A is slain.");
+    expect(eventLog[3]).toEqual("Sidekick targets sworm B"); // make target event is for B
+    expect(eventLog[4]).toEqual("Sidekick fights sworm B");
+    expect(eventLog[5]).toEqual("sworm B is slain.");
 
     // But if i turn off "autoRetarget" (on by default) then this won't happen:
 
     bs._autoRetarget = false;
     eventLog = [];
-    bs.startBattle(stubPlayer, {number: 2, type: slime}, 0); // 0 is land type, don't care
+    bs.startBattle(stubPlayer, {number: 2, type: sworm}, 0); // 0 is land type, don't care
 
-    // both attack slime A:
+    // both attack sworm A:
     bs.choosePCCommand(stubPlayer.getParty()[0], fight, bs.monsters[0]);
     bs.choosePCCommand(stubPlayer.getParty()[1], fight, bs.monsters[0]);
     
-    // the second attack hits the already dead slime A, leaving slime B alive:
+    // the second attack, with its target already gone, whiffs, so Sidekick doens't act:
     expect(eventLog.length).toEqual(5);
-    expect(eventLog[0]).toEqual("Hero fights slime A");
-    expect(eventLog[1]).toEqual("slime A is slain.");
-    expect(eventLog[2]).toEqual("Sidekick fights slime A");
-    expect(eventLog[3]).toEqual("slime A is slain.");
-    expect(eventLog[4]).toContain("slime B fights"); // don't care which of us he fights
+    expect(eventLog[0]).toEqual("Hero targets sworm A");
+    expect(eventLog[1]).toEqual("Hero fights sworm A");
+    expect(eventLog[2]).toEqual("sworm A is slain.");
+    expect(eventLog[3]).toContain("sworm B targets");
+    expect(eventLog[4]).toContain("sworm B fights"); // don't care which of us he fights
+  });
+
+
+  it("Should play queued animation before processing next event", function() {
+    // gonna have to use the async jasmine features for this one i think.
+    
+    // we want attack animation to show before effect of attack is applied
+    runs(function() {
+      var hero = stubPlayer.getParty()[0];
+
+      hero.subscribeEvent(bs.eventService, "attack-targeted", function(eventData) {
+        if (eventData.source === this) {
+          // When i target an attack:
+          var anim = new Animation(3);
+          anim.onFrame(function(frameNo) {
+            eventLog.push("Attack animation frame number " + frameNo);
+          });
+          console.log("I AM QUEUEING AN ANIMATION");
+          bs.queueAnimation(anim);
+        }
+        return true;
+      });
+
+      bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0); // 0 is land type, don't care
+
+      bs.choosePCCommand(stubPlayer.getParty()[0], fight, bs.monsters[0]);
+    });
+
+    waits(1000);
+    
+    runs(function() {
+      expect(eventLog.length).toEqual(5);
+      //expect(eventLog[0]).toEqual("Hero targets sworm A");
+      expect(eventLog[0]).toEqual("Attack animation frame number 1");
+      expect(eventLog[1]).toEqual("Attack animation frame number 2");
+      expect(eventLog[2]).toEqual("Attack animation frame number 3");
+      expect(eventLog[3]).toEqual("Hero fights sworm A");
+      expect(eventLog[4]).toEqual("sworm A is slain.");
+    });
+  });
+
+  it("Should queue up multiple animations and play them all in order", function() {
+    // gonna have to use the async jasmine features for this one i think.
+    
+    // we want attack animation to show before effect of attack is applied
+    runs(function() {
+      var hero = stubPlayer.getParty()[0];
+
+      var animatedFight = new BatCmd({
+        target: "random_enemy", name: "Animated Fight",
+        effect: function(system, user, target) {
+          var anim = new Animation(3);
+          eventLog.push(user.name + " uses animated fight");
+          anim.onFrame(function(frameNo) {
+            eventLog.push("Attack animation frame number " + frameNo);
+          });
+          system.queueAnimation(anim);
+          system.eventService.stackGameEvent("damage", {source: user, target: target,
+                                                        amount: 1});
+        }
+      });
+                                     
+      bs.eventService.subscribeClass(Monster, "damage", function(eventData) {
+        if (eventData.target === this) {
+          this.setStat("hp", this.getStat("hp") - eventData.amount);
+          eventLog.push(this.name + " takes " + eventData.amount + " damage");
+          
+          var anim = new Animation(3);
+          anim.onFrame(function(frameNo) {
+            eventLog.push("Damage animation frame number " + frameNo);
+          });
+          bs.queueAnimation(anim);
+
+          if (this.getStat("hp") <= 0) {
+            var deathAnim = new Animation(3);
+            deathAnim.onFrame(function(frameNo) {
+              eventLog.push("Death animation frame number " + frameNo);
+            });
+            bs.queueAnimation(deathAnim);
+
+            bs.removeFromBattle(this);
+          }
+        }
+      });
+
+      bs.onEndRound(function(eventData) {
+        eventLog.push("Round ended."); 
+        // just to make sure this happens after all animations
+      });
+      
+      bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0); // 0 is land type, don't care
+
+      bs.choosePCCommand(stubPlayer.getParty()[0], animatedFight, bs.monsters[0]);
+    });
+
+    waits(1000);
+    
+    runs(function() {
+      expect(eventLog.length).toEqual(12);
+      expect(eventLog[0]).toEqual("Hero uses animated fight");
+      expect(eventLog[1]).toEqual("Attack animation frame number 1");
+      expect(eventLog[2]).toEqual("Attack animation frame number 2");
+      expect(eventLog[3]).toEqual("Attack animation frame number 3");
+      expect(eventLog[4]).toEqual("sworm A takes 1 damage");
+      expect(eventLog[5]).toEqual("Damage animation frame number 1");
+      expect(eventLog[6]).toEqual("Damage animation frame number 2");
+      expect(eventLog[7]).toEqual("Damage animation frame number 3");
+      expect(eventLog[8]).toEqual("Death animation frame number 1");
+      expect(eventLog[9]).toEqual("Death animation frame number 2");
+      expect(eventLog[10]).toEqual("Death animation frame number 3");
+      expect(eventLog[11]).toEqual("Round ended.");
+
+      bs.eventService.unsubscribeClass(Monster);
+    });
   });
 
 
@@ -204,6 +331,9 @@ describe("Battle system", function() {
    * Test that we skip turns of battlers who died or fled before their turn came up
    * Test that round ends after everybody goes once.
    * Test that round ends early if all remaining battlers have died or fled.
+   * Test that everything that was pending gets canceled if round ends early
+   * Test that we can't leave the battle system until all the end of battle text has
+   *    run its course.
    * Test that the onStart/onWin/onLose callbacks of a SpecialEncounter get called
    * Test that "fled" status works correctly
    * Test that "peaceful resolution" works correctly
@@ -227,6 +357,9 @@ describe("Battle system", function() {
    * messages could be thrown into this queue as well! treated as "show this msg and then
    * animate nothing for 12 frames"
 
+   *
+   * I think we can get rid of the battle system's "onEffect" and "sendEffect" functions,
+   * replacing them with eventService calls.
    */
 
 

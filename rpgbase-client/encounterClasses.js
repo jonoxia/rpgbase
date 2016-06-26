@@ -163,6 +163,7 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
   this._attackSFX = null;
   this._statDisplayType = "battle";
   this._battleOver = false;
+  this._animationQueue = [];
 
   if (options.startBattleMsg) {
     this.startBattleMsg = options.startBattleMsg;
@@ -256,6 +257,7 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
                                   function() {self.draw();});
   } else {
     // if frameDelay is zero, then no animation
+    // TODO maybe we can deprecate this option?
     this._animator = null;
   }
 
@@ -822,6 +824,9 @@ BattleSystem.prototype = {
         var attackEventData = {source: fighters[i],
                                cmd: action.cmd,
                                target: action.target}; // may not be final target
+
+        // The four event stages of every attack:
+        this.eventService.queueGameEvent("attack-declared", attackEventData);
         this.eventService.queueGameEvent("attack-targeted", attackEventData);
         this.eventService.queueGameEvent("attack", attackEventData);
         this.eventService.queueGameEvent("attack-resolved", attackEventData);
@@ -830,8 +835,7 @@ BattleSystem.prototype = {
         //                       target: action.target});
       }
     }
-    this.eventService.procAllEvents();
-    this.finishRound();
+    this.runEventQueue(); // this will call finishRound() when it's done.
     // this.executeNextFighterAction();
   },
 
@@ -840,60 +844,84 @@ BattleSystem.prototype = {
     //this._fightQueue.unshift({fighter: fighter,
     //                          cmd: cmd,
     //                          target: target});
+
+    // TODO should i actually stack declared-, targeted-, attack, and then resolved-?
     this.eventService.stackEvent("attack", {source: fighter, cmd: cmd, target: target});
   },
 
   
   onAttackEvent: function(eventData) {
-    if (eventData.source.canAct() && !this._battleOver) {
-      if (this.menuImpl == "css") {
-        this.displayElem.empty();// clear the message
-      }
+    if (this.menuImpl == "css") {
+      this.displayElem.empty();// clear the message
+    }
       
-      if (eventData.cmd) {
-        eventData.cmd.effect(this, eventData.source, eventData.target);
-      } else {
-        this.showMsg(eventData.source.name + " has no idea what to do!");
-      }
-      // update stats display so we can see effects of action
-      this.updateStats();
-
+    if (eventData.cmd) {
+      eventData.cmd.effect(this, eventData.source, eventData.target);
+    } else {
+      this.showMsg(eventData.source.name + " has no idea what to do!");
+    }
+    // update stats display so we can see effects of action
+    this.updateStats();
+    
       //if (self._animator) {
         // delay so you can read effects of attack:
      //   var readDelay = new Animation(12);
      //   readDelay.onFinish(function(){
      // this.executeNextFighterAction();
      //   });
-    }
   },
-  
-  onAttackTargetedEvent: function(eventData) {
-    var target = eventData.target;
-    if (this._autoRetarget) {
-      // If autoRetarget option is true, then if the target has died or
-      // fled before a single-target attack has resolved, a new random
-      // target is selected instead:
-      if (target.hasOwnProperty("_statBlock")) {
-        // meaning target is an individual ally/enemy and not a string code
-        if (target._dead || target.hasStatus("fled")) {
-          // no longer a valid target for most things;
-          // TODO EXCEPTION
-          // revive spells could target dead fighters
 
-          // If target was a monster, pick another monster; if target
-          // was a PC pick another PC.
+  onAttackDeclaredEvent: function(eventData) {
+
+    /* Check if this declared attack is still a legal attack.
+       If it's not, cancel the attack OR retarget it.
+       This is also where we turn attack target declaration strings
+       (like "all_enemies" or "random_enemy") into concrete object references.
+     */
+
+    // If attacker was disabled before their turn came, cancel the attack:
+    if (eventData.source.canAct() == false) {
+      eventData.target = null; // do not propagate to original target
+      this.eventService.cancelEvent("attack-targeted");
+      this.eventService.cancelEvent("attack");
+      this.eventService.cancelEvent("attack-resolved");
+      return;
+    }
+
+    // For single target attacks, check target is still valid:
+    var target = eventData.target;
+    if (target.hasOwnProperty("_statBlock")) {
+      // meaning target is an individual ally/enemy and not a string code
+      if (target._dead || target.hasStatus("fled")) {
+        // Cannot target battlers who have died or fled already.
+        // TODO other reasons something can no longer be targeted??
+        // TODO EXCEPTION
+        // revive spells could target dead fighters
+
+        if (this._autoRetarget) {
+          /* If autoRetarget option is true, select a new random target:
+           * If target was a monster, pick another monster; if target
+           * was a PC pick another PC. (this will retarget heals as well as attacks)*/
           if (this.monsters.indexOf(target) > -1 || this.deadMonsters.indexOf(target) > -1) {
-            console.log("AUTO RETARGETED TO random_monster");
             target = "random_monster";
           }
           else if (this._party.indexOf(target) > -1) {
             target = "random_pc";
           }
+        } else {
+          // If autoRetarget option is false, then we must cancel this now invalid attack.
+          eventData.target = null; // do not propagate to original target
+          this.eventService.cancelEvent("attack-targeted");
+          this.eventService.cancelEvent("attack");
+          this.eventService.cancelEvent("attack-resolved");
+          return;
         }
       }
     }
+    
+    // If the attack is going ahead, then interpret attack intention strings:
 
-    // choose random targets now, right before executing:
+    // For the "random" strings, choose random targets now, right before executing:
     if (target == "random_monster") {
       target = this.chooseRandomEnemy("monster");
       console.log("RANDOM MONSTER resulted in choice of " + target.name);
@@ -913,8 +941,8 @@ BattleSystem.prototype = {
       target = eventData.source;
     }
 
+    // Modify the event's target:
     eventData.target = target;
-    // EVENT TODO fire a new attack-targeted event specifying the new target!!!
   },
 
   onAttackResolvedEvent: function(eventData) {
@@ -922,11 +950,38 @@ BattleSystem.prototype = {
       this.eventService.clearQueue();
       // this.finishRound();
       // What we want to do here is clear out all events still pending in the queue!
-      // (and then push on a new end of battle event? maybe?
+      // (and then push on a new end of battle event? maybe?)
+      // (finishRound will be called because the event queue empties)
     }
   },
 
-  executeNextFighterAction: function() {
+  runEventQueue: function() {
+    // the heartbeat of the battle system, keeps events and animations flowing in the
+    // correct order.
+
+    if (this.eventService.queueIsEmpty()) {
+      this.finishRound();
+    } else {
+      this.eventService.processGameEvent();
+      console.log("I just processed an event, now checking for animation");
+      // after processing each event, play all queued animations before proceeding to next
+      // event.
+      var self = this;
+      if (this._animationQueue.length > 0) {
+        console.log("There is an animation, starting it now...");
+        // play all the animations here before calling runEventQueue as last callback
+        var nextAnimation = this._animationQueue.shift();
+        // Return here after each animation is done:
+        nextAnimation.onFinish(function() {  self.runEventQueue(); });
+        this._animator.runAnimation(nextAnimation);
+      } else {
+        // TODO is this a good place for a "yield" continuation?
+        this.runEventQueue();
+      }
+    }
+  },
+
+  /*executeNextFighterAction: function() {
     // first, make sure the fight hasn't ended:
     if (this.checkBattleEndConditions()) {
       // If battle has already ended mid-round,
@@ -940,10 +995,10 @@ BattleSystem.prototype = {
     // Skip any dead or otherwise incapacitated people
     // (they may have died, fled, etc. during the round before their
     // turn came up)
-    /*while (this._fightQueue.length > 0 && 
+    while (this._fightQueue.length > 0 && 
            !this._fightQueue[0].fighter.canAct()) {
       this._fightQueue.shift();
-    }*/
+    }
     
     // If fight queue is empty, then round is done
     if (this._fightQueue.length == 0) {
@@ -956,7 +1011,7 @@ BattleSystem.prototype = {
     var target = fightRecord.target;
     this._whoseTurn = fighter;
 
-    /*if (this._autoRetarget) {
+    if (this._autoRetarget) {
       // If autoRetarget option is true, then if the target has died or
       // fled before a single-target attack has resolved, a new random
       // target is selected instead:
@@ -1037,8 +1092,8 @@ BattleSystem.prototype = {
     } else {
       // if animation disabled, just go to next fighter action now:
       proceed();
-    }*/
-  },
+    }
+  },*/
 
   finishRound: function() {
     var activeParty = this.getActiveParty();
@@ -1201,8 +1256,13 @@ BattleSystem.prototype = {
     
   },
 
+  // DEPRECATED use queueAnimation instead:
   animate: function(animation) {
     this._animator.runAnimation(animation);
+  },
+
+  queueAnimation: function(animation) {
+    this._animationQueue.push(animation);
   },
 
   getAllies: function(fighter) {
