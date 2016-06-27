@@ -37,47 +37,44 @@ GameEventService.prototype = {
     this._eventQueue.unshift({name: eventName, data: eventData});
   },
 
-  // TODO a fireGameEvent where it just happens immediately?
+  fireGameEvent: function(eventName, eventData) {
+    // Call this to just proc the event immediately with no queueing
+    var receivers = this._subscribers[eventName];
+    if (!receivers) {
+      receivers = [];
+    }
+
+    $.each(receivers, function(i, receiver) {
+      receiver.takeEvent(eventName, eventData);
+    });
+
+    // also notify the source and target, if any, so that class-level handlers can be
+    // triggered for them:
+    if (eventData.source) { // not all events have sources
+      if (receivers.indexOf( eventData.source ) === -1) { // don't notify twice
+        eventData.source.takeEvent(eventName, eventData);
+      }
+    }
+    if (eventData.target) { // not all events have targets
+      if (receivers.indexOf( eventData.target ) === -1) { // don't notify twice
+        if (eventData.target.takeEvent) {
+          // this check necessitated by the times where target is an array of targets
+          // TODO instead of skipping it, notify every object in the array?
+          // OR put that array in a different field not named "target"
+          eventData.target.takeEvent(eventName, eventData);
+        } else {
+          console.log("WARN: Target with no takeEvent function is " + eventData.target);
+        }
+      }
+    }
+  },
 
   processGameEvent: function() {
     if (this.queueIsEmpty()) {
       return;
     }
     var event = this._eventQueue.shift();
-
-    var receivers = this._subscribers[event.name];
-    if (!receivers) {
-      receivers = [];
-    }
-
-    $.each(receivers, function(i, receiver) {
-      receiver.takeEvent(event.name, event.data);
-    });
-
-    // also notify the source and target, if any, so that class-level handlers can be
-    // triggered for them:
-    if (event.data.source) { // not all events have sources
-      if (receivers.indexOf( event.data.source ) === -1) { // don't notify twice
-        event.data.source.takeEvent(event.name, event.data);
-      }
-    }
-    if (event.data.target) { // not all events have targets
-      if (receivers.indexOf( event.data.target ) === -1) { // don't notify twice
-        if (!event.data.target.takeEvent) {
-          console.log("Target with no takeEvent function is " + event.data.target);
-        }
-        event.data.target.takeEvent(event.name, event.data);
-      }
-    }
-
-    /*var classReceivers = this._classSubscribers[event.name];
-    if (classReceivers) {
-      $.each(classReceivers, function(i, classReceiver) {
-        $.each(classReceiver._instances, function(j, receiver) {
-          receiver.takeEvent(event.name, event.data);
-        });
-      });
-    }*/
+    this.fireGameEvent(event.name, event.data);
   },
 
   queueIsEmpty: function() {
@@ -201,4 +198,3 @@ function GameEventSubscriberMixin(prototype) {
 // an additional handler for just playerCharacters responding to "damage" event
 // an additional handler for a player character with a specific ability responding to "damage" event.
 
-// Add tests: for clearQueue, cancelEvent, and fireEvent.

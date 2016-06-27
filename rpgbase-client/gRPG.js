@@ -82,6 +82,7 @@ var gRPG = (function(){
     
     this.loader = new AssetLoader();
     this.audioPlayer = new AudioPlayer();
+    this.eventService = new GameEventService();
     this.csvLoader = new CSVLoader(this.settings.basePath, []);
 
     // implement scaling:
@@ -485,6 +486,7 @@ var gRPG = (function(){
 
       var battleSystem = new BattleSystem(settings.menuBaseElem,
                                           this.canvas,
+                                          this.eventService,
                                           {defaultCmdSet: settings.stdBattleCmds,
                                            width: settings.screenWidth,
                                            height: settings.screenHeight,

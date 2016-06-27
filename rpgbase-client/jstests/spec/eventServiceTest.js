@@ -422,6 +422,8 @@ describe("Event Service (PubSub)", function() {
     expect(BattleBot.prototype._classEventHandlers["punch-target"].length).toEqual(0);
     expect(BattleBot.prototype._classEventHandlers["punch-resolve"].length).toEqual(0);
   });
+
+  // Add tests: for clearQueue, cancelEvent, and fireEvent.
 });
 
 

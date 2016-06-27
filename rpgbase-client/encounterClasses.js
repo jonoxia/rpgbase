@@ -231,9 +231,8 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
     this.onBeginRound(options.onBeginRound);
     //this._beginRoundCallback = options.onBeginRound;
   }
-  this._showMenuCallback = null;
   if (options.onShowMenu) {
-    this._showMenuCallback = options.onShowMenu;
+    this.onShowMenu(options.onShowMenu);
   }
 
   var frameDelay = 50; // default (very fast)
@@ -248,7 +247,7 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
   }
   this._wholePartyCmd = null;
 
-  this._effectHandlers = {};
+  //this._effectHandlers = {};
 
   this._freelyExit = false;
 
@@ -260,6 +259,12 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
     // TODO maybe we can deprecate this option?
     this._animator = null;
   }
+
+  // Subscribe my own default event handlers:
+  this.subscribeEvent(this.eventService, "attack", this.onAttackEvent);
+  this.subscribeEvent(this.eventService, "attack-declared", this.onAttackDeclaredEvent);
+  this.subscribeEvent(this.eventService, "attack-resolved", this.onAttackResolvedEvent);
+
 
   // Stuff to always do when battle ends:
   this.onClose(function() {
@@ -289,7 +294,6 @@ BattleSystem.prototype = {
   },
 
   showMenuForPC: function(pc) {
-    console.log("Show menu for pc called");
     // kind of a hack to allow non-index-based access to menus
     // in case some pcs are dead:
     var index = this._party.indexOf(pc);
@@ -302,9 +306,7 @@ BattleSystem.prototype = {
     }
     this.saveStackDepth();
 
-    if (this._showMenuCallback) {
-      this._showMenuCallback(this, pc);
-    }
+    this.eventService.fireGameEvent("menu-shown", {pc: pc});
   },
 
   choosePCCommand: function(pc, cmd, target) {
@@ -454,7 +456,7 @@ BattleSystem.prototype = {
   },
 
   onShowMenu: function(callback) {
-    this._showMenuCallback = callback;
+    this.subscribeEvent(this.eventService, "menu-shown", callback);
   },
 /*
   onEndBattle: function(callback) {
@@ -492,7 +494,7 @@ BattleSystem.prototype = {
     this.clearMsg();
     this.landType = landType;
     this._attackSFX = null;
-    this._whoseTurn = null; // currently only used to target counters
+    //this._whoseTurn = null; // currently only used to target counters
     this.encounter = encounter;
     this._fixedDisplayBoxes = [];
     this.peacefulResolutionText = null;
@@ -579,20 +581,26 @@ BattleSystem.prototype = {
       // just start the round!
       afterAnimation();
     }*/
-    this.eventService.queueGameEvent("start-battle", {});
-    /* will probably have to do some kind of do-se-do here where the start-battle handler
-     * kicks off an animation, and when the animation's done it fires back a
-     * "start-battle-animation-done" event that the game engine listens for...
-     * maybe we want something like a processGameEventWhenAnimationDone ?
-     * or an animation-linked event-pump that waits for animation to be done, then
-     * processes the next game event, indefinitely?
-     */
-    
-    this.eventService.processGameEvent();
+    this.eventService.fireGameEvent("start-battle", {});
+
     if (encounter.start) {
-      encounter.start(self, self.player); // this could also be a "start-battle" listener?
+      encounter.start(self, self.player); // TODO this could be rewritten as a
+      // "start-battle" listener? (especially if start-battle event data included an
+      // encounter reference)
     }
-    self.showStartRoundMenu();
+
+    if (this._animationQueue.length > 0) {
+      // In case any start-battle listener pushed an animation onto our queue:
+      // play that animation before proceeding. TODO this duplicates logic from
+      // runEventQueue; could we use that somehow?
+
+      var nextAnimation = this._animationQueue.shift();
+      // TODO this only handles one animation, would there ever be multiple?
+      nextAnimation.onFinish(function() {  self.showStartRoundMenu(); });
+      this._animator.runAnimation(nextAnimation);
+    } else {
+      self.showStartRoundMenu();
+    }
   },
 
   updateStats: function() {
@@ -661,15 +669,14 @@ BattleSystem.prototype = {
     this._gameOverCallback = callback;
   },
 
-  onEffect: function(effectName, callback) {
+  /*onEffect: function(effectName, callback) {
     // callback should take target and data, and do things using
     // target.setStat or target.modifyStat.
     this._effectHandlers[effectName] = callback;
     // TODO allow more than one??
-  },
+  },*/
 
   showStartRoundMenu: function() {
-    console.log("Show start round menu called");
     // Adjust PC menu contents in case there were any changes last round
     // (e.g. single-use items used up)
     this.pcMenus = [];
@@ -716,7 +723,6 @@ BattleSystem.prototype = {
   },
 
   showFirstPCMenu: function() {
-    console.log("Show first pc menu called");
     var firstPC = this.getNextActingPC(null);
     if (firstPC) {
       this.showMenuForPC(firstPC);
@@ -767,8 +773,7 @@ BattleSystem.prototype = {
     var fighters = activeParty.concat(this.monsters); //everyone
     var i;
 
-    this.eventService.queueGameEvent("begin-round", {});
-    this.eventService.processGameEvent(); // should we have a "fireGameEvent"?
+    this.eventService.fireGameEvent("begin-round", {});
 
     //if (this._beginRoundCallback) {
     //  this._beginRoundCallback(this, fighters);
@@ -924,7 +929,6 @@ BattleSystem.prototype = {
     // For the "random" strings, choose random targets now, right before executing:
     if (target == "random_monster") {
       target = this.chooseRandomEnemy("monster");
-      console.log("RANDOM MONSTER resulted in choice of " + target.name);
     } else if (target == "random_pc") {
       target = this.chooseRandomEnemy("pc");
     }
@@ -934,7 +938,6 @@ BattleSystem.prototype = {
       target = this.getAllies(eventData.source);
     } else if (target == "all_enemies") {
       target = this.getEnemies(eventData.source);
-      console.log("All enemies of " + eventData.source.name + " is array: "+ target);
     }
     else if (target == "self") {
       // target yourself
@@ -963,20 +966,23 @@ BattleSystem.prototype = {
       this.finishRound();
     } else {
       this.eventService.processGameEvent();
-      console.log("I just processed an event, now checking for animation");
       // after processing each event, play all queued animations before proceeding to next
       // event.
       var self = this;
       if (this._animationQueue.length > 0) {
-        console.log("There is an animation, starting it now...");
         // play all the animations here before calling runEventQueue as last callback
-        var nextAnimation = this._animationQueue.shift();
+        this._attackSFX = this._animationQueue.shift();
         // Return here after each animation is done:
-        nextAnimation.onFinish(function() {  self.runEventQueue(); });
-        this._animator.runAnimation(nextAnimation);
+        this._attackSFX.onFinish(function() { 
+          self._attackSFX = null;
+          self.runEventQueue();
+        });
+        this._animator.runAnimation(this._attackSFX);
       } else {
         // TODO is this a good place for a "yield" continuation?
         this.runEventQueue();
+        // TODO JS doesn't optimize tail recursion so this ends up making the call stack
+        // really deep. hmmm.
       }
     }
   },
@@ -1104,11 +1110,7 @@ BattleSystem.prototype = {
       // any special end-of-round effects (e.g. poison damage)
     }
 
-    this.eventService.queueGameEvent("end-round", {});
-    this.eventService.processGameEvent();
-    /*if (this._endRoundCallback) {
-      this._endRoundCallback(this, fighters);
-    }*/
+    this.eventService.fireGameEvent("end-round", {fighters: fighters});
 
     if (this._wholePartyCmd) {
       if (this._wholePartyCmd.onEndRound) {
@@ -1213,7 +1215,8 @@ BattleSystem.prototype = {
     //endBattleText.setPos(16, 16);
   },
 
-  sendEffect: function(target, effectName, data) {
+  // so deprecated
+  /*sendEffect: function(target, effectName, data) {
     // Identify source of effect as whichever fighter just went:
     data.source = this._whoseTurn;
     
@@ -1235,7 +1238,7 @@ BattleSystem.prototype = {
 
     return result;
     // TODO can this return stuff??
-  },
+  },*/
 
   removeFromBattle: function(target) {
     // dead fighters will be skipped during command input and execution
@@ -1609,7 +1612,7 @@ var BattlerMixin = function() {
   this.clearTempStatMods = function() {
     this._statMods = [];
   };
-  this.onEffect = function(effectName, callback) {
+  /*this.onEffect = function(effectName, callback) {
     this._effectHandlers[effectName] = callback;
   };
   this.takeEffect = function(effectName, data) {
@@ -1620,7 +1623,7 @@ var BattlerMixin = function() {
     // otherwise, return (possibly modified) data to continue
     // with the default handler.
     return data;
-  };
+  };*/
   this.setStatus = function(name, val) {
     this._stati[name] = val; // should be true or false only
   };
@@ -1648,7 +1651,7 @@ function Monster(img, statBlock, cmdList, effectHandlers, aiCallback) {
   this.y = null;
   this.name = "A Monster";
   this._commands = cmdList;
-  this._effectHandlers = effectHandlers; // shallow copy, not cloned
+  //this._effectHandlers = effectHandlers; // shallow copy, not cloned
   this._aiCallback = aiCallback;
 };
 Monster.prototype = {

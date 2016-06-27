@@ -52,10 +52,6 @@ describe("Battle system", function() {
     });
     bs.onDrawBattle(function() {}); // don't draw anything
 
-    bs.subscribeEvent(bs.eventService, "attack", bs.onAttackEvent);
-    bs.subscribeEvent(bs.eventService, "attack-declared", bs.onAttackDeclaredEvent);
-    bs.subscribeEvent(bs.eventService, "attack-resolved", bs.onAttackResolvedEvent);
-
     var hero = new StubPC("Hero");
     hero.setStats({"hp": 10});
     stubPlayer = {
@@ -320,6 +316,35 @@ describe("Battle system", function() {
       bs.eventService.unsubscribeClass(Monster);
     });
   });
+  it("Should play any startBattle animation before starting the battle", function() {
+    // use showMenuCallback
+
+    runs(function() {
+      bs.onStartBattle(function(eventData) {
+        var anim = new Animation(3);
+        anim.onFrame(function(frameNo) {
+          eventLog.push("Start battle animation frame number " + frameNo);
+        });
+        this.queueAnimation(anim);
+      });
+      
+      bs.onShowMenu(function(eventData) {
+        eventLog.push("Menu shown for " + eventData.pc.name);
+      });
+
+      bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0);
+    });
+
+    waits(1000);
+    
+    runs(function() {
+      expect(eventLog.length).toEqual(4);
+      expect(eventLog[0]).toEqual("Start battle animation frame number 1");
+      expect(eventLog[1]).toEqual("Start battle animation frame number 2");
+      expect(eventLog[2]).toEqual("Start battle animation frame number 3");
+      expect(eventLog[3]).toEqual("Menu shown for Hero");
+    });
+  });
 
 
   /* TODO test that whatever message text we tell the battle system to display gets
@@ -327,7 +352,7 @@ describe("Battle system", function() {
    * test that we can start an encounter with different versions of an encounter object.
    *
    * Test that we can't exit battle until end of battle text is done scrolling, then we can.
-   *
+   * Test that target strings like "all_enemies" are processed correctly
    * Test that we skip turns of battlers who died or fled before their turn came up
    * Test that round ends after everybody goes once.
    * Test that round ends early if all remaining battlers have died or fled.
@@ -360,6 +385,7 @@ describe("Battle system", function() {
    *
    * I think we can get rid of the battle system's "onEffect" and "sendEffect" functions,
    * replacing them with eventService calls.
+   *
    */
 
 
