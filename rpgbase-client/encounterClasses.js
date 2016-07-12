@@ -158,8 +158,6 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
   this._init(htmlElem, options.cursorImg, options.width, options.height);
   this._ctx = canvas.getContext("2d");
   this.hide();
-  // this.endBattleCallbacks = []; // deprecated
-  // use onClose instead
   this._attackSFX = null;
   this._statDisplayType = "battle";
   this._battleOver = false;
@@ -200,39 +198,22 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
   if (options.onRollInitiative) {
     this._initiativeCallback = options.onRollInitiative;
   }
-  //this._startBattleCallback = null;
+  this._randomTargetCallback = null;
+
+
+  // TODO the following options are all standard eventService handlers; we
+  // could combine them.
   if (options.onStartBattle) {
     this.onStartBattle(options.onStartBattle);
-    //this._startBattleCallback = options.onStartBattle;
   }
   if (options.onEndBattle) {
     this.onEndBattle(options.onEndBattle);
   }
-  /*this._victoryCallback = null;
-  if (options.onVictory) {
-    this._victoryCallback = options.onVictory;
-  }
-  this._defeatCallback = null;
-  if (options.onDefeat) {
-    this._defeatCallback = options.onDefeat;
-  }
-  this._peacefulCallback = null;
-  if (options.onPeace) {
-    this._peacefulCallback = options.onPeace;
-  }*/
-  this._randomTargetCallback = null;
-
-  //this._endRoundCallback = null;
   if (options.onEndRound) {
     this.onEndRound(options.onEndRound);
-    //this._endRoundCallback = options.onEndRound;
   }
-  // TODO refactor to have a general purpose event listener
-  // registry instead of all these specific named methods!
-  //this._beginRoundCallback = null;
   if (options.onBeginRound) {
     this.onBeginRound(options.onBeginRound);
-    //this._beginRoundCallback = options.onBeginRound;
   }
   if (options.onShowMenu) {
     this.onShowMenu(options.onShowMenu);
@@ -249,9 +230,6 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
     this._rootMenu = null;
   }
   this._wholePartyCmd = null;
-
-  //this._effectHandlers = {};
-
   this._freelyExit = false;
 
   if (frameDelay > 0) {
@@ -443,7 +421,9 @@ BattleSystem.prototype = {
   onChooseRandomTarget: function(callback) {
     this._randomTargetCallback = callback;
   },
- 
+
+  // The following five methods are all standard event service handlers --
+  // these could easily be combined into one function.
   onStartBattle: function(callback) {
     this.subscribeEvent(this.eventService, "start-battle", callback);
   },
@@ -454,22 +434,15 @@ BattleSystem.prototype = {
 
   onEndRound: function(callback) {
     this.subscribeEvent(this.eventService, "end-round", callback);
-    //this._endRoundCallback = callback;
   },
 
   onBeginRound: function(callback) {
     this.subscribeEvent(this.eventService, "begin-round", callback);
-    //this._beginRoundCallback = callback;
   },
 
   onShowMenu: function(callback) {
     this.subscribeEvent(this.eventService, "menu-shown", callback);
   },
-/*
-  onEndBattle: function(callback) {
-  // deprecated
-    this.endBattleCallbacks.push(callback);
-  },*/ 
 
   _instantiateMonsters: function(encounterGroups) {
     // Instantiate monsters from monters types and give each monster a letter for a name:
@@ -506,7 +479,7 @@ BattleSystem.prototype = {
     this._fixedDisplayBoxes = [];
     this.peacefulResolutionText = null;
     this.monsters = [];
-
+    this._endBattleText = "";
 
     var encounterGroups = null;
     // A mixed-type encounter could look like this:
@@ -573,21 +546,6 @@ BattleSystem.prototype = {
       this._animator.start();
     }
 
-    // startBattleCallback needs to itself take a callback!
-    /*var afterAnimation = function() {
-      if (encounter.start) {
-        encounter.start(self, self.player);
-      }
-      self.showStartRoundMenu();
-    };
-
-    if (this._startBattleCallback) {
-      // do any start-battle animation
-      this._startBattleCallback(this, afterAnimation);
-    } else {
-      // just start the round!
-      afterAnimation();
-    }*/
     this.eventService.fireGameEvent("start-battle", {});
 
     if (encounter.start) {
@@ -660,29 +618,9 @@ BattleSystem.prototype = {
     this._initiativeCallback = callback;
   },
   
-  // So deprecated:
-  /*onVictory: function(callback) {
-    this._victoryCallback = callback;
-  },
-
-  onDefeat: function(callback) {
-    this._defeatCallback = callback;
-  },
-
-  onPeace: function(callback) {
-    this._peacefulCallback = callback;
-  },*/
-  
   onGameOver: function(callback) {
     this._gameOverCallback = callback;
   },
-
-  /*onEffect: function(effectName, callback) {
-    // callback should take target and data, and do things using
-    // target.setStat or target.modifyStat.
-    this._effectHandlers[effectName] = callback;
-    // TODO allow more than one??
-  },*/
 
   showStartRoundMenu: function() {
     // Adjust PC menu contents in case there were any changes last round
@@ -783,10 +721,6 @@ BattleSystem.prototype = {
 
     this.eventService.fireGameEvent("begin-round", {});
 
-    //if (this._beginRoundCallback) {
-    //  this._beginRoundCallback(this, fighters);
-    //}
-
     // Tick down all temporary stat mods - they expire now if
     // their duration has run out
     for (i = 0; i < fighters.length; i++) {
@@ -828,8 +762,7 @@ BattleSystem.prototype = {
 
     // hide menus
     this.emptyMenuStack();
-    // build list of {fighter, cmd, target} objects:
-    //this._fightQueue = [];
+    // build up an event queue of attacks:
     for (i = 0; i < fighters.length; i++) {
       if (fighters[i].canAct()) {
         var action = fighters[i].getLockedInCmd();
@@ -843,20 +776,13 @@ BattleSystem.prototype = {
         this.eventService.queueGameEvent("attack-targeted", attackEventData);
         this.eventService.queueGameEvent("attack", attackEventData);
         this.eventService.queueGameEvent("attack-resolved", attackEventData);
-        //this._fightQueue.push({fighter: fighters[i],
-        //                       cmd: action.cmd,
-        //                       target: action.target});
       }
     }
     this.runEventQueue(); // this will call finishRound() when it's done.
-    // this.executeNextFighterAction();
   },
 
   outOfSequenceAction: function(fighter, cmd, target) {
-    // stick this on beginning of fight queue
-    //this._fightQueue.unshift({fighter: fighter,
-    //                          cmd: cmd,
-    //                          target: target});
+    // sticks an attack on the beginning of the attack queue:
 
     // TODO should i actually stack declared-, targeted-, attack, and then resolved-?
     this.eventService.stackEvent("attack", {source: fighter, cmd: cmd, target: target});
@@ -876,12 +802,6 @@ BattleSystem.prototype = {
     // update stats display so we can see effects of action
     this.updateStats();
     
-      //if (self._animator) {
-        // delay so you can read effects of attack:
-     //   var readDelay = new Animation(12);
-     //   readDelay.onFinish(function(){
-     // this.executeNextFighterAction();
-     //   });
   },
 
   onAttackDeclaredEvent: function(eventData) {
@@ -995,120 +915,6 @@ BattleSystem.prototype = {
     }
   },
 
-  /*executeNextFighterAction: function() {
-    // first, make sure the fight hasn't ended:
-    if (this.checkBattleEndConditions()) {
-      // If battle has already ended mid-round,
-      // don't continue executing.
-      this.finishRound();
-      return;
-    }
-    //if (this.menuImpl == "css") {
-    //  this.displayElem.empty();// clear the message
-    //}
-    // Skip any dead or otherwise incapacitated people
-    // (they may have died, fled, etc. during the round before their
-    // turn came up)
-    while (this._fightQueue.length > 0 && 
-           !this._fightQueue[0].fighter.canAct()) {
-      this._fightQueue.shift();
-    }
-    
-    // If fight queue is empty, then round is done
-    if (this._fightQueue.length == 0) {
-      this.finishRound();
-      return;
-    }
-    var fightRecord = this._fightQueue.shift();
-    var fighter = fightRecord.fighter;
-    var cmd = fightRecord.cmd;
-    var target = fightRecord.target;
-    this._whoseTurn = fighter;
-
-    if (this._autoRetarget) {
-      // If autoRetarget option is true, then if the target has died or
-      // fled before a single-target attack has resolved, a new random
-      // target is selected instead:
-      if (target.hasOwnProperty("_statBlock")) {
-        // meaning target is an individual ally/enemy and not a string code
-        if (target._dead || target.hasStatus("fled")) {
-          // no longer a valid target for most things;
-          // TODO EXCEPTION
-          // revive spells could target dead fighters
-
-          // If target was a monster, pick another monster; if target
-          // was a PC pick another PC.
-          if (this.monsters.indexOf(target) > -1 || this.deadMonsters.indexOf(target) > -1) {
-            target = "random_monster";
-          }
-          else if (this._party.indexOf(target) > -1) {
-            target = "random_pc";
-          }
-        }
-      }
-    }
-
-    // choose random targets now, right before executing:
-    if (target == "random_monster") {
-      target = this.chooseRandomEnemy("monster");
-    } else if (target == "random_pc") {
-      target = this.chooseRandomEnemy("pc");
-    }
-    // Turn "all allies" and "all enemies" target types into
-    // arrays:
-    else if (target == "all_allies") {
-      target = this.getAllies(fighter);
-    } else if (target == "all_enemies") {
-      target = this.getEnemies(fighter);
-      console.log("All enemies of " + fighter.name + " is array: "+ target);
-    }
-    else if (target == "self") {
-      // target yourself
-      target = fighter;
-    }*/
-
-    // here's what to do after animation -- apply the effect of command,
-    // update stats, and go on to next fighter action.
-    /*var self = this;
-    var proceed = function() {
-      self._attackSFX = null; // clear the attack sfx if any
-
-      if (cmd) {
-        cmd.effect(self, fighter, target);
-      } else {
-        self.showMsg(fighter.name + " has no idea what to do!");
-      }
-      // update stats display so we can see effects of action
-      self.updateStats();
-
-      if (self._animator) {
-        // delay so you can read effects of attack:
-        var readDelay = new Animation(12);
-        readDelay.onFinish(function(){
-          self.executeNextFighterAction();
-        });
-        self._animator.runAnimation(readDelay);
-      } else {
-        self.executeNextFighterAction();
-      }
-    };
-
-    // run animation for this action, then apply its effects, then 
-    // go on to execute next action.
-    if (this._animator) {
-      if (cmd.animate) {
-        this._attackSFX = cmd.animate(this, fighter, target);
-      } else {
-        this._attackSFX = new Animation(10);
-      }
-      this._attackSFX.onFinish(proceed);
-      this._animator.runAnimation(this._attackSFX);
-    } else {
-      // if animation disabled, just go to next fighter action now:
-      proceed();
-    }
-  },*/
-
   finishRound: function() {
     var activeParty = this.getActiveParty();
     var fighters = activeParty.concat(this.monsters); //everyone
@@ -1135,6 +941,8 @@ BattleSystem.prototype = {
   },
 
   addEndBattleText: function(text) {
+    /* Appends given text to the messages that the player will scroll through
+     * after the battle resolves before returning to the map.*/
     this._endBattleText += text;
   },
 
@@ -1151,8 +959,6 @@ BattleSystem.prototype = {
     this._attackSFX = null;
     this._battleOver = true;
     this.clearMsg();
-
-    this._endBattleText = "";
 
     /* TODO another error:  topMenu.getPos is not a function
      * that appears to be the result of pushing a menu onto the
@@ -1213,31 +1019,6 @@ BattleSystem.prototype = {
     });
     //endBattleText.setPos(16, 16);
   },
-
-  // so deprecated
-  /*sendEffect: function(target, effectName, data) {
-    // Identify source of effect as whichever fighter just went:
-    data.source = this._whoseTurn;
-    
-    // 1. if target has a handler for this name, call that
-    // (target.takeEffect)
-
-    data = target.takeEffect(effectName, data);
-    // takeEffect will return null to mean prevent default, or
-    // will return modified data....
-    if (!data) {
-      return;
-    }
-
-    // 2. if not, if i have a default handler, call the default handler
-    var result;
-    if (this._effectHandlers[effectName]) {
-      var result = this._effectHandlers[effectName](target, data);
-    }
-
-    return result;
-    // TODO can this return stuff??
-  },*/
 
   removeFromBattle: function(target) {
     // dead fighters will be skipped during command input and execution
