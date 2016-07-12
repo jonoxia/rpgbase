@@ -84,11 +84,8 @@ describe("Battle system", function() {
     bs.onEndRound(function(eventData) {
       eventLog.push("Round ended.");
     });
-    bs.onVictory(function(eventData) {
+    bs.onEndBattle(function(eventData) {
       eventLog.push("Hero won battle.");
-      return "End battle text"; // this one MUST return something
-      // which is a bit awkward; i'd rather be able to have any callback push
-      // any text it wants onto some kind of battle system display queue.
     });
 
     bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0); // 0 is land type, don't care
@@ -104,7 +101,7 @@ describe("Battle system", function() {
     expect(eventLog[1]).toEqual("Round started.");
     expect(eventLog[2]).toEqual("Hero fights sworm A");
     expect(eventLog[3]).toEqual("sworm A is slain.");
-    expect(eventLog[4]).toEqual("Hero won battle."); // TODO is sayng this twice
+    expect(eventLog[4]).toEqual("Hero won battle.");
     expect(eventLog[5]).toEqual("Round ended.");
     // interesting that roundEnded still gets called even if hero wins first...
   });
@@ -345,6 +342,43 @@ describe("Battle system", function() {
       expect(eventLog[3]).toEqual("Menu shown for Hero");
     });
   });
+
+  it("Should scroll any end-of-battle text given by end-battle handlers", function() {
+
+    bs.subscribeEvent(bs.eventService, "end-battle", function(eventData) {
+      eventLog.push("Battle ended with result: " + eventData.resolution);
+      if (eventData.resolution == "win") {
+        eventData.battle.addEndBattleText("You got 1 EXP and 1 Gold!");
+      }
+    });
+
+    bs.onClose(function() {
+      // TODO the onClose handler doesn't use the event service yet -- rewrite it to
+      // do so (?)
+      eventLog.push("Battle UI closed.");
+    });
+
+    bs.startBattle(stubPlayer, {number: 1, type: sworm}, 0);
+    bs.choosePCCommand(stubPlayer.getParty()[0], fight, "random_monster");
+
+    expect(eventLog.length).toEqual(3);
+    expect(eventLog[0]).toEqual("Hero fights sworm A");
+    expect(eventLog[1]).toEqual("sworm A is slain.");
+    expect(eventLog[2]).toEqual("Battle ended with result: win");
+
+    // now check what's in the end-battle text:
+    expect($(".msg-display").text()).toEqual("You got 1 EXP and 1 Gold!");
+
+    // then process some button presses to scroll through the end text...
+    // make sure we get the battle system onClose message when the text is done scrolling.
+    bs.handleKey(CONFIRM_BUTTON);
+    expect(eventLog.length).toEqual(4);
+    expect(eventLog[0]).toEqual("Hero fights sworm A");
+    expect(eventLog[1]).toEqual("sworm A is slain.");
+    expect(eventLog[2]).toEqual("Battle ended with result: win");
+    expect(eventLog[3]).toEqual("Battle UI closed.");
+  });
+
 
 
   /* TODO test that whatever message text we tell the battle system to display gets

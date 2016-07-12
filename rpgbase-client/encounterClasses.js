@@ -205,7 +205,10 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
     this.onStartBattle(options.onStartBattle);
     //this._startBattleCallback = options.onStartBattle;
   }
-  this._victoryCallback = null;
+  if (options.onEndBattle) {
+    this.onEndBattle(options.onEndBattle);
+  }
+  /*this._victoryCallback = null;
   if (options.onVictory) {
     this._victoryCallback = options.onVictory;
   }
@@ -216,7 +219,7 @@ function BattleSystem(htmlElem, canvas, eventService, options) {
   this._peacefulCallback = null;
   if (options.onPeace) {
     this._peacefulCallback = options.onPeace;
-  }
+  }*/
   this._randomTargetCallback = null;
 
   //this._endRoundCallback = null;
@@ -445,6 +448,10 @@ BattleSystem.prototype = {
     this.subscribeEvent(this.eventService, "start-battle", callback);
   },
 
+  onEndBattle: function(callback) {
+    this.subscribeEvent(this.eventService, "end-battle", callback);
+  },
+
   onEndRound: function(callback) {
     this.subscribeEvent(this.eventService, "end-round", callback);
     //this._endRoundCallback = callback;
@@ -652,8 +659,9 @@ BattleSystem.prototype = {
   onRollInitiative: function(callback) {
     this._initiativeCallback = callback;
   },
-
-  onVictory: function(callback) {
+  
+  // So deprecated:
+  /*onVictory: function(callback) {
     this._victoryCallback = callback;
   },
 
@@ -663,7 +671,7 @@ BattleSystem.prototype = {
 
   onPeace: function(callback) {
     this._peacefulCallback = callback;
-  },
+  },*/
   
   onGameOver: function(callback) {
     this._gameOverCallback = callback;
@@ -1126,6 +1134,10 @@ BattleSystem.prototype = {
     }
   },
 
+  addEndBattleText: function(text) {
+    this._endBattleText += text;
+  },
+
   endBattle: function(resolutionType) {
     // Trigger a ScrollingTextBox to come up
     // with end of battle messages; closing the ScrollingTextBox
@@ -1140,6 +1152,8 @@ BattleSystem.prototype = {
     this._battleOver = true;
     this.clearMsg();
 
+    this._endBattleText = "";
+
     /* TODO another error:  topMenu.getPos is not a function
      * that appears to be the result of pushing a menu onto the
      * menu stack just as the menu stack is emptied. */
@@ -1150,68 +1164,45 @@ BattleSystem.prototype = {
       this._party[i].clearTempStatMods();
     }
 
-    /* TODO rewrite this so that there's just an endBattle event fired,
-     * with "win" "lose" "run" etc. as a resolution field of the eventData.
-     * Have a method that the handlers can call on battleSystem to append text to
-     * the end-of-battle text scroll. */
-
     this.eventService.fireGameEvent("end-battle", {battle: this,
-                                                   resolution: resolutionType});
+                                                   resolution: resolutionType,
+                                                   aliveMonsters: this.monsters,
+                                                   deadMonsters: this.deadMonsters});
 
-    var endBattleMessage;
     switch (resolutionType) {
     case "win":
-      if (this._victoryCallback) {
-        // Regular battle victory -- call victory callback, and use its return value
-        // for the end of battle text.
-        endBattleMessage = this._victoryCallback(this.player,
-                                                 this.deadMonsters);
-      } else {
-        endBattleMessage = "You won! Let's assume there is a whole lot of end battle text, including how many experience points you got, how much gold you got, whether anybody went up a level, and all that jazz.";
-      }
-
       /* If there's a special encounter in effect, call its win callback, AND replace the
        * normal end-of-battle text with the special encounter end-of-battle-text (i.e.
        * whatever is returned.) */
       if (this.encounter.win) {
         var specialMessage = this.encounter.win(this, this.player);
         if (specialMessage != null) {
-          endBattleMessage = specialMessage;
+          this._endBattleText = specialMessage;
         }
       }
       break;
     case "lose":
-        if (this._defeatCallback) {
-            endBattleMessage = this._defeatCallback();
-        } else {
-            endBattleMessage = "YOU LOST! IT IS VERY SAD. DEFEAT TEXT GOES HERE.";
-        }
       if (this.encounter.lose) {
         // special encounter lose results
         var specialMessage  = this.encounter.lose(this, this.player);
         if (specialMessage != null) {
-          endBattleMessage = specialMessage;
+          this._endBattleText = specialMessage;
         }
       }
       break;
-    case "run":
-      endBattleMessage = "YOU BRAVELY RAN AWAY, AWAY!";
-      break;
-    case "peace":
-      // A "victory" where the player successfully negotiated a peaceful resolution instead
-      // of killing all monsters.
-      if (this._peacefulCallback) {
-        // there can be some dead and some alive monsters in this case, so pass both
-        // lists to the callback:
-        endBattleMessage = this._peacefulCallback(this.player,
-                                                  this.monsters,
-                                                  this.deadMonsters);
-      } else {
-        endBattleMessage = this.peacefulResolutionText || "THE ENCOUNTER RESOLVES PEACEFULLY.";
-      }
-      break;
     }
-    var endBattleText = this.scrollText(endBattleMessage);
+
+    if (this._endBattleText === "") {
+      // if userland end-battle handlers didn't set any end battle text, use a default:
+      var defaultMsgs = {"win": "You won! Let's assume there is a whole lot of end battle text, including how many experience points you got, how much gold you got, whether anybody went up a level, and all that jazz.",
+                         "lose":  "YOU LOST! IT IS VERY SAD. DEFEAT TEXT GOES HERE.",
+                         "peace": "THE ENCOUNTER RESOLVES PEACEFULLY.",
+                         "run": "YOU BRAVELY RAN AWAY, AWAY!"};
+      this._endBattleText = defaultMsgs[resolutionType];
+    }
+
+
+    var endBattleText = this.scrollText(this._endBattleText);
     var self = this;
     endBattleText.onClose(function() {
       self._freelyExit = true;
@@ -1274,6 +1265,20 @@ BattleSystem.prototype = {
 
   queueAnimation: function(animation) {
     this._animationQueue.push(animation);
+  },
+
+  queueMsg: function(msgText) {
+    /* Unlike showMsg, this shows the given message for a certain period of time
+     * before proceeding with the battle. If you queueMsg multiple times then
+     * the messages appear in sequence. Use it to make text more readable. */
+    var anim = new Animation(12);
+    var self = this;
+    anim.onFrame(function(frameNum) {
+      if (frameNum == 1) {
+        self.showMsg(msgText);
+      }
+    });
+    this.queueAnimation(anim);
   },
 
   getAllies: function(fighter) {
