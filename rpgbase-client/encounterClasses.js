@@ -1126,7 +1126,7 @@ BattleSystem.prototype = {
     }
   },
 
-  endBattle: function(winLoseRun) {
+  endBattle: function(resolutionType) {
     // Trigger a ScrollingTextBox to come up
     // with end of battle messages; closing the ScrollingTextBox
     // closes the battle menu system.
@@ -1140,9 +1140,9 @@ BattleSystem.prototype = {
     this._battleOver = true;
     this.clearMsg();
 
-    // TODO another error:  topMenu.getPos is not a function
-    // that appears to be the result of pushing a menu onto the
-    // menu stack just as the menu stack is emptied.
+    /* TODO another error:  topMenu.getPos is not a function
+     * that appears to be the result of pushing a menu onto the
+     * menu stack just as the menu stack is emptied. */
 
     // Clear all temporary stat mods that happened to PCs during
     // the battle - these should not persist:
@@ -1150,8 +1150,16 @@ BattleSystem.prototype = {
       this._party[i].clearTempStatMods();
     }
 
+    /* TODO rewrite this so that there's just an endBattle event fired,
+     * with "win" "lose" "run" etc. as a resolution field of the eventData.
+     * Have a method that the handlers can call on battleSystem to append text to
+     * the end-of-battle text scroll. */
+
+    this.eventService.fireGameEvent("end-battle", {battle: this,
+                                                   resolution: resolutionType});
+
     var endBattleMessage;
-    switch (winLoseRun) {
+    switch (resolutionType) {
     case "win":
       if (this._victoryCallback) {
         // Regular battle victory -- call victory callback, and use its return value
@@ -1208,7 +1216,7 @@ BattleSystem.prototype = {
     endBattleText.onClose(function() {
       self._freelyExit = true;
       self.close();
-      if (winLoseRun == "lose" && self._gameOverCallback) {
+      if (resolutionType == "lose" && self._gameOverCallback) {
         self._gameOverCallback();
       }
     });
