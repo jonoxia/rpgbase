@@ -124,9 +124,9 @@ Inventory.prototype = {
     // If it contains an item with the given name, then returns a
     // reference to it. otherwise returns null.
     for (var i = 0; i < this._itemList.length; i++) {
-        if (this._itemList[i].getName() == name) {
-            return this._itemList[i];
-        }
+      if (this._itemList[i].getName() == name) {
+        return this._itemList[i];
+      }
     }
     return null;
 
@@ -137,9 +137,9 @@ Inventory.prototype = {
     // otherwise false.
     var copiesFound = 0
     for (var i = 0; i < this._itemList.length; i++) {
-        if (this._itemList[i].getName() == name) {
-            copiesFound ++;
-        }
+      if (this._itemList[i].getName() == name) {
+        copiesFound ++;
+      }
     }
     return (copiesFound >= number);
   }
