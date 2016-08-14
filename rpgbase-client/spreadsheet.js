@@ -18,8 +18,15 @@ var Spreadsheet = (function(Tabletop){
   Spreadsheet.prototype = {
     getWorksheetAsArrays: function(worksheetName) {
       var sheet = this.tabletopInfo[worksheetName];
-
-      return [sheet.column_names].concat(sheet.toArray());
+      /* Unfortunately tabletop always reads as dictionaries with column titles as keys.
+       * Which means that the top row of a map gets interpreted as a set of column names
+       * even if we convert it toArray. I don't see an option to make Tabletop work
+       * differently, so as a workaround, for now we need to add a row at the top of
+       * each map consisting of unique columnn numbers. We'll then throw this row away
+       * after parsing.
+       */
+	//return [sheet.column_names].concat(sheet.toArray());
+       return sheet.toArray();
     },
     getWorksheetAsDicts: function(worksheetName) {
       return this.tabletopInfo[worksheetName].elements;
