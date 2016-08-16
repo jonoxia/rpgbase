@@ -1,17 +1,23 @@
 // http://javascriptweblog.wordpress.com/2011/05/31/a-fresh-look-at-javascript-mixins/
 
 function NPC(spriteSheet, mapScreen) {
-  this.defineSprite(spriteSheet,
-                    this.spriteDimensions.width,
-                    this.spriteDimensions.height,
-                    this.spriteDimensions.offsetX,
-                    this.spriteDimensions.offsetY);
-  this._talkCallback = null;
-  this._wanders = false;
-  this._wanderloop = null;
-  this._mapScreen = mapScreen;
+  if (spriteSheet) {
+    this._npcInit(spriteSheet, mapScreen);
+  }
 }
 NPC.prototype = {
+  _npcInit: function(spriteSheet, mapScreen) {
+    this.defineSprite(spriteSheet,
+                      this.spriteDimensions.width,
+                      this.spriteDimensions.height,
+                      this.spriteDimensions.offsetX,
+                      this.spriteDimensions.offsetY);
+    this._talkCallback = null;
+    this._wanders = false;
+    this._wanderloop = null;
+    this._mapScreen = mapScreen;
+  },
+
   step: function(deltaX, deltaY) {
     var canMove = this.canMove(this._mapScreen, deltaX, deltaY);
     this.setFacing(deltaX, deltaY);
