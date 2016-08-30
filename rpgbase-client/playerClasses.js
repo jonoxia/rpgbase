@@ -743,6 +743,12 @@ PlayerCharacter.prototype = {
     }
   },
 
+  equipItemToSlot: function(item, slot) {
+    if (this.canEquipItem(item)) {
+      this._equippedItems[slot] = item;
+    }
+  },
+
   isEquipped: function(instance) {
     for (var slot in this._equippedItems) {
       if (this._equippedItems[slot] == instance) {
