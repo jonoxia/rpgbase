@@ -5,8 +5,15 @@ function AssetLoader() {
 }
 AssetLoader.prototype = {
   add: function(url) {
-    // TODO if we've already been asked to load this URL,
-    // just return the tag we already have!
+    // if we've already been asked to load this URL,
+    // just return the tag we already have:
+    for (var i = 0; i < this._things.length; i++) {
+      if (this._things[i].url === url) {
+        return this._things[i].tag;
+      }
+    }
+
+    // if no match found, create new record:
     this._thingsToLoad++;
     var tag = new Image();
     var thing = { url: url,
