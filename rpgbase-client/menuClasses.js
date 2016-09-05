@@ -889,7 +889,7 @@ function MenuSystemMixin(subClassPrototype) {
 
     CanvasTextUtils.drawTextBox(ctx, x, y, width, height, lines);
   };
-
+ 
   subClassPrototype.drawCanvasPartyStats = function(ctx, party) {
     var x = this._positioning.statsLeft;
     var y = this._positioning.statsTop;
@@ -1460,10 +1460,14 @@ CssFixedImgBox.prototype.outsideWidth = function() {
     // TODO implement me
 };
 CssFixedImgBox.prototype.hide = function() {
-  this.parentTag.hide();
+  if (this.parentTag) {
+    this.parentTag.hide();
+  }
 };
 CssFixedImgBox.prototype.show = function() {
-  this.parentTag.show();
+  if (this.parentTag) {
+    this.parentTag.show();
+  }
 };
 
 
@@ -1502,7 +1506,7 @@ Dialoglog.prototype = {
     var counter = 0;
 
     var portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
-    this.pushMenu(portraitBox);
+    this.pushMenu(portraitBox); // TODO don't push this onto the stack, have it as a sidebar
     portraitBox.setPos(this._positioning.msgLeft - 130,
                        this._positioning.msgTop - 40);
     if (textSegments[0].img == null) {

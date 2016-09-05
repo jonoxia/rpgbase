@@ -264,6 +264,9 @@ var gRPG = (function(){
 
     libraryLoad: function(typeName, instanceName) {
       /* retrieves an object stored earlier by librarySave */
+      if (!this.library[typeName]) {
+        throw "No library called " + typeName;
+      }
       return this.library[typeName][instanceName];
     },
 
