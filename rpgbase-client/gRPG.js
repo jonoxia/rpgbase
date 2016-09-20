@@ -280,6 +280,13 @@ var gRPG = (function(){
       }
       return keys;
     },
+
+    hasLibrary: function(typeName) {
+      if (this.library[typeName]) {
+        return true;
+      }
+      return false;
+    },
     
     mainMenu: function(callback) {
     },
