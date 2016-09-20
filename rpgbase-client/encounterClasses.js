@@ -636,11 +636,11 @@ BattleSystem.prototype = {
                                            customCmds));
     }
 
+    this._wholePartyCmd = null;
     for (var i = 0; i < this.pcMenus.length; i++) {
       this.pcMenus[i].reset();
     }
     if (this._rootMenu) {
-      this._wholePartyCmd = null;
       this._rootMenu.reset();
       this.pushMenu(this._rootMenu);
     } else {

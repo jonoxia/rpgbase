@@ -1,6 +1,6 @@
 /* Class that reads and parses CSV files. Require Papaparse. */
 
-function CSVLoader(basePath, fileList) {
+function CSVLoader(basePath, fileList, allowDefaults) {
   // fileList is an array of filenames. It will look for these files in basePath.
   this.basePath = basePath
   this.offline = false;
@@ -15,6 +15,8 @@ function CSVLoader(basePath, fileList) {
   this.data = {};
 
   this.spreadsheets = {};
+
+  this.allowDefaults = allowDefaults;
 }
 CSVLoader.prototype = {
   addFiles: function(newFiles) {
@@ -60,25 +62,44 @@ CSVLoader.prototype = {
     } else if (this.spreadsheets[filename]) {
       return this.spreadsheets[filename].getWorksheetAsDicts(filename);
     }
+
+    // No match found for filename:
+    if (this.allowDefaults) {
+      console.log("WARNING: no CSV file named " + filename);
+      return [];
+    } else {
+      throw "No CSV file named " + filename;
+    }
   },
 
   getArrays: function (filename) {
+    var results = null;
     if (this.data[filename]) {
       var rawCSV = this.data[filename];
-      var results = Papa.parse(rawCSV, {header: false});
+      results = Papa.parse(rawCSV, {header: false});
       results = results.data;
     } else if (this.spreadsheets[filename]) {
-      var results = this.spreadsheets[filename].getWorksheetAsArrays(filename);
+      results = this.spreadsheets[filename].getWorksheetAsArrays(filename);
     }
 
-    // Strip out spaces from values:
-    for (var row = 0; row < results.length; row++) {
-      for (var col = 0; col < results[row].length; col++) {
-        results[row][col] = results[row][col].replace(" ", "");
+    if (results) {
+      // Strip out spaces from values:
+      for (var row = 0; row < results.length; row++) {
+        for (var col = 0; col < results[row].length; col++) {
+          results[row][col] = results[row][col].replace(" ", "");
+        }
       }
+      
+      return results;
     }
 
-    return results;
+    // No match found for filename:
+    if (this.allowDefaults) {
+      console.log("WARNING: no CSV file named " + filename);
+      return [];
+    } else {
+      throw "No CSV file named " + filename;
+    }
   },
 
   loadFromGoogleDocs: function(googleDocsData, callback) {

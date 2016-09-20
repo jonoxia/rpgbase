@@ -380,6 +380,55 @@ describe("Battle system", function() {
   });
 
 
+  it("Should let me pick a whole-party command in place of individual commands", function() {
+
+    // make at least 2 pcs
+    // make a "run" command
+    // chooseWholePartyCmd(run, true);
+    // round should start
+    // whole party command's onStartRound and onEndRound functions should be called
+    // (whole party command doesn't have an effect per se since it's outside the initiative
+    // order)
+    // PCs should not act individually
+
+    var runCmd = new BatCmd({
+      onStartRound: function(battle, party) {
+        eventLog.push("Party gets ready to run.");
+      },
+      onEndRound: function(battle, party) {
+        eventLog.push("Party ran away!");
+      }
+    });
+
+    var hero = new StubPC("Hero");
+    hero.setStats({"hp": 10});
+    var sidekick = new StubPC("Sidekick");
+    sidekick.setStats({"hp": 10});
+    stubPlayer.getParty = function() { return [hero, sidekick] };
+
+    bs.startBattle(stubPlayer, {number: 8, type: sworm}, 0); // 0 is land type, don't care
+
+    // wow 8 sworms, that's too many, run away!
+    bs.chooseWholePartyCmd(runCmd, true);
+    
+    // That should start a round
+    expect(eventLog.length).toEqual(10);
+
+    expect(eventLog[0]).toEqual("Party gets ready to run.");
+    expect(eventLog[1]).toContain("sworm A fights");
+    expect(eventLog[2]).toContain("sworm B fights");
+    expect(eventLog[3]).toContain("sworm C fights");
+    expect(eventLog[4]).toContain("sworm D fights");
+    expect(eventLog[5]).toContain("sworm E fights");
+    expect(eventLog[6]).toContain("sworm F fights");
+    expect(eventLog[7]).toContain("sworm G fights");
+    expect(eventLog[8]).toContain("sworm H fights");
+    expect(eventLog[9]).toEqual("Party ran away!");
+
+    // TODO test that if we start another fight, the wholePartyCmd is no longer locked in
+  });
+
+
 
   /* TODO test that whatever message text we tell the battle system to display gets
    * displayed. 

@@ -440,46 +440,42 @@ CanvasCmdMenu.prototype.showArrowAtIndex = function(index) {
 
 
 function CssMixin(subclassPrototype) {
-   subclassPrototype.display = subclassPrototype.parentDisplay = function() {
-      this.parentTag = $("<div></div>");
-      this.parentTag.addClass("menu");
-      if (this.title) {
-        var titleSpan = $("<span></span>");
-        titleSpan.addClass("menu");
-        titleSpan.html(this.title);
-        this.parentTag.append(titleSpan);
-      }
-      this.table = $("<table></table>");
-      this.parentTag.css("left", this.screenX);
-      this.parentTag.css("top", this.screenY);
-      this.parentTag.append(this.table);
-      this.container.append(this.parentTag);
+  subclassPrototype._generateHtml = function() {
+    this.parentTag.empty();
+    if (this.title) {
+      var titleSpan = $("<span></span>");
+      titleSpan.addClass("menu");
+      titleSpan.html(this.title);
+      this.parentTag.append(titleSpan);
+    }
+    this.table = $("<table></table>");
+    this.parentTag.css("left", this.screenX);
+    this.parentTag.css("top", this.screenY);
+    this.parentTag.append(this.table);
+    this.container.append(this.parentTag);
+    
+    var self = this;
+    
+    for (var c in this.cmdList) {
+      var row = $("<tr></tr>");
+      var cell = $("<td></td>");
+      cell.html();
+      row.append(cell);
+      cell = $("<td></td>");
+      var name = this.cmdList[c].name;
+      cell.html(name);
+      row.append(cell);
+      this.table.append(row);
+    }
+    this.showArrowAtIndex(0);    
+  };
 
-	var self = this;
-
-	for (var c in this.cmdList) {
-	    var row = $("<tr></tr>");
-	    var cell = $("<td></td>");
-	    cell.html();
-	    row.append(cell);
-	    cell = $("<td></td>");
-	    var name = this.cmdList[c].name;
-	    cell.html(name);
-	    row.append(cell);
-	    /*(function(row, c) {
-		row.on("mouseover", function(e) {
-		    self.showArrowAtIndex(c);
-		});
-		row.on("click", function(e) {
-		    self.selectedIndex = c;
-		    self.chooseSelected();
-		});
-	    })(row, c);*/
-	    this.table.append(row);
-	}
-	this.showArrowAtIndex(0);
-	this.parentTag.focus();
-   };
+  subclassPrototype.display = subclassPrototype.parentDisplay = function() {
+    this.parentTag = $("<div></div>");
+    this.parentTag.addClass("menu");
+    this._generateHtml();
+    this.parentTag.focus();
+  };
   
   subclassPrototype.close = function() {
     console.log("Close called on a CSS menu");
