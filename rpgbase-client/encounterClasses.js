@@ -1024,6 +1024,9 @@ BattleSystem.prototype = {
     // dead fighters will be skipped during command input and execution
     target.die(); // TODO is there any other reason we might remove from battle
     // when not dead? what do we do with fled enemies for isntance?
+
+    // TODO set "source" of this event to be whoever dealt the last blow?
+    this.eventService.fireGameEvent("battler-slain", {target: target});
     
     var index = this.monsters.indexOf(target);
     if (index > -1) {
