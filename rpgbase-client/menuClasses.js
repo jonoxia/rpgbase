@@ -361,8 +361,9 @@ function CanvasMixin(subclassPrototype) {
 
 
 
-function CanvasCmdMenu(cursorImg) {
+function CanvasCmdMenu(cursorImg, menuSystem) {
   this._init();
+  this.menuSystem = menuSystem;
   this.x = 0; 
   this.y = 0;
   this.width = 50;
@@ -467,7 +468,17 @@ function CssMixin(subclassPrototype) {
       row.append(cell);
       this.table.append(row);
     }
-    this.showArrowAtIndex(0);    
+    this.showArrowAtIndex(0);
+
+    // TODO don't hard-code font-size of 18
+    var fontSize = Math.floor(18 * this.menuSystem._calculatedScale);
+    console.log("Setting font size to " + fontSize);
+    $(".menu td").css("font-size", fontSize + "pt");
+    $(".stats td").css("font-size", fontSize + "pt");
+    $(".msg-display").css("font-size", fontSize + "pt");
+    // TODO this is a bad hack -- it sets everything's font size every
+    // time i open a new menu. But so far, doing it any other way doesn't
+    // seem to work... ??
   };
 
   subclassPrototype.display = subclassPrototype.parentDisplay = function() {
@@ -491,29 +502,48 @@ function CssMixin(subclassPrototype) {
     }
   };
 
+  subclassPrototype.setOuterDimensions = function(width, height) {
+    // TODO don't hard code the 20 for padding or the 3 for borders or the
+    // 14 for font:
+    var scaleFactor = this.menuSystem._calculatedScale;
+    var padding = Math.floor(20 * scaleFactor);
+    var borders = 3;
+    this.parentTag.css("font-size", Math.floor(14 * scaleFactor) + "pt");
+    this.parentTag.css("padding", padding + "px");
+    var dim = {x: width * scaleFactor,  //Math.floor (1024/ 3),
+               y: height * scaleFactor};
+
+    dim.x -= (2*padding); //+ 2*borders);
+    dim.y -= (2*padding); // + 2*borders);
+    this.parentTag.css("width", dim.x + "px"); // 1024
+    this.parentTag.css("height", dim.y + "px"); //230
+  };
+
   subclassPrototype.getPos = function() {
     return {x: this.screenX, y: this.screenY};
   };
+
 }
 
 
-function CssCmdMenu(container) {
+function CssCmdMenu(container, menuSystem) {
   this._init();
   this.container = container;
+  this.menuSystem = menuSystem;
   this.cursorHtml = "<blink>&#x25B6;</blink>";
 }
 CssCmdMenu.prototype = {
-    showArrowAtIndex: function(index) {
-      var rows = this.table.find("tr");
-      for (var r = 0; r < rows.length; r++) {
-	var cell = $(rows[r]).find("td")[0];
-	if (r == index) {
-	  $(cell).html(this.cursorHtml);
-	} else {
-	  $(cell).empty();
-	}
+  showArrowAtIndex: function(index) {
+    var rows = this.table.find("tr");
+    for (var r = 0; r < rows.length; r++) {
+      var cell = $(rows[r]).find("td")[0];
+      if (r == index) {
+	$(cell).html(this.cursorHtml);
+      } else {
+	$(cell).empty();
       }
     }
+  }
 };
 CmdMenuMixin(CssCmdMenu.prototype);
 CssMixin(CssCmdMenu.prototype);
@@ -630,9 +660,9 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.makeMenu = function() {
     if (this.menuImpl == "canvas") {
-      return new CanvasCmdMenu(this._cursorImg);
+      return new CanvasCmdMenu(this._cursorImg, this);
     } else {
-      return new CssCmdMenu(this._htmlElem, this._cursorImg);
+      return new CssCmdMenu(this._htmlElem, this);
     }
   };
 
@@ -663,6 +693,11 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.getScaledStatsPos = function() {
     return this._scalePositions(this._positioning.statsLeft,
                                 this._positioning.statsTop);
+  };
+
+  subClassPrototype.getScaledStatsDimensions = function() {
+    return this._scalePositions(this._positioning.statsWidth,
+                                this._positioning.statsHeight);
   };
   
   subClassPrototype._scalePositions = function(x, y) {
@@ -1318,6 +1353,7 @@ CanvasFixedTextBox.prototype = {
 
 function CssFixedTextBox(textLines, menuSystem) {
   //this._init();
+  this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem; //container;
   //this.cursorHtml = "<blink>&#x25B6;</blink>";
   this.textLines = textLines;
