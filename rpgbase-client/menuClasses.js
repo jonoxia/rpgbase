@@ -1,3 +1,6 @@
+/* TODO: move the CSS implementation and Canvas Implementation each out to their own
+ * file so a project only has to include the code it's using */
+
 function CmdMenuMixin(subClassProto) {
   subClassProto._init = function() {
     this.cmdList = [];
@@ -16,7 +19,7 @@ function CmdMenuMixin(subClassProto) {
   subClassProto.addCommand = function(name, callback) {
     this.cmdList.push({name: name, execute: callback});
   };
-    
+
   subClassProto.moveSelectionUp = function() {
     this.selectedIndex --;
     if (this.selectedIndex < 0) {
@@ -24,7 +27,7 @@ function CmdMenuMixin(subClassProto) {
     }
     this.showArrowAtIndex(this.selectedIndex);
   };
-  
+
   subClassProto.moveSelectionDown = function() {
     this.selectedIndex ++;
     if (this.selectedIndex >= this.cmdList.length) {
@@ -442,6 +445,9 @@ CanvasCmdMenu.prototype.showArrowAtIndex = function(index) {
 
 function CssMixin(subclassPrototype) {
   subclassPrototype._generateHtml = function() {
+    // TODO this HTML is specifically for menus, but is applied to every
+    // text box with the CssMixin. It's not breaking anything but maybe refactor
+    // so that each Css text box class defines its own generateHtml() ?
     this.parentTag.empty();
     if (this.title) {
       var titleSpan = $("<span></span>");
@@ -470,15 +476,7 @@ function CssMixin(subclassPrototype) {
     }
     this.showArrowAtIndex(0);
 
-    // TODO don't hard-code font-size of 18
-    var fontSize = Math.floor(18 * this.menuSystem._calculatedScale);
-    console.log("Setting font size to " + fontSize);
-    $(".menu td").css("font-size", fontSize + "pt");
-    $(".stats td").css("font-size", fontSize + "pt");
-    $(".msg-display").css("font-size", fontSize + "pt");
-    // TODO this is a bad hack -- it sets everything's font size every
-    // time i open a new menu. But so far, doing it any other way doesn't
-    // seem to work... ??
+    this.table.find("td").css("font-size", this.menuSystem.getFontSize() + "pt");
   };
 
   subclassPrototype.display = subclassPrototype.parentDisplay = function() {
@@ -489,7 +487,6 @@ function CssMixin(subclassPrototype) {
   };
   
   subclassPrototype.close = function() {
-    console.log("Close called on a CSS menu");
     this.parentTag.remove();
   };
 
@@ -503,20 +500,19 @@ function CssMixin(subclassPrototype) {
   };
 
   subclassPrototype.setOuterDimensions = function(width, height) {
-    // TODO don't hard code the 20 for padding or the 3 for borders or the
-    // 14 for font:
     var scaleFactor = this.menuSystem._calculatedScale;
-    var padding = Math.floor(20 * scaleFactor);
-    var borders = 3;
-    this.parentTag.css("font-size", Math.floor(14 * scaleFactor) + "pt");
+    var positioning = this.menuSystem._positioning;
+    var padding = Math.ceil(positioning.cssPadding * scaleFactor);
+    var borders = Math.ceil(positioning.cssBorderWidth * scaleFactor);
     this.parentTag.css("padding", padding + "px");
-    var dim = {x: width * scaleFactor,  //Math.floor (1024/ 3),
+    this.parentTag.css("border-width", borders + "px");
+    var dim = {x: width * scaleFactor,
                y: height * scaleFactor};
-
-    dim.x -= (2*padding); //+ 2*borders);
-    dim.y -= (2*padding); // + 2*borders);
-    this.parentTag.css("width", dim.x + "px"); // 1024
-    this.parentTag.css("height", dim.y + "px"); //230
+    // inset the width to make room for padding and borders
+    dim.x -= (2*padding + 2*borders);
+    dim.y -= (2*padding + 2*borders);
+    this.parentTag.css("width", dim.x + "px");
+    this.parentTag.css("height", dim.y + "px");
   };
 
   subclassPrototype.getPos = function() {
@@ -600,7 +596,11 @@ function MenuSystemMixin(subClassPrototype) {
       resourceLeft: 160,
       resourceTop: 10,
       resourceWidth: 90,
-      resourceHeight: 20
+      resourceHeight: 20,
+
+      cssFontSize: 18, // only applies to css menus 
+      cssBorderWidth: 3, // same -- TODO merge with canvas text styles
+      cssPadding: 20 // same
     };
   };
 
@@ -735,8 +735,12 @@ function MenuSystemMixin(subClassPrototype) {
     if (this.menuStack.length > 0) {
       var topMenu = this.menuStack[this.menuStack.length -1];
       var pos = topMenu.getPos();
-      x = pos.x + this._positioning.menuXOffset;
-      y = pos.y + this._positioning.menuYOffset;
+      // if menuXOffset and menuYOffset are set, then we move each
+      // new child menu that far right/down from its parent menu:
+      var offsets = this._scalePositions(this._positioning.menuXOffset,
+                                         this._positioning.menuYOffset);
+      x = pos.x + offsets.x;
+      y = pos.y + offsets.y;
     } else {
       var pos = this.getScaledMenuPos();
       x = pos.x;
@@ -791,6 +795,7 @@ function MenuSystemMixin(subClassPrototype) {
     } else {
       this.displayElem.css("left", this._positioning.msgLeft);
       this.displayElem.css("top", this._positioning.msgTop);
+      this.displayElem.css("font-size", this.getFontSize() + "pt");
       this.displayElem.append($("<span></span>").html(msg));
       this.displayElem.append($("<br>"));
       this.displayElem.show();
@@ -847,17 +852,24 @@ function MenuSystemMixin(subClassPrototype) {
       var pos = this.getScaledStatsPos();
       var left = pos.x;
       var top = pos.y;
+
+      // if we're doing the thing where each party member has a stat box all in
+      // a row, calculate the offsets for each one:
+      var offsets = this._scalePositions(this._positioning.statsXOffset,
+                                         this._positioning.statsYOffset);
+
       for (var i = 0; i < this._party.length; i++) {
         var statHtml = this._party[i].getStatDisplay(this._statDisplayType);
         var statBox = $("<div></div>").html(statHtml);
         statBox.addClass("stats");
         statBox.css("left", left + "px");
         statBox.css("top", top + "px");
-        statBox.css("width", this._positioning.statsWidth);
-        statBox.css("height", this._positioning.statsHeight);
+        var dim = this.getScaledStatsDimensions();
+        statBox.css("width", dim.x + "px");
+        statBox.css("height", dim.y + "px");
         this._htmlElem.append(statBox);
-        left += this._positioning.statsXOffset;
-        top += this._positioning.statsYOffset;
+        left += offsets.x;
+        top += offsets.y;
       }
     }
   };
@@ -1024,6 +1036,10 @@ function MenuSystemMixin(subClassPrototype) {
     return topMenu.cmdList[topMenu.selectedIndex];
   };
 
+  subClassPrototype.getFontSize = function() {
+    // This is only relevant for CSS menus
+    return Math.floor(this._positioning.cssFontSize * this._calculatedScale);
+  };
 }
 
 function FieldMenu(htmlElem, cursorImg, width, height, commandSet, uiText) {
@@ -1287,6 +1303,7 @@ CssScrollingTextBox.prototype.display = function() {
   // (which you probably do)
   this.parentTag.css("left", this.screenX);
   this.parentTag.css("top", this.screenY);
+  this.parentTag.css("font-size", this.menuSystem.getFontSize() + "pt");
   //this.parentTag.append(this.table);
   this.container.append(this.parentTag);
   this.update();
@@ -1373,6 +1390,7 @@ CssFixedTextBox.prototype.display = function() {
   this.parentTag = $("<div></div>");
   this.parentTag.css("left", this.screenX);
   this.parentTag.css("top", this.screenY);
+  this.parentTag.css("font-size", this.menuSystem.getFontSize() + "pt");
   this.container.append(this.parentTag);
   this.parentTag.html(this.textLines.join("<br>"));
 };
