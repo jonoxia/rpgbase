@@ -16,20 +16,20 @@ describe("CSS Menu implementation", function() {
   };
   
   var menuSystem;
-  
-  beforeEach(function() {
-    
-    var htmlElem = $("#menusystem-base");
-    menuSystem = new BareBonesMenuSystem(htmlElem, 1024, 768);
-
-    var stubPlayer = {
+  var stubPlayer = {
       getParty: function() {
         return [ new StubPC("Alice", 45),
                  new StubPC("Bob", 50),
                  new StubPC("Carrie", 38)
                ];
       },
-    };
+  };
+
+  
+  beforeEach(function() {
+    var htmlElem = $("#menusystem-base");
+    menuSystem = new BareBonesMenuSystem(htmlElem, 1024, 768);
+
     menuSystem.open(stubPlayer);
   });
 
@@ -166,9 +166,99 @@ describe("CSS Menu implementation", function() {
   });
 
 
-  it("Should display fixed text boxes in the passive window list", function() {
+  it("Should display passive status boxes", function() {
     // there's a this._fixedDisplayBoxes but it currently works only for canvas
     // menu impl.
+
+    var someStatus = menuSystem.makeFixedTextBox(["Status: single"]);
+    menuSystem.addStatusBox(someStatus);
+    
+    menuSystem.showStatusBoxes();
+
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(2); // the first is msg-display
+    var statusDiv = $(divs[1]);
+    expect(statusDiv.html()).toEqual("Status: single");
+    expect(statusDiv.css("display")).toEqual("block"); // is shown
+
+    menuSystem.hideStatusBoxes();
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(1); // the div should be gone
+
+    menuSystem.showStatusBoxes(); // even if i show multiple times,
+    menuSystem.showStatusBoxes(); // there should not be multiple divs
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(2); // the first is msg-display
+    statusDiv = $(divs[1]);
+    expect(statusDiv.html()).toEqual("Status: single");
+    expect(statusDiv.css("display")).toEqual("block");
+    
+    // close currently calls hidePartyStats and hidePartyResources
+    // it's inconsistent -- some things remove the html tags, others just hide them
+  });
+
+  it("Should save status boxes across menu open/close sessions", function() {
+    var someStatus = menuSystem.makeFixedTextBox(["Status: single"]);
+    menuSystem.addStatusBox(someStatus);
+    
+    menuSystem.showStatusBoxes();
+
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(2); // the first is msg-display
+    var statusDiv = $(divs[1]); // TODO a more convenient way to gain access?
+    expect(statusDiv.html()).toEqual("Status: single");
+    expect(statusDiv.css("display")).toEqual("block"); // is shown
+
+    // If we open a DIFFERENT menu system, we don't want to
+    // see this one's status boxes!!! that means we need to hideStatusBoxes on close:
+    menuSystem.close();
+    // after menu system is closed, all menu system divs should be hidden:
+    expect( $("#menusystem-base").css("display") ).toEqual("none");
+    expect($("#menusystem-base div").length).toEqual(1);
+
+    menuSystem.open(stubPlayer);
+    // Thing I'm not sure about: should it be open when we open the menu system
+    // or do we need to call showStatusBoxes again?
+    // maybe it should remember whether they were shown or hidden last time and
+    // re-open with the same status?
+    menuSystem.showStatusBoxes();
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(2);
+    statusDiv = $(divs[1]);
+    expect(statusDiv.html()).toEqual("Status: single");
+    expect(statusDiv.css("display")).toEqual("block");
+  });
+  
+  it("Should update contents of status boxes when refresh is called", function() {
+    // to refresh contents of all status boxes, if those boxes have a generate
+    // contents method
+    
+    var customStatus = menuSystem.makeFixedTextBox();
+    var externalVar = 3;
+    
+    customStatus._generateHtml = function() {
+      return "<p>" + externalVar + "</p>";
+    };
+    menuSystem.addStatusBox(customStatus);
+    menuSystem.showStatusBoxes();
+
+    var divs = $("#menusystem-base div");
+    customDiv = $(divs[1]);
+    expect(customDiv.html()).toEqual("<p>3</p>");
+
+    externalVar = 7;
+
+    menuSystem.refreshStatusBoxes();
+    divs = $("#menusystem-base div");
+    customDiv = $(divs[1]);
+    expect(customDiv.html()).toEqual("<p>7</p>");
+    // assert that we can override the ._generateHtml() of our fixed text box
+    // and it gets called both when we display and when we refresh.
+  });
+
+  it("Should never give keyboard focus to status boxes", function() {
+    // also: make sure that status boxes never get keyboard focus; they don't
+    // go on the menu stack.
   });
 
   it("Should set menus/stat boxes width/height if given", function() {
@@ -215,3 +305,6 @@ describe("CSS Menu implementation", function() {
 // drawCanvasPartyStats
 // drawCanvasPartyResources
 // drawCanvasMenus
+
+// Interaction between two menu systems -- make sure one doesn't leave any junk
+// lying around that shows up when we open the other one.

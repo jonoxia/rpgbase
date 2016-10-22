@@ -571,7 +571,8 @@ function MenuSystemMixin(subClassPrototype) {
     this._openCallbacks = [];
     this._resourceVisible = false;
     this._statDisplayType = "short";
-    this._fixedDisplayBoxes = [];
+    this._fixedDisplayBoxes = []; // TODO canvas-only; merge with statusBoxes
+    this._statusBoxes = []; // TODO css-only; merge with fixedDisplayBoxes
     this._savedStackDepth = 0;
 
     // cursor image is optional
@@ -654,8 +655,9 @@ function MenuSystemMixin(subClassPrototype) {
       this._rootMenu.reset();
     }
     this.canvasStyleMsgText = null;
-    this.hidePartyStats();
-    this.hidePartyResources();
+    this.hidePartyStats(); // TODO soon redundant with hideStatsuBoxes
+    this.hidePartyResources(); // ditto
+    this.hideStatusBoxes();
     this.hide();
     for (var i = 0; i < this._closeCallbacks.length; i++) {
       this._closeCallbacks[i]();
@@ -849,6 +851,7 @@ function MenuSystemMixin(subClassPrototype) {
     if (this.menuImpl == "canvas") {
         this.canvasPartyStats = true;
     } else {
+      // TODO deprecate this in favor of showStatusBoxes()
       this._htmlElem.find(".stats").remove();
       var pos = this.getScaledStatsPos();
       var left = pos.x;
@@ -879,6 +882,7 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.hidePartyStats = function() {
+    // TODO deprecated in favor of hideStatusBoxes
     if (this.menuImpl == "canvas") {
       this.canvasPartyStats = null;
     } else {
@@ -998,14 +1002,14 @@ function MenuSystemMixin(subClassPrototype) {
     if (this.menuImpl == "canvas") {
       this._resourceVisible = true;
     }
-    // TODO implement me for css menus too
+    // TODO deprecate this in favor of using a status box for resources
   };
 
   subClassPrototype.hidePartyResources = function() {
     if (this.menuImpl == "canvas") {
       this._resourceVisible = null;
     }
-    // TODO implement me for css menus too
+    // TODO deprecate this in favor of using a status box for resources
   },
 
   subClassPrototype.drawCanvasPartyResources = function(ctx) {
@@ -1041,6 +1045,31 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.getFontSize = function() {
     // This is only relevant for CSS menus
     return Math.floor(this._positioning.cssFontSize * this._calculatedScale);
+  };
+
+  subClassPrototype.addStatusBox = function(statusBox) {
+    // TODO do we want to give this a name so we can easily refer to it later?
+    this._statusBoxes.push(statusBox);
+  };
+
+  subClassPrototype.showStatusBoxes = function() {
+    $.each(this._statusBoxes, function(i, box) {
+      box.display();
+    });
+    // TODO this is for CSS menus -- for canvas menus it needs to do what
+    // canvas menus is currently doing with fixedDisplayBoxes.
+  };
+
+  subClassPrototype.hideStatusBoxes = function() {
+    $.each(this._statusBoxes, function(i, box) {
+      box.close(); // this removes its html, is that OK?
+    });
+  };
+
+  subClassPrototype.refreshStatusBoxes = function() {
+    $.each(this._statusBoxes, function(i, box) {
+      box.refresh();
+    });
   };
 }
 
@@ -1186,7 +1215,7 @@ FieldMenu.prototype = {
         self.popMenu();
         spell.effect(self, character, target);
 	// update stats display to show effect of heal:
-	self.showPartyStats();
+	self.showPartyStats(); // TODO replace with refreshStatusBoxes
       });
     } else if (spell.target == "all_allies") {
       var party = self._player.getAliveParty();
@@ -1387,17 +1416,31 @@ CssFixedTextBox.prototype.setText = function(newTextLines) {
     this.parentTag.html(this.textLines.join("<br>"));
   }
 };
+CssFixedTextBox.prototype._generateHtml = function() {
+  // override this to make a fixed text box that displays something else
+  return this.textLines.join("<br>");
+};
+CssFixedTextBox.prototype.refresh = function() {
+  // TODO probably move this to the CSS mixin.
+  // TODO i guess Canvas menus should have this method but it doesn't do anything?
+  this.parentTag.html(this._generateHtml());
+};
 CssFixedTextBox.prototype.display = function() {
-  // Mostly copied from CssCmdMenu
+  // Mostly copied from CssCmdMenu.
+  // TODO -- move this display logic to the CssMixin, including left/top and
+  // font size. Every class that uses CssMixin defines its own _generateHtml method.
+  if (this.parentTag) {
+    this.parentTag.remove(); // so we won't get doubles if this is called again
+  }
   this.parentTag = $("<div></div>");
   this.parentTag.css("left", this.screenX);
   this.parentTag.css("top", this.screenY);
   this.parentTag.css("font-size", this.menuSystem.getFontSize() + "pt");
   this.container.append(this.parentTag);
-  this.parentTag.html(this.textLines.join("<br>"));
+  this.parentTag.html(this._generateHtml());
 };
 CssFixedTextBox.prototype.outsideWidth = function() {
-    // TODO implement me
+  return this.parentTag.outerWidth(); // TODO is this ever used?
 };
 
 
