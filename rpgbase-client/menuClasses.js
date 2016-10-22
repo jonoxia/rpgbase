@@ -476,7 +476,11 @@ function CssMixin(subclassPrototype) {
     }
     this.showArrowAtIndex(0);
 
-    this.table.find("td").css("font-size", this.menuSystem.getFontSize() + "pt");
+    // Scale the body font:
+    var fontSize = this.menuSystem.getFontSize();
+    this.table.find("td").css("font-size", fontSize + "pt");
+    // Scale the title font:
+    this.parentTag.find("span").css("font-size", fontSize + "pt");
   };
 
   subclassPrototype.display = subclassPrototype.parentDisplay = function() {
@@ -682,9 +686,6 @@ function MenuSystemMixin(subClassPrototype) {
     }
   };
 
-  // TODO will need a function that instantiates fixed or scrolling text boxes
-  // also according to this.menuImpl
-
   subClassPrototype.getScaledMenuPos = function() {
     return this._scalePositions(this._positioning.menuLeft,
                                 this._positioning.menuTop);
@@ -864,9 +865,12 @@ function MenuSystemMixin(subClassPrototype) {
         statBox.addClass("stats");
         statBox.css("left", left + "px");
         statBox.css("top", top + "px");
-        var dim = this.getScaledStatsDimensions();
-        statBox.css("width", dim.x + "px");
-        statBox.css("height", dim.y + "px");
+        statBox.css("font-size", this.getFontSize() + "pt");
+        if (this._positioning.statsWidth !== "auto") {
+          var dim = this.getScaledStatsDimensions();
+          statBox.css("width", dim.x + "px");
+          statBox.css("height", dim.y + "px");
+        }
         this._htmlElem.append(statBox);
         left += offsets.x;
         top += offsets.y;
@@ -975,8 +979,6 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.setMenuPositions = function(options) {
-    // TODO these are currently only applied to Canvas menus.
-    // Apply them to CSS menus too?
     for (var prop in options) {
       this._positioning[prop] = options[prop];
     }
@@ -1519,7 +1521,6 @@ CssFixedImgBox.prototype.show = function() {
     this.parentTag.show();
   }
 };
-
 
 
 function Dialoglog(htmlElem, cursorImg, width, height) {
