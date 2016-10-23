@@ -444,50 +444,21 @@ CanvasCmdMenu.prototype.showArrowAtIndex = function(index) {
 
 
 function CssMixin(subclassPrototype) {
-  subclassPrototype._generateHtml = function() {
-    // TODO this HTML is specifically for menus, but is applied to every
-    // text box with the CssMixin. It's not breaking anything but maybe refactor
-    // so that each Css text box class defines its own generateHtml() ?
-    this.parentTag.empty();
-    if (this.title) {
-      var titleSpan = $("<span></span>");
-      titleSpan.addClass("menu");
-      titleSpan.html(this.title);
-      this.parentTag.append(titleSpan);
+  subclassPrototype.refresh = function() {
+    // TODO i guess Canvas menus should have this method but it doesn't do anything?
+    this.parentTag.html(this._generateHtml());
+  };
+  
+  subclassPrototype.display = subclassPrototype.parentDisplay = function() {
+    if (this.parentTag) {
+      this.parentTag.remove(); // so we won't get doubles if this is called again
     }
-    this.table = $("<table></table>");
+    this.parentTag = $("<div></div>");
     this.parentTag.css("left", this.screenX);
     this.parentTag.css("top", this.screenY);
-    this.parentTag.append(this.table);
+    this.parentTag.css("font-size", this.menuSystem.getFontSize() + "pt");
     this.container.append(this.parentTag);
-    
-    var self = this;
-    
-    for (var c in this.cmdList) {
-      var row = $("<tr></tr>");
-      var cell = $("<td></td>");
-      cell.html();
-      row.append(cell);
-      cell = $("<td></td>");
-      var name = this.cmdList[c].name;
-      cell.html(name);
-      row.append(cell);
-      this.table.append(row);
-    }
-    this.showArrowAtIndex(0);
-
-    // Scale the body font:
-    var fontSize = this.menuSystem.getFontSize();
-    this.table.find("td").css("font-size", fontSize + "pt");
-    // Scale the title font:
-    this.parentTag.find("span").css("font-size", fontSize + "pt");
-  };
-
-  subclassPrototype.display = subclassPrototype.parentDisplay = function() {
-    this.parentTag = $("<div></div>");
-    this.parentTag.addClass("menu");
-    this._generateHtml();
-    this.parentTag.focus();
+    this.refresh();
   };
   
   subclassPrototype.close = function() {
@@ -495,6 +466,7 @@ function CssMixin(subclassPrototype) {
   };
 
   subclassPrototype.setPos = function(x, y) {
+    // TODO this doesn't apply scale. I think it probably should.
     this.screenX = x;
     this.screenY = y;
     if (this.parentTag) {
@@ -533,6 +505,50 @@ function CssCmdMenu(container, menuSystem) {
   this.cursorHtml = "<blink>&#x25B6;</blink>";
 }
 CssCmdMenu.prototype = {
+
+  _generateHtml: function() {
+    // TODO this works in a subtly different way from the other CssMixin
+    // subclasses' generateHtml -- those return an HTML string, this one has
+    // side effects of creating tags. Should make them all work the same way.
+    this.parentTag.empty();
+    if (this.title) {
+      var titleSpan = $("<span></span>");
+      titleSpan.addClass("menu");
+      titleSpan.html(this.title);
+      this.parentTag.append(titleSpan);
+    }
+    this.table = $("<table></table>");
+    this.parentTag.append(this.table);
+    
+    var self = this;
+    
+    for (var c in this.cmdList) {
+      var row = $("<tr></tr>");
+      var cell = $("<td></td>");
+      cell.html();
+      row.append(cell);
+      cell = $("<td></td>");
+      var name = this.cmdList[c].name;
+      cell.html(name);
+      row.append(cell);
+      this.table.append(row);
+    }
+    this.showArrowAtIndex(0);
+
+    // TODO setting the font size here seems redundant with setting it in
+    // CssMixin display function, but if I don't do it here it doesn't work.
+    // for some reason.
+    // Scale the body font:
+    var fontSize = this.menuSystem.getFontSize();
+    this.table.find("td").css("font-size", fontSize + "pt");
+    // Scale the title font:
+    this.parentTag.find("span").css("font-size", fontSize + "pt");
+
+    // Give it the "menu" class (this brings it in front of other boxes)
+    this.parentTag.addClass("menu");
+    this.parentTag.focus();
+  },
+  
   showArrowAtIndex: function(index) {
     var rows = this.table.find("tr");
     for (var r = 0; r < rows.length; r++) {
@@ -681,6 +697,9 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.makeFixedTextBox = function(dialogText) {
+    // TODO the actual 'dialogText' option is used rarely enough that
+    // it might make more sense for the argument to be a generateHtml
+    // callback.
     if (this.menuImpl == "canvas") {
       return new CanvasFixedTextBox(dialogText, this);
     } else {
@@ -1419,25 +1438,6 @@ CssFixedTextBox.prototype.setText = function(newTextLines) {
 CssFixedTextBox.prototype._generateHtml = function() {
   // override this to make a fixed text box that displays something else
   return this.textLines.join("<br>");
-};
-CssFixedTextBox.prototype.refresh = function() {
-  // TODO probably move this to the CSS mixin.
-  // TODO i guess Canvas menus should have this method but it doesn't do anything?
-  this.parentTag.html(this._generateHtml());
-};
-CssFixedTextBox.prototype.display = function() {
-  // Mostly copied from CssCmdMenu.
-  // TODO -- move this display logic to the CssMixin, including left/top and
-  // font size. Every class that uses CssMixin defines its own _generateHtml method.
-  if (this.parentTag) {
-    this.parentTag.remove(); // so we won't get doubles if this is called again
-  }
-  this.parentTag = $("<div></div>");
-  this.parentTag.css("left", this.screenX);
-  this.parentTag.css("top", this.screenY);
-  this.parentTag.css("font-size", this.menuSystem.getFontSize() + "pt");
-  this.container.append(this.parentTag);
-  this.parentTag.html(this._generateHtml());
 };
 CssFixedTextBox.prototype.outsideWidth = function() {
   return this.parentTag.outerWidth(); // TODO is this ever used?
