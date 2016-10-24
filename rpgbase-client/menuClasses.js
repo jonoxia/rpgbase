@@ -466,7 +466,8 @@ function CssMixin(subclassPrototype) {
   };
 
   subclassPrototype.setPos = function(x, y) {
-    // TODO this doesn't apply scale. I think it probably should.
+    // TODO this doesn't apply scale. I think it probably should, to be consistent
+    // with setOuterDimensions.
     this.screenX = x;
     this.screenY = y;
     if (this.parentTag) {
@@ -543,6 +544,9 @@ CssCmdMenu.prototype = {
     this.table.find("td").css("font-size", fontSize + "pt");
     // Scale the title font:
     this.parentTag.find("span").css("font-size", fontSize + "pt");
+    // Scale the line height so that line heights don't change as you move
+    // the cursor:
+    this.table.find("td").css("line-height", Math.floor(1.1*fontSize) + "pt");
 
     // Give it the "menu" class (this brings it in front of other boxes)
     this.parentTag.addClass("menu");
@@ -1339,10 +1343,11 @@ function CssScrollingTextBox(text, menuSystem) {
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this.linesAtOnce = 3; // TODO don't hardcode me
-  this._closeCallbacks = [];
+  this._closeCallbacks = []; // TODO isn't this in the base class?
 };
 ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
+// TODO add unit test for this, then refactor it to use _generateHtml() / refresh()
 CssScrollingTextBox.prototype.display = function() {
   console.log("CssScrollingTextBox created.");
   // Mostly copied from CssCmdMenu
