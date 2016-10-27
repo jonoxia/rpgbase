@@ -669,6 +669,9 @@ var gRPG = (function(){
                                      null, settings.screenWidth,
                                      settings.screenHeight);
       dialogMode.setMenuPositions(settings.menuPositions);
+      // TODO MenuSystem should have a public method for this.
+      // TODO do it to field menu and plot manager
+      dialogMode._calculatedScale = this._calculatedScale;
 
       dialogMode.engine = this;
       dialogMode.onClose(function() {

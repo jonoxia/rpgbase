@@ -1,20 +1,21 @@
+function BareBonesMenuSystem(htmlElem, width, height) {
+  this._init(htmlElem, null, width, height);
+};
+MenuSystemMixin(BareBonesMenuSystem.prototype);
+
+function StubPC(name, maxHP) {
+  this.name = name;
+  this.hp = maxHP;
+};
+StubPC.prototype = {
+  getStatDisplay: function() {
+    return "<p><b>" + this.name + "<br>" + this.hp + " / " + this.hp + "</b></p>";
+  }
+};
+
+
 describe("CSS Menu implementation", function() {
 
-  function BareBonesMenuSystem(htmlElem, width, height) {
-    this._init(htmlElem, null, width, height);
-  };
-  MenuSystemMixin(BareBonesMenuSystem.prototype);
-
-  function StubPC(name, maxHP) {
-    this.name = name;
-    this.hp = maxHP;
-  };
-  StubPC.prototype = {
-    getStatDisplay: function() {
-      return "<p><b>" + this.name + "<br>" + this.hp + " / " + this.hp + "</b></p>";
-    }
-  };
-  
   var menuSystem;
   var stubPlayer = {
       getParty: function() {
@@ -24,7 +25,6 @@ describe("CSS Menu implementation", function() {
                ];
       },
   };
-
   
   beforeEach(function() {
     var htmlElem = $("#menusystem-base");
@@ -308,3 +308,156 @@ describe("CSS Menu implementation", function() {
 
 // Interaction between two menu systems -- make sure one doesn't leave any junk
 // lying around that shows up when we open the other one.
+
+describe("Diagloglog", function() {
+  var stubPlayer = {
+    getParty: function() {
+      return [ new StubPC("Alice", 45),
+               new StubPC("Bob", 50),
+               new StubPC("Carrie", 38)
+             ];
+    },
+  };
+  var dialoglog;
+  
+  beforeEach(function() {
+    var htmlElem = $("#menusystem-base");
+    dialoglog = new Dialoglog(htmlElem, null, 1024, 768);
+    dialoglog.open(stubPlayer);
+  });
+
+  afterEach(function() {
+    dialoglog.close();
+  });
+
+  it("Should advance multipartTextDisplay with each key press", function() {
+    // set up a dialoglog with multiple text segments
+    // process key presses repeatedly
+    // assert that correct text is shown after each one
+    
+    dialoglog.multipartTextDisplay([{img: null, text: "Hello there im the king"},
+                                    {img: null, text: "No image for this one"},
+                                    {img: null, text: "Sure i'll accept your quest"}
+                                   ]);
+    // get html of message box...
+    var topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.html()).toContain("Hello there im the king");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.html()).toContain("No image for this one");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.html()).toContain("Sure i'll accept your quest");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    // Expect dialoglog to be closed after that last button press:
+    topMenu = dialoglog.getTopMenu();
+    expect(topMenu).toBe(null);
+  });
+
+  it("Should display correct img alongside each line of dialog", function() {
+    dialoglog.multipartTextDisplay([
+      {img: "king.jpg", text: "Hello there im the king"},
+      {img: null, text: "No image for this one"},
+      {img: "hero.jpg", text: "Sure i'll accept your quest"}
+    ]);
+    
+    var imgElem = $("#menusystem-base").find("img");
+    expect(imgElem.attr("src")).toEqual("king.jpg");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    imgElem = $("#menusystem-base").find("img");
+    expect(imgElem.length).toEqual(0); // no img should be displayed
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    imgElem = $("#menusystem-base").find("img");
+    expect(imgElem.attr("src")).toEqual("hero.jpg");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+  });
+
+  it("Should position img and msg correctly", function() {
+    // dialoglog should take positioning arguments that set position
+    // and size of the text box and the portrait box.
+    dialoglog.setMenuPositions({ imgLeft: 60,
+                                 imgTop: 500,
+                                 msgLeft: 100,
+                                 msgTop: 650 });
+    dialoglog.multipartTextDisplay([
+      {img: "king.jpg", text: "Hello there im the king"},
+    ]);
+    var topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.offset().left).toEqual(100);
+    expect(topMenu.parentTag.offset().top).toEqual(650);
+    
+    var imgElem = $("#menusystem-base").find("img");
+    expect(imgElem.parent().offset().left).toEqual(60);
+    expect(imgElem.parent().offset().top).toEqual(500);
+  });
+
+  it("Should scale down img and msg correctly", function() {
+    dialoglog.setMenuPositions({ imgLeft: 60,
+                                 imgTop: 500,
+                                 msgLeft: 100,
+                                 msgTop: 650});
+    dialoglog._calculatedScale = 0.5;
+    dialoglog.multipartTextDisplay([
+      {img: "king.jpg", text: "Hello there im the king"},
+    ]);
+    // Positioning should be half:
+    var topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.offset().left).toEqual(50);
+    expect(topMenu.parentTag.offset().top).toEqual(325);
+    
+    var imgElem = $("#menusystem-base").find("img");
+    expect(imgElem.parent().offset().left).toEqual(30);
+    expect(imgElem.parent().offset().top).toEqual(250);
+
+    // dimensions should be half:
+    expect(imgElem.outerWidth()).toEqual(50); // will fail
+    expect(imgElem.outerWidth()).toEqual(50); // will fail
+  });
+
+  // bugs that tests did not catch:
+  //  -- menu system exited before all conversation was done
+  //  -- talking to same npc again resulted in empty conversation
+  //  -- multiple copies of portrait window created
+  //  -- messages from previous conversation hanging around
+  //  -- extra keypress required after windows are all closed to actually exit
+
+  it("Should scroll on keypress if line of dialog is very long", function() {
+    var longText = "It's not like anything seen alive on Earth today: it's the size of large turkey, but with a face like a Jim Henson puppet. The head is a shoe-box with eyes, the Frankensteinian flatness on top accentuated by horns sticking out horizontally from each cheek.";
+
+    dialoglog.multipartTextDisplay([
+      {img: "king.jpg", text: longText},
+      {img: null, text: "No image for this one"},
+      {img: "hero.jpg", text: "Sure i'll accept your quest"}
+    ]);
+
+    var topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.html()).toEqual(
+      "It's not like anything seen<br>alive on Earth today: it's the<br>size of large turkey, but with a");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    expect(topMenu.parentTag.html()).toEqual(
+      "alive on Earth today: it's the<br>size of large turkey, but with a<br>face like a Jim Henson puppet.");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    expect(topMenu.parentTag.html()).toEqual(
+      "size of large turkey, but with a<br>face like a Jim Henson puppet.<br>The head is a shoe-box with");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    expect(topMenu.parentTag.html()).toEqual(
+      "face like a Jim Henson puppet.<br>The head is a shoe-box with<br>eyes, the Frankensteinian");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    expect(topMenu.parentTag.html()).toEqual(
+      "The head is a shoe-box with<br>eyes, the Frankensteinian<br>flatness on top accentuated by");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    expect(topMenu.parentTag.html()).toEqual(
+      "eyes, the Frankensteinian<br>flatness on top accentuated by<br>horns sticking out horizontally");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    expect(topMenu.parentTag.html()).toEqual(
+      "flatness on top accentuated by<br>horns sticking out horizontally<br>from each cheek.");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.html()).toEqual("No image for this one");
+    dialoglog.handleKey(CONFIRM_BUTTON);
+    topMenu = dialoglog.getTopMenu();
+    expect(topMenu.parentTag.html()).toEqual("Sure i'll accept your quest");
+
+
+  });
+});

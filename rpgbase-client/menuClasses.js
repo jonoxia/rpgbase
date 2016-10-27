@@ -348,6 +348,10 @@ function CanvasMixin(subclassPrototype) {
                                 this.width, this.height, textLines);
   };
 
+  subclassPrototype.refresh = function() {
+    // No need to do anything here, as it is redrawn on every cycle anyway
+  };
+
   subclassPrototype.close = function() {
     // TODO anything to do here? Just stop drawing it right?
   };
@@ -445,7 +449,6 @@ CanvasCmdMenu.prototype.showArrowAtIndex = function(index) {
 
 function CssMixin(subclassPrototype) {
   subclassPrototype.refresh = function() {
-    // TODO i guess Canvas menus should have this method but it doesn't do anything?
     this.parentTag.html(this._generateHtml());
   };
   
@@ -462,12 +465,15 @@ function CssMixin(subclassPrototype) {
   };
   
   subclassPrototype.close = function() {
-    this.parentTag.remove();
+    if (this.parentTag) { // so this won't do anything if it's already closed
+      this.parentTag.remove();
+    }
   };
 
   subclassPrototype.setPos = function(x, y) {
     // TODO this doesn't apply scale. I think it probably should, to be consistent
-    // with setOuterDimensions.
+    // with setOuterDimensions. We're usually calling getScaledPos and then passing
+    // that to setPos, so we could move the transformation inside this function...
     this.screenX = x;
     this.screenY = y;
     if (this.parentTag) {
@@ -755,12 +761,18 @@ function MenuSystemMixin(subClassPrototype) {
     return {x: x, y: y};
   };
 
+  subClassPrototype.getTopMenu = function() {
+    if (this.menuStack.length == 0) {
+      return null;
+    }
+    return this.menuStack[this.menuStack.length - 1];
+  };
+
   subClassPrototype.pushMenu = function(newMenu) {
     var x, y;
     
     if (this.menuStack.length > 0) {
-      var topMenu = this.menuStack[this.menuStack.length -1];
-      var pos = topMenu.getPos();
+      var pos = this.getTopMenu().getPos();
       // if menuXOffset and menuYOffset are set, then we move each
       // new child menu that far right/down from its parent menu:
       var offsets = this._scalePositions(this._positioning.menuXOffset,
@@ -1000,7 +1012,7 @@ function MenuSystemMixin(subClassPrototype) {
       // if it's not the cancel button, pass it on to the topmost
       // menu of the stack:
       if (this.menuStack.length > 0) {
-        this.menuStack[ this.menuStack.length - 1].onKey(keyCode);
+        this.getTopMenu().onKey(keyCode);
       }
     }
   };
@@ -1061,7 +1073,7 @@ function MenuSystemMixin(subClassPrototype) {
     if (this.menuStack.length < 1) {
       return null;
     }
-    var topMenu = this.menuStack[this.menuStack.length - 1];
+    var topMenu = this.getTopMenu();
     return topMenu.cmdList[topMenu.selectedIndex];
   };
 
@@ -1289,7 +1301,7 @@ function ScrollingTextBoxMixin(subclassPrototype) {
     if (this.currLine + this.linesAtOnce < this.lines.length) { 
       // advance through scroll text, if large
       this.currLine ++;
-      this.update();
+      this.refresh();
     } else {
       // if done, treat any key as cancel button
       this.menuSystem.handleKey(CANCEL_BUTTON);
@@ -1302,9 +1314,6 @@ function ScrollingTextBoxMixin(subclassPrototype) {
 
   subclassPrototype.onClose = function(callback) {
     this._closeCallbacks.push(callback);
-  };
-
-  subclassPrototype.update = function() {
   };
 };
 
@@ -1347,26 +1356,13 @@ function CssScrollingTextBox(text, menuSystem) {
 };
 ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
-// TODO add unit test for this, then refactor it to use _generateHtml() / refresh()
-CssScrollingTextBox.prototype.display = function() {
-  console.log("CssScrollingTextBox created.");
-  // Mostly copied from CssCmdMenu
-  this.parentTag = $("<div></div>");
-  this.parentTag.addClass("msg-display"); // TODO don't hard-code class name?
-  // use CSS to force .msg-display to the front using z-index
-  // if you want scrollingTextBoxes to display in front of other menus
-  // (which you probably do)
-  this.parentTag.css("left", this.screenX);
-  this.parentTag.css("top", this.screenY);
-  this.parentTag.css("font-size", this.menuSystem.getFontSize() + "pt");
-  //this.parentTag.append(this.table);
-  this.container.append(this.parentTag);
-  this.update();
-};
-CssScrollingTextBox.prototype.update = function() {
+// TODO add unit test for this
+// had a parentTag.addClass("msg-display"), put that somewhere
+CssScrollingTextBox.prototype._generateHtml = function() {
+  // this was called "update"
   this.textLines = this.lines.slice(this.currLine,
                                     this.currLine + this.linesAtOnce).join("<br>");
-  this.parentTag.html(this.textLines);
+  return this.textLines;
 };
 
 
@@ -1528,10 +1524,8 @@ BackgroundImgBox.prototype = {
 };
 
 function CssFixedImgBox(img, menuSystem) {
-  //this._init();
-  this.container = menuSystem._htmlElem; //container;
-  //this.cursorHtml = "<blink>&#x25B6;</blink>";
-  //this.textLines = textLines;
+  this.container = menuSystem._htmlElem;
+  this.menuSystem = menuSystem;
   this.imgUrl = img;
 }
 CssMixin(CssFixedImgBox.prototype);
@@ -1544,30 +1538,14 @@ CssFixedImgBox.prototype.setImg = function(newImg, width, height) {
   this.imgTag.attr("width", width);
   this.imgTag.attr("height", height);
 };
-CssFixedImgBox.prototype.display = function() {
-  // Mostly copied from CssCmdMenu
-  this.parentTag = $("<div></div>");
-  this.parentTag.css("left", this.screenX);
-  this.parentTag.css("top", this.screenY);
-  this.container.append(this.parentTag);
+CssFixedImgBox.prototype._generateHtml = function() {
   this.imgTag = $("<img/>");
   this.imgTag.attr("src", this.imgUrl);
   this.parentTag.append(this.imgTag);
-
-  // TODO addClass("menu") and / or addClass("stats") ?
 };
+// TODO addClass("menu") and / or addClass("stats") ?
 CssFixedImgBox.prototype.outsideWidth = function() {
     // TODO implement me
-};
-CssFixedImgBox.prototype.hide = function() {
-  if (this.parentTag) {
-    this.parentTag.hide();
-  }
-};
-CssFixedImgBox.prototype.show = function() {
-  if (this.parentTag) {
-    this.parentTag.show();
-  }
 };
 
 
@@ -1598,49 +1576,54 @@ Dialoglog.prototype = {
   },
 
   multipartTextDisplay: function(textSegments) {
-    console.log("The text segments are " + textSegments);
+    /* pass in a list of objects with .text and .img properties, like:
+     * [{text: "bla bla bla", img: "hero.jpg"}]
+     * scrolls each text segment while showing the corresponding image
+     */
     if (textSegments.length == 0) { return; }
     var self = this;
+    this._freelyExit = false; // lock us into the dialog until it's finished,
+    // because otherwise the dialoglog will close as soon as the first scrolling
+    // text box closes
 
-    var counter = 0;
-
-    var portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
-    this.pushMenu(portraitBox); // TODO don't push this onto the stack, have it as a sidebar
-    portraitBox.setPos(this._positioning.msgLeft - 130,
-                       this._positioning.msgTop - 40);
-    if (textSegments[0].img == null) {
-      portraitBox.hide();
-    } else {
-      portraitBox.show();
-      portraitBox.setImg(textSegments[0].img, 100, 100);
+    if (!this.portraitBox) {
+      this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
+      this.addStatusBox(this.portraitBox);
+      this.portraitBox.setPos(self._calculatedScale * this._positioning.imgLeft,
+                              self._calculatedScale * this._positioning.imgTop);
+      // TODO setOutsideDimensions, maybe?
     }
 
-    var textBox = this.makeFixedTextBox([textSegments[0].text]);
-    this.pushMenu(textBox);
-    textBox.setPos(this._positioning.msgLeft,
-                   this._positioning.msgTop);
+    var segmentIndex = 0;
+    var proceed = function() {
+      var nextSegment = textSegments[segmentIndex];
 
-    textBox.onKey = function(key) {
-      console.log("text box got keypress");
-      counter ++;
-      if (counter < textSegments.length) {
-        var nextLine = textSegments[counter];
-        textBox.setText([nextLine.text]);
-        textBox.parentTag.html(textBox.textLines.join("<br>")); // should be part of setText?
-        if (nextLine.img == null) {
-          portraitBox.hide();
-        } else {
-          portraitBox.show();
-          portraitBox.setImg(nextLine.img, 100, 100);
-        }
+      var textBox = self.makeScrollingTextBox(nextSegment.text);
+      self.pushMenu(textBox);
+      textBox.setPos(self._calculatedScale * self._positioning.msgLeft,
+                     self._calculatedScale * self._positioning.msgTop);
+      // TODO setOutsideDimensions, maybe?
+      
+      if (nextSegment.img == null) {
+        self.hideStatusBoxes();
       } else {
-        self.popMenu(); // to get rid of the portraitBox
-        // (TODO general-purpose solution for passive boxes that show up alongside the menu
-        // stack but never take input)
-        self.handleKey(CANCEL_BUTTON);
+        self.showStatusBoxes();
+        var imgWidth = self._calculatedScale * 180; // scale the image:
+        self.portraitBox.setImg(nextSegment.img, imgWidth, imgWidth);
+      }
+      
+      if (segmentIndex < textSegments.length - 1) {
+        segmentIndex ++;
+        textBox.onClose(proceed);
+      } else {
+        self._freelyExit = true;
+        textBox.onClose(function() {
+          self.close();
+        });
       }
     };
 
+    proceed();
   },
 };
 MenuSystemMixin(Dialoglog.prototype);
