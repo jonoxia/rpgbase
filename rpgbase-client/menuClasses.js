@@ -1082,28 +1082,44 @@ function MenuSystemMixin(subClassPrototype) {
     return Math.floor(this._positioning.cssFontSize * this._calculatedScale);
   };
 
-  subClassPrototype.addStatusBox = function(statusBox) {
-    // TODO do we want to give this a name so we can easily refer to it later?
-    this._statusBoxes.push(statusBox);
+  subClassPrototype.addStatusBox = function(statusBox, name) {
+    // Give this a name so we can refer to it later
+    this._statusBoxes.push({name: name, instance: statusBox});
   };
 
-  subClassPrototype.showStatusBoxes = function() {
-    $.each(this._statusBoxes, function(i, box) {
-      box.display();
+  subClassPrototype.removeStatusBox = function(name) {
+    // removes any status boxes with given name
+    this._statusBoxes = this._statusBoxes.filter(
+      function(x) { return x.name !== name; }
+    );
+  };
+
+  subClassPrototype.showStatusBoxes = function(name) {
+    // if name is provided, only show the ones with "name"
+    $.each(this._statusBoxes, function(i, entry) {
+      if (!name || entry.name === name) {
+        entry.instance.display();
+      }
     });
     // TODO this is for CSS menus -- for canvas menus it needs to do what
     // canvas menus is currently doing with fixedDisplayBoxes.
   };
 
-  subClassPrototype.hideStatusBoxes = function() {
-    $.each(this._statusBoxes, function(i, box) {
-      box.close(); // this removes its html, is that OK?
+  subClassPrototype.hideStatusBoxes = function(name) {
+    // if name is provided, only show the ones with "name"
+    $.each(this._statusBoxes, function(i, entry) {
+      if (!name || entry.name === name) {
+        entry.instance.close(); // this removes its html, is that OK?
+      }
     });
   };
 
-  subClassPrototype.refreshStatusBoxes = function() {
-    $.each(this._statusBoxes, function(i, box) {
-      box.refresh();
+  subClassPrototype.refreshStatusBoxes = function(name) {
+    // if name is provided, only refresh the ones with "name"
+    $.each(this._statusBoxes, function(i, entry) {
+      if (!name || entry.name === name) {
+        entry.instance.refresh();
+      }
     });
   };
 }
@@ -1588,7 +1604,7 @@ Dialoglog.prototype = {
 
     if (!this.portraitBox) {
       this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
-      this.addStatusBox(this.portraitBox);
+      this.addStatusBox(this.portraitBox, "portrait");
       this.portraitBox.setPos(self._calculatedScale * this._positioning.imgLeft,
                               self._calculatedScale * this._positioning.imgTop);
       // TODO setOutsideDimensions, maybe?
@@ -1605,11 +1621,12 @@ Dialoglog.prototype = {
       // TODO setOutsideDimensions, maybe?
       
       if (nextSegment.img == null) {
-        self.hideStatusBoxes();
+        self.hideStatusBoxes("portrait");
       } else {
-        self.showStatusBoxes();
-        var imgWidth = self._calculatedScale * 180; // scale the image:
-        self.portraitBox.setImg(nextSegment.img, imgWidth, imgWidth);
+        self.showStatusBoxes("portrait");
+        var imgWidth = self._calculatedScale * self._positioning.imgWidth;
+        var imgHeight = self._calculatedScale * self._positioning.imgHeight;
+        self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);
       }
       
       if (segmentIndex < textSegments.length - 1) {

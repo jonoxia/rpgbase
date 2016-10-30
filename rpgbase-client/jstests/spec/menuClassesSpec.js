@@ -171,7 +171,7 @@ describe("CSS Menu implementation", function() {
     // menu impl.
 
     var someStatus = menuSystem.makeFixedTextBox(["Status: single"]);
-    menuSystem.addStatusBox(someStatus);
+    menuSystem.addStatusBox(someStatus, "some");
     
     menuSystem.showStatusBoxes();
 
@@ -199,7 +199,7 @@ describe("CSS Menu implementation", function() {
 
   it("Should save status boxes across menu open/close sessions", function() {
     var someStatus = menuSystem.makeFixedTextBox(["Status: single"]);
-    menuSystem.addStatusBox(someStatus);
+    menuSystem.addStatusBox(someStatus, "some");
     
     menuSystem.showStatusBoxes();
 
@@ -239,7 +239,7 @@ describe("CSS Menu implementation", function() {
     customStatus._generateHtml = function() {
       return "<p>" + externalVar + "</p>";
     };
-    menuSystem.addStatusBox(customStatus);
+    menuSystem.addStatusBox(customStatus, "custom");
     menuSystem.showStatusBoxes();
 
     var divs = $("#menusystem-base div");
@@ -257,12 +257,80 @@ describe("CSS Menu implementation", function() {
   });
 
   it("Should never give keyboard focus to status boxes", function() {
-    // also: make sure that status boxes never get keyboard focus; they don't
+    // make sure that status boxes never get keyboard focus; they don't
     // go on the menu stack.
   });
 
   it("Should set menus/stat boxes width/height if given", function() {
 
+  });
+
+  it("Should show/hide status boxes by name if given", function() {
+    
+    var statsBox = menuSystem.makeFixedTextBox();
+    var resourcesBox = menuSystem.makeFixedTextBox();
+    var portraitBox = menuSystem.makeFixedTextBox();
+    
+    statsBox._generateHtml = function() {
+      return "<p>Stats</p>";
+    };
+    resourcesBox._generateHtml = function() {
+      return "<p>Resources</p>";
+        };
+    portraitBox._generateHtml = function() {
+      return "<p>Portrait</p>";
+    };
+    
+    menuSystem.addStatusBox(statsBox, "stats");
+    menuSystem.addStatusBox(resourcesBox, "resources");
+    menuSystem.addStatusBox(portraitBox, "portrait");
+    
+    menuSystem.showStatusBoxes(); // should show all
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(4);
+    expect(divs.eq(1).html()).toEqual("<p>Stats</p>");
+    expect(divs.eq(2).html()).toEqual("<p>Resources</p>");
+    expect(divs.eq(3).html()).toEqual("<p>Portrait</p>");
+
+    menuSystem.hideStatusBoxes(); // should hide all
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(1);
+
+    menuSystem.showStatusBoxes("portrait");
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(2);
+    expect(divs.eq(1).html()).toEqual("<p>Portrait</p>");
+
+    menuSystem.showStatusBoxes("resources"); // should now see portrait and resources
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(3);
+    expect(divs.eq(1).html()).toEqual("<p>Portrait</p>");
+    expect(divs.eq(2).html()).toEqual("<p>Resources</p>");
+
+    menuSystem.showStatusBoxes("stats"); // should now see all 3
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(4);
+    expect(divs.eq(1).html()).toEqual("<p>Portrait</p>");
+    expect(divs.eq(2).html()).toEqual("<p>Resources</p>");
+    expect(divs.eq(3).html()).toEqual("<p>Stats</p>");
+
+    menuSystem.hideStatusBoxes("stats");
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(3);
+    expect(divs.eq(1).html()).toEqual("<p>Portrait</p>");
+    expect(divs.eq(2).html()).toEqual("<p>Resources</p>");
+
+    menuSystem.hideStatusBoxes("resources");
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(2);
+    expect(divs.eq(1).html()).toEqual("<p>Portrait</p>");
+
+    menuSystem.hideStatusBoxes("portrait");
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(1);
+
+    // maybe have a convenience function which is like
+    // menuSystem.addStatusBox(name, generateHtmlCallback)
   });
 
 });
@@ -377,6 +445,8 @@ describe("Diagloglog", function() {
     // and size of the text box and the portrait box.
     dialoglog.setMenuPositions({ imgLeft: 60,
                                  imgTop: 500,
+                                 imgWidth: 180,
+                                 imgHeight: 180,
                                  msgLeft: 100,
                                  msgTop: 650 });
     dialoglog.multipartTextDisplay([
@@ -389,11 +459,15 @@ describe("Diagloglog", function() {
     var imgElem = $("#menusystem-base").find("img");
     expect(imgElem.parent().offset().left).toEqual(60);
     expect(imgElem.parent().offset().top).toEqual(500);
+    expect(imgElem.outerWidth()).toEqual(180);
+    expect(imgElem.outerHeight()).toEqual(180);
   });
 
   it("Should scale down img and msg correctly", function() {
     dialoglog.setMenuPositions({ imgLeft: 60,
                                  imgTop: 500,
+                                 imgWidth: 180,
+                                 imgHeight: 180,
                                  msgLeft: 100,
                                  msgTop: 650});
     dialoglog._calculatedScale = 0.5;
@@ -410,8 +484,8 @@ describe("Diagloglog", function() {
     expect(imgElem.parent().offset().top).toEqual(250);
 
     // dimensions should be half:
-    expect(imgElem.outerWidth()).toEqual(50); // will fail
-    expect(imgElem.outerWidth()).toEqual(50); // will fail
+    expect(imgElem.outerWidth()).toEqual(90);
+    expect(imgElem.outerWidth()).toEqual(90);
   });
 
   // bugs that tests did not catch:
