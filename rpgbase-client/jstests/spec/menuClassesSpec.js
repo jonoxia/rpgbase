@@ -94,16 +94,22 @@ describe("CSS Menu implementation", function() {
     menuSystem.pushMenu(menu1);
     expect(menu1.getPos().x).toEqual(500);
     expect(menu1.getPos().y).toEqual(400);
+    expect(menu1.parentTag.offset().left).toEqual(500);
+    expect(menu1.parentTag.offset().top).toEqual(400);
 
     var menu2 = menuSystem.makeMenu();
     menuSystem.pushMenu(menu2);
     expect(menu2.getPos().x).toEqual(550);
     expect(menu2.getPos().y).toEqual(440);
+    expect(menu2.parentTag.offset().left).toEqual(550);
+    expect(menu2.parentTag.offset().top).toEqual(440);
 
     var menu3 = menuSystem.makeMenu();
     menuSystem.pushMenu(menu3);
     expect(menu3.getPos().x).toEqual(600);
     expect(menu3.getPos().y).toEqual(480);
+    expect(menu3.parentTag.offset().left).toEqual(600);
+    expect(menu3.parentTag.offset().top).toEqual(480);
   });
 
   it("Should scale down menu positions/offsets", function() {
@@ -115,18 +121,26 @@ describe("CSS Menu implementation", function() {
     
     var menu1 = menuSystem.makeMenu();
     menuSystem.pushMenu(menu1);
-    expect(menu1.getPos().x).toEqual(250);
-    expect(menu1.getPos().y).toEqual(200);
+    expect(menu1.getPos().x).toEqual(500); // getPos should return the logical coord
+    expect(menu1.getPos().y).toEqual(400);
+    expect(menu1.parentTag.offset().left).toEqual(250); // actual position shoudlb e half
+    expect(menu1.parentTag.offset().top).toEqual(200);
 
     var menu2 = menuSystem.makeMenu();
     menuSystem.pushMenu(menu2);
-    expect(menu2.getPos().x).toEqual(275);
-    expect(menu2.getPos().y).toEqual(220);
+    expect(menu2.getPos().x).toEqual(550);
+    expect(menu2.getPos().y).toEqual(440);
+    expect(menu2.parentTag.offset().left).toEqual(275);
+    expect(menu2.parentTag.offset().top).toEqual(220);
+
 
     var menu3 = menuSystem.makeMenu();
     menuSystem.pushMenu(menu3);
-    expect(menu3.getPos().x).toEqual(300);
-    expect(menu3.getPos().y).toEqual(240);
+    expect(menu3.getPos().x).toEqual(600);
+    expect(menu3.getPos().y).toEqual(480);
+    expect(menu3.parentTag.offset().left).toEqual(300);
+    expect(menu3.parentTag.offset().top).toEqual(240);
+
   });
 
   it("Should offset each PC's stats window by pixels specified", function() {
@@ -254,6 +268,28 @@ describe("CSS Menu implementation", function() {
     expect(customDiv.html()).toEqual("<p>7</p>");
     // assert that we can override the ._generateHtml() of our fixed text box
     // and it gets called both when we display and when we refresh.
+  });
+
+  it("Should position the message where indicated", function() {
+    menuSystem.setMenuPositions({ msgLeft: 512,
+                                  msgTop: 384 });
+
+    menuSystem.showMsg("Nonihilf");
+    var divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(1);
+    var msgDiv = divs.eq(0);
+    expect(msgDiv.offset().left).toEqual(512);
+    expect(msgDiv.offset().top).toEqual(384);
+    expect(msgDiv.html()).toEqual("<span>Nonihilf</span><br>");
+
+    menuSystem.clearMsg();
+    menuSystem._calculatedScale = 0.5;
+    menuSystem.showMsg("Nonihilf");
+    divs = $("#menusystem-base div");
+    expect(divs.length).toEqual(1);
+    msgDiv = divs.eq(0);
+    expect(msgDiv.offset().left).toEqual(256);
+    expect(msgDiv.offset().top).toEqual(192);
   });
 
   it("Should never give keyboard focus to status boxes", function() {
@@ -487,6 +523,12 @@ describe("Diagloglog", function() {
     expect(imgElem.outerWidth()).toEqual(90);
     expect(imgElem.outerWidth()).toEqual(90);
   });
+
+  // Test for correctly positioning scrollingMsgBox
+  // test for setting a menu's position BEFORE drawing it (doesn't work but should)
+  // test for negative coordinates meaning offset measured from right or bottom
+  // test that showMsg happens in the right place (which it currently doesn't)
+  // multiColumnMenu is now broken
 
   // bugs that tests did not catch:
   //  -- menu system exited before all conversation was done

@@ -471,18 +471,19 @@ function CssMixin(subclassPrototype) {
   };
 
   subclassPrototype.setPos = function(x, y) {
-    // TODO this doesn't apply scale. I think it probably should, to be consistent
-    // with setOuterDimensions. We're usually calling getScaledPos and then passing
-    // that to setPos, so we could move the transformation inside this function...
-    this.screenX = x;
-    this.screenY = y;
+    // x and y are given in logical coordinates; this does the scaling.
+    this.logicalX = x;
+    this.logicalY = y;
+    this.screenX = Math.floor( x * this.menuSystem._calculatedScale );
+    this.screenY = Math.floor( y * this.menuSystem._calculatedScale );
     if (this.parentTag) {
-      this.parentTag.css("left", x);
-      this.parentTag.css("top", y);
+      this.parentTag.css("left", this.screenX);
+      this.parentTag.css("top", this.screenY);
     }
   };
 
   subclassPrototype.setOuterDimensions = function(width, height) {
+    // width and height are given in logical coordinates; this does the scaling.
     var scaleFactor = this.menuSystem._calculatedScale;
     var positioning = this.menuSystem._positioning;
     var padding = Math.ceil(positioning.cssPadding * scaleFactor);
@@ -499,7 +500,9 @@ function CssMixin(subclassPrototype) {
   };
 
   subclassPrototype.getPos = function() {
-    return {x: this.screenX, y: this.screenY};
+    // do we want the screen position at current scale, or the logical position
+    // (out of 1024)?
+    return {x: this.logicalX, y: this.logicalY};
   };
 
 }
@@ -624,10 +627,15 @@ function MenuSystemMixin(subClassPrototype) {
       menuXOffset: 0,
       menuYOffset: 0,
 
-      resourceLeft: 160,
+      resourceLeft: 160, // todo will we still use these?
       resourceTop: 10,
       resourceWidth: 90,
       resourceHeight: 20,
+
+      imgLeft: 100,
+      imgTop: 520,
+      imgWidth: 100,
+      imgHeight: 100,
 
       cssFontSize: 18, // only applies to css menus 
       cssBorderWidth: 3, // same -- TODO merge with canvas text styles
@@ -775,14 +783,14 @@ function MenuSystemMixin(subClassPrototype) {
       var pos = this.getTopMenu().getPos();
       // if menuXOffset and menuYOffset are set, then we move each
       // new child menu that far right/down from its parent menu:
-      var offsets = this._scalePositions(this._positioning.menuXOffset,
-                                         this._positioning.menuYOffset);
-      x = pos.x + offsets.x;
-      y = pos.y + offsets.y;
+      //var offsets = this._scalePositions(this._positioning.menuXOffset,
+      //                                   this._positioning.menuYOffset);
+      x = pos.x + this._positioning.menuXOffset; //offsets.x;
+      y = pos.y + this._positioning.menuYOffset; //offsets.y;
     } else {
-      var pos = this.getScaledMenuPos();
-      x = pos.x;
-      y = pos.y;
+      //var pos = this.getScaledMenuPos();
+      x = this._positioning.menuLeft; //pos.x;
+      y = this._positioning.menuTop; //pos.y;
     }
 
     newMenu.setPos(x, y);
@@ -831,8 +839,8 @@ function MenuSystemMixin(subClassPrototype) {
       this.canvasStyleMsgText = msg;
       this.canvasStyleMsgLines = CanvasTextUtils.splitLines(msg);
     } else {
-      this.displayElem.css("left", this._positioning.msgLeft);
-      this.displayElem.css("top", this._positioning.msgTop);
+      this.displayElem.css("left", this._calculatedScale * this._positioning.msgLeft);
+      this.displayElem.css("top", this._calculatedScale * this._positioning.msgTop);
       this.displayElem.css("font-size", this.getFontSize() + "pt");
       this.displayElem.append($("<span></span>").html(msg));
       this.displayElem.append($("<br>"));
@@ -1605,8 +1613,8 @@ Dialoglog.prototype = {
     if (!this.portraitBox) {
       this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
       this.addStatusBox(this.portraitBox, "portrait");
-      this.portraitBox.setPos(self._calculatedScale * this._positioning.imgLeft,
-                              self._calculatedScale * this._positioning.imgTop);
+      this.portraitBox.setPos(this._positioning.imgLeft,
+                              this._positioning.imgTop);
       // TODO setOutsideDimensions, maybe?
     }
 
@@ -1616,8 +1624,8 @@ Dialoglog.prototype = {
 
       var textBox = self.makeScrollingTextBox(nextSegment.text);
       self.pushMenu(textBox);
-      textBox.setPos(self._calculatedScale * self._positioning.msgLeft,
-                     self._calculatedScale * self._positioning.msgTop);
+      textBox.setPos(self._positioning.msgLeft,
+                     self._positioning.msgTop);
       // TODO setOutsideDimensions, maybe?
       
       if (nextSegment.img == null) {
