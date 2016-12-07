@@ -63,15 +63,14 @@ PlotManager.prototype = {
 SerializableMixin(PlotManager);
 
 function PlotDialogSystem(htmlElem, cursorImg, width, height) {
+  // Note: code overlaps a LOT with Dialoglog - could they be merged?
   this._init(htmlElem, cursorImg, width, height);
   this._rootMenu = new BackgroundImgBox(width, height);
   this._freelyExit = false;
 
-  this._portraitBox = new CssFixedImgBox("", this);
-  
   var self = this;
   this.onClose(function() {
-    self._portraitBox.hide();
+    self.hideStatusBoxes("portrait");
     self._rootMenu.clearPanelStack();
   });
 }
@@ -87,22 +86,18 @@ PlotDialogSystem.prototype.handleKey = function(keyCode) {
   }
 };
 PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
-  
-  //this.pushMenu(this._portraitBox);
-    if (!this._portraitBox.parentTag) {
-    // TODO don't hardcode these offsets -- they should depend on size
-    // of portrait image
-    // TODO also this duplicates logic from dialoglog.multiPartTextDisplay.
-    this._portraitBox.setPos(this._positioning.msgLeft - 140,
-                             this._positioning.msgTop - 35);
-    this._portraitBox.display();
+  if (!this.portraitBox) {
+      this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
+      this.addStatusBox(this.portraitBox, "portrait");
+      this.portraitBox.setPos(this._positioning.imgLeft,
+                              this._positioning.imgTop);
+      // TODO setOutsideDimensions, maybe?
   }
-  if (!portrait) {
-    this._portraitBox.hide();
-  } else {
-    this._portraitBox.show();
-    this._portraitBox.setImg(portrait, 100, 100);
-  }
+
+  this.showStatusBoxes("portrait");
+  var imgWidth = this._calculatedScale * this._positioning.imgWidth;
+  var imgHeight = this._calculatedScale * this._positioning.imgHeight;
+  this.portraitBox.setImg(portrait, imgWidth, imgHeight);
 };
 
 

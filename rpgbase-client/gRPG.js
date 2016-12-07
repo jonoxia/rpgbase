@@ -639,8 +639,9 @@ var gRPG = (function(){
 
       /* TODO the following line is supposed to scale the menu system to match
        * the scale of the game engine as a whole. Would probably be better
-       * to make part of the InputMode interface be a function updateScale or something
-       * like that, which we can call whenever the window size changes. */
+       * to make part of the InputMode interface be a function updateScale or
+       * something like that, which we can call whenever the window size 
+       * changes. */
       menuMode._calculatedScale = this._calculatedScale;
 
       this.addMode(modeName, menuMode);
@@ -725,7 +726,7 @@ var gRPG = (function(){
 
       plotMode.stop = function() {
       };
-
+      plotMode._calculatedScale = this._calculatedScale;
       this.addMode(modeName, plotMode);
       return plotMode;
     }
