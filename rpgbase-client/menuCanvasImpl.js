@@ -183,27 +183,6 @@ var CanvasTextUtils = {
     
   },
 
-  splitLines: function(text) {
-    // split text up into lines:
-    var words = text.split(" ");
-    var lines = [];
-    var currLine = words.shift();
-    var maxLineLength = this.styles.maxLineLength;
-    while (words.length > 0) {
-      var word = words.shift();
-      if (currLine.length + word.length + 1 <= maxLineLength) {
-        currLine = currLine + " " + word;
-      } else {
-        lines.push(currLine);
-        currLine = word;
-      }
-    }
-    if (currLine.length > 0) {
-      lines.push(currLine);
-    }
-    return lines;
-  },
-
   setStyles: function(options) {
     for (var prop in options) {
       this.styles[prop] = options[prop];
@@ -367,11 +346,11 @@ CanvasCmdMenu.prototype.showArrowAtIndex = function(index) {
 */
 
 function CanvasScrollingTextBox(text, menuSystem) {
-  this.lines = CanvasTextUtils.splitLines(text);
   // currently hard-coded to show 2 lines at a time
   this.currLine = 0;
   this.menuSystem = menuSystem;
   var styles = CanvasTextUtils.getStyles();
+  this.lines = this.splitLines(text, styles.maxLineLength);
   this.linesAtOnce = styles.scrollBoxLines;
   this.width = styles.leftMargin + styles.rightMargin 
     + styles.maxLineLength * styles.fontSize;

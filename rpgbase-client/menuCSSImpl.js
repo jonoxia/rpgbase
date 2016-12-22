@@ -133,13 +133,14 @@ CssMixin(CssCmdMenu.prototype);
 
 
 function CssScrollingTextBox(text, menuSystem) {
-  // TODO rewrite this constructor -- how do we decide where to split lines?
-  this.lines = CanvasTextUtils.splitLines(text);
   this.currLine = 0;
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this.linesAtOnce = 3; // TODO don't hardcode me
+  var maxCharsPerLine = 40; // TODO don't hardcode me either
   this._closeCallbacks = []; // TODO isn't this in the base class?
+  this.lines = this.splitLines(text, maxCharsPerLine);
+
 };
 ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
@@ -151,8 +152,6 @@ CssScrollingTextBox.prototype._generateHtml = function() {
                                     this.currLine + this.linesAtOnce).join("<br>");
   return this.textLines;
 };
-
-
 
 function CssFixedTextBox(textLines, menuSystem) {
   //this._init();
@@ -174,10 +173,16 @@ CssFixedTextBox.prototype.setText = function(newTextLines) {
 CssFixedTextBox.prototype._generateHtml = function() {
   // override this to make a fixed text box that displays something else
   return this.textLines.join("<br>");
+  /* TODO almost all the usefulness of CssFixedTextBox is in overriding this
+   * so maybe it should just take the generateHtml function as a constructor
+   * argument or something? */
 };
 CssFixedTextBox.prototype.outsideWidth = function() {
   return this.parentTag.outerWidth(); // TODO is this ever used?
 };
+GameEventSubscriberMixin(CssFixedTextBox.prototype); // mmmm?????
+
+
 
 function CssFixedImgBox(img, menuSystem) {
   this.container = menuSystem._htmlElem;
