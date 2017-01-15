@@ -176,6 +176,7 @@ function Animator(frameLength, afterFrame) {
     self._currentAnimations = stillGoingAnims;
   };
   this.SFX = null;
+  this.fastForward = false;
 }
 Animator.prototype = {
   start: function() {
@@ -196,6 +197,15 @@ Animator.prototype = {
   },
   
   runAnimation: function(animation) {
+    if (this.fastForward) {
+      debugLog("fast-forwarding runAnimation");
+      $.each(animation.finishCallbacks, function(j, callback) {
+        callback();
+      });
+      return;
+    }
+    // otherwise, run normally:
+    debugLog("Original runAnimation");
     animation.currFrame = 0;
     this._currentAnimations.push(animation);
   },
