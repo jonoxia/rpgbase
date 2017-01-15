@@ -1,6 +1,6 @@
 
 function randomElementFromArray(arr) {
-  var index = Math.floor( Math.random() * arr.length);
+  var index = rollDice(1, arr.length) - 1;
   return arr[index];
 }
 
@@ -784,12 +784,19 @@ BattleSystem.prototype = {
   },
 
   outOfSequenceAction: function(fighter, cmd, target) {
-    // sticks an attack on the beginning of the attack queue:
-
-    // TODO should i actually stack declared-, targeted-, attack, and then resolved-?
-    this.eventService.stackEvent("attack", {source: fighter, cmd: cmd, target: target});
+    // sticks an attack on the beginning of the attack queue. Use for
+    // counterattacks, bonus attacks, etc.
+    var counterAttackData = {source: fighter,
+                             cmd: cmd,
+                             target: target
+                            };
+    // since we're stacking these, put them on in the reverse order that we want
+    // them to happen:
+    this.eventService.stackGameEvent("attack-resolved", counterAttackData);
+    this.eventService.stackGameEvent("attack", counterAttackData);
+    this.eventService.stackGameEvent("attack-targeted", counterAttackData);
+    this.eventService.stackGameEvent("attack-declared", counterAttackData);
   },
-
   
   onAttackEvent: function(eventData) {
     if (this.menuImpl == "css") {
