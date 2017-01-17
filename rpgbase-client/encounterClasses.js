@@ -1403,6 +1403,8 @@ var BattlerMixin = function() {
       this._statMods[i].tickDown();
       if (this._statMods[i].isActive()) {
         modsStillActive.push(this._statMods[i]);
+      } else {
+        this._statMods[i].onExpire();
       }
     }
     this._statMods = modsStillActive;
@@ -1523,6 +1525,11 @@ TempStatMod.prototype = {
 
   isStatus: function(statusName) {
     return false;
+  },
+
+  onExpire: function() {
+    // will be called when the stat mod expires -- override this to have
+    // something happen.
   }
 };
 
@@ -1548,5 +1555,10 @@ TempStatusCondition.prototype = {
   isStatus: function(statusName) {
     var result = (this._statusName == statusName);
     return result;
+  },
+
+  onExpire: function() {
+    // will be called when the stat mod expires -- override this to have
+    // something happen.
   }
 };
