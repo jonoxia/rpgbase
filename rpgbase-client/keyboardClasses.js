@@ -205,7 +205,6 @@ Animator.prototype = {
       return;
     }
     // otherwise, run normally:
-    debugLog("Original runAnimation");
     animation.currFrame = 0;
     this._currentAnimations.push(animation);
   },

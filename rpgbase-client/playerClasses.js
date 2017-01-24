@@ -669,10 +669,18 @@ PlayerCharacter.prototype = {
     }
     return myItemCmd;
   },
+  getAbilityList: function(isBattle) {
+    if (isBattle) {
+      return this._battleSpells.slice();
+    } else {
+      return this._fieldSpells.slice();
+    }
+  },
   generateMagicSubMenu: function() {
     var myMagicCmd = new BattleCommandSet();
-    for (i = 0; i < this._battleSpells.length; i++) {
-      var spell = this._battleSpells[i];
+    var spells = this.getAbilityList(true);
+    for (i = 0; i < spells.length; i++) {
+      var spell = spells[i];
       myMagicCmd.add(spell.name, spell);
     }
     return myMagicCmd;
@@ -763,6 +771,10 @@ PlayerCharacter.prototype = {
       var slot = instance.getEquipSlot();
       this._equippedItems[slot] = null;
     }
+  },
+
+  unEquipSlot: function(slot) {
+    this._equippedItems[slot] = null;
   },
 
   unEquipAll: function() {
