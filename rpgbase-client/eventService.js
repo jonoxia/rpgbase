@@ -44,15 +44,11 @@ GameEventService.prototype = {
       receivers = [];
     }
 
-    $.each(receivers, function(i, receiver) {
-      receiver.takeEvent(eventName, eventData);
-    });
-
     // also notify the source and target, if any, so that class-level handlers can be
     // triggered for them:
     if (eventData.source) { // not all events have sources
       if (receivers.indexOf( eventData.source ) === -1) { // don't notify twice
-        eventData.source.takeEvent(eventName, eventData);
+        receivers.push(eventData.source);
       }
     }
     if (eventData.target) { // not all events have targets
@@ -61,12 +57,16 @@ GameEventService.prototype = {
           // this check necessitated by the times where target is an array of targets
           // TODO instead of skipping it, notify every object in the array?
           // OR put that array in a different field not named "target"
-          eventData.target.takeEvent(eventName, eventData);
+          receivers.push(eventData.target);
         } else {
           console.log("WARN: Target with no takeEvent function is " + eventData.target);
         }
       }
     }
+
+    $.each(receivers, function(i, receiver) {
+      receiver.takeEvent(eventName, eventData);
+    });
   },
 
   processGameEvent: function() {

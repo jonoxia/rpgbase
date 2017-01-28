@@ -424,6 +424,68 @@ describe("Event Service (PubSub)", function() {
   });
 
   // Add tests: for clearQueue, cancelEvent, and fireEvent.
+
+  it("Should notify source and target even if they didn't subscribe", function() {
+    var bot1 = new BattleBot("Bot 1");
+    var bot2 = new BattleBot("Bot 2");
+
+    var handler = function(eventData) {
+      if (eventData.source === this) {
+        eventLog.push(this.name + " was the source.");
+      }
+      if (eventData.target === this) {
+        eventLog.push(this.name + " was the target.");
+      }
+    };
+    bot1.onEvent("doathing", handler);
+    bot2.onEvent("doathing", handler);
+
+    pubSubHub.queueGameEvent("doathing", {source: bot1, target: bot2});
+    pubSubHub.procAllEvents();
+    expect(eventLog.length).toEqual(2);
+    expect(eventLog[0]).toEqual("Bot 1 was the source.");
+    expect(eventLog[1]).toEqual("Bot 2 was the target.");
+  });
+
+  it("Should notify me only once even if i'm source and subscriber", function() {
+    var bot1 = new BattleBot("Bot 1");
+    var bot2 = new BattleBot("Bot 2");
+
+    var handler = function(eventData) {
+      if (eventData.source === this) {
+        eventLog.push(this.name + " was the source.");
+      }
+      if (eventData.target === this) {
+        eventLog.push(this.name + " was the target.");
+      }
+    };
+    bot1.subscribeEvent(pubSubHub, "doathing", handler);
+    bot2.subscribeEvent(pubSubHub, "doathing", handler);
+
+    pubSubHub.queueGameEvent("doathing", {source: bot1, target: bot2});
+    pubSubHub.procAllEvents();
+    expect(eventLog.length).toEqual(2);
+    expect(eventLog[0]).toEqual("Bot 1 was the source.");
+    expect(eventLog[1]).toEqual("Bot 2 was the target.");
+  });
+
+  it("Should only notify me once even if i'm source and target", function() {
+    var bot1 = new BattleBot("Bot 1");
+    // this is a weird edge case, but if the same object is both source and
+    // target it should still only get one notification, not two.
+
+    bot1.onEvent("doathing", function(eventData) {
+      if (eventData.source === this && eventData.target === this) {
+        eventLog.push(this.name + " did a thing to itself.");
+      }
+    });
+
+    pubSubHub.queueGameEvent("doathing", {source: bot1, target: bot1});
+    pubSubHub.procAllEvents();
+
+    expect(eventLog.length).toEqual(1);
+    expect(eventLog[0]).toEqual("Bot 1 did a thing to itself.");
+  });
 });
 
 
