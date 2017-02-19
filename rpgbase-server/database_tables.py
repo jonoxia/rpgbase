@@ -12,5 +12,16 @@ class SavedGame(SQLObject):
     saveSlot = StringCol()
     gameData = StringCol()
 
+class MapData(SQLObject):
+    mapName = StringCol()
+    width = IntCol()
+    height = IntCol()
+    mapDataCSV = StringCol()
+    imageFile = StringCol()
+    isOverworld = BoolCol()
+    isTileset = BoolCol()
+    
+
 if __name__ == "__main__":
     SavedGame.createTable()
+    MapData.createTable()
