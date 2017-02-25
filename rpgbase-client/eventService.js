@@ -39,8 +39,11 @@ GameEventService.prototype = {
 
   fireGameEvent: function(eventName, eventData) {
     // Call this to just proc the event immediately with no queueing
-    var receivers = this._subscribers[eventName];
-    if (!receivers) {
+    var receivers;
+    if (this._subscribers[eventName]) {
+      // work off a copy of the subscribers list
+      receivers = this._subscribers[eventName].slice();
+    } else {
       receivers = [];
     }
 
@@ -64,6 +67,7 @@ GameEventService.prototype = {
       }
     }
 
+    var preLoopReceiverLen = receivers.length;
     $.each(receivers, function(i, receiver) {
       receiver.takeEvent(eventName, eventData);
     });

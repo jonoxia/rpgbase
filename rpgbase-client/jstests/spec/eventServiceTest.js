@@ -713,7 +713,9 @@ describe("Event-service-based battle system", function() {
     expect(eventLog[5]).toEqual("B3 uses Fight");
     expect(eventLog[6]).toEqual("B2 takes 2 damage.");
   });
-  
+
+  // TODO test for what happens if a listener unsubscribes itself during its
+  // event handler (changing the length of the receivers list)
 });
 
 
