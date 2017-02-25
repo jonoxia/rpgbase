@@ -776,8 +776,10 @@ FieldMenu.prototype = {
 
   executeFieldSpell: function(character, spell) {
     var self = this;
-    if (!spell.canUse(character)) {
-      self.showMsg("NOT ENOUGH MP."); // TODO maybe other reason?
+    var result = spell.checkUsability(this, character);
+    if (!result.usable) {
+      // show reason why spell cannot be used:
+      self.showMsg(result.reason);
     } else if (spell.target == "ally") {
       self.chooseCharacter(self._uiText.spellTarget, function(target) {
         self.popMenu();

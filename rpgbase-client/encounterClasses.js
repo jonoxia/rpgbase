@@ -361,15 +361,16 @@ BattleSystem.prototype = {
 
         // if pc has a cmdDisplayText function use that instead of name
         if (pc.cmdDisplayText) {
-          name = pc.cmdDisplayText(cmd, true); // true = is in battle
+          name = pc.cmdDisplayText(cmd, self);
         }
 
         // but if it's a "leaf node", then next step is to see
         // whether you can use it right now...
-        if (!cmd.canUse(pc)) {
+        var result = cmd.checkUsability(self, pc);
+        if (!result.usable) {
           cmdMenu.addCommand(name, function() {
-            self.scrollText("NOT ENOUGH MP!");
-            // TODO what if this isn't the reason
+            // Show reason why command is not usable:
+            self.scrollText(result.reason);
           });
           return;
         }
@@ -692,11 +693,11 @@ BattleSystem.prototype = {
         return;
       }
 
-      if (!lockin.cmd.canUse(pc)) {
-        this.scrollText("NOT ENOUGH MP."); // TODO what if this isn't the reason?
-        // canUse should actually return a record with both true/false and error msg.
-        // or mabye change name to ".unusable" and have it return an error msg or falsy to
-        // be usable.
+      var result = cmd.checkUsability(this, pc);
+      if (!result.usable) {
+        // Show reason why PC can not repeat last round's command
+        // (e.g. because they're out of MP):
+        this.scrollText(result.reason);
         return;
       }
 
@@ -1179,21 +1180,29 @@ function BatCmd(options) {
 }
 BatCmd.prototype = {
   isContainer: false,
-  canUse: function(user) {
+  INSUFFICIENT_RESOURCE_MSG: "NOT ENOUGH MP", // game should override this
+  
+  checkUsability: function(system, user) {
+    // Return a record with {usable: true/false, reason: string}
+    // if it's not usable string should tell user why
     // TODO what if usability depends on target selection?
     if (this.cost) {
       if (user.getStat(this.cost.resource) < this.cost.amount) {
-        return false;
+        return {usable: false, reason: this.INSUFFICIENT_RESOURCE_MSG};
       }
     }
     if (this._canUse) {
-      return this._canUse(user);
+      return this._canUse(system, user);
     }
-    return true;
+    return {usable: true, reason: ""};
+  },
+  canUse: function(system, user) {
+    return this.checkUsablity(user).usable;
   },
   effect: function(system, user, target) {
-    if (!this.canUse(user)) {
-      system.showMsg(user.name + " can't use " + this.name);
+    var result = this.checkUsability(system, user);
+    if (!result.usable) {
+      system.showMsg(this.name + ": " + result.reason);
       return; // can happen if e.g. you REPEAT a spell when out of MP
     }
     if (this.cost) {
