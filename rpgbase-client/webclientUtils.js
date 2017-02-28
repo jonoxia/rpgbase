@@ -1,3 +1,7 @@
+// TODO make AssetLoader able to load other kinds of things as well:
+// music and CSV files.
+// give it a deleteTags() method.
+// 
 function AssetLoader() {
     this._things = [];
     this._thingsToLoad = 0;
@@ -20,6 +24,18 @@ AssetLoader.prototype = {
 	          tag: tag };
     this._things.push(thing);
     return tag;
+  },
+
+  addAudio: function(url) {
+    // TODO
+  },
+
+  addMapDataFile: function(url) {
+    // TODO
+  },
+
+  parseMapDataFile: function(url) {
+    // TODO
   },
 
   listUnloaded: function() {
@@ -54,6 +70,11 @@ AssetLoader.prototype = {
 	thing.tag.src = thing.url;
       })(this._things[t]);
     }
+  },
+
+  deleteTags: function() {
+    // TODO
+    // remove from the page all tags I created
   }
 };
 
@@ -122,6 +143,10 @@ AudioPlayer.prototype = {
       this._preloads[filename].currentTime = 0;
     }
     this._preloads[filename].play();
+  },
+
+  getCurrentTrack: function() {
+    return this._currentPlayingFile;
   },
 
   stop: function() {
