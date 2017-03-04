@@ -1197,7 +1197,8 @@ BatCmd.prototype = {
     return {usable: true, reason: ""};
   },
   canUse: function(system, user) {
-    return this.checkUsablity(user).usable;
+     // deprecated but kept for backwards compatibility
+    return this.checkUsability(user).usable;
   },
   effect: function(system, user, target) {
     var result = this.checkUsability(system, user);

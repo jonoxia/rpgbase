@@ -352,9 +352,16 @@ ItemInstance.prototype = {
     return this._equipStats;
   },
 
-  getEquipStat: function(statName) {
+  getEquipStat: function(statName, character) {
     if (this._equipStats.hasOwnProperty(statName)) {
-      return this._equipStats[statName];
+      // this._equipStats[statName] is either a number or a function.
+      // (the function version lets us implement variable or scaling equipment)
+      // if it's a function, call it:
+      var stat = this._equipStats[statName];
+      if (typeof stat === "function") {
+        return stat.call(this, character);
+      }
+      return stat;
     } else {
       return 0;
     }
