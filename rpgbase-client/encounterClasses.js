@@ -1104,6 +1104,10 @@ BattleSystem.prototype = {
 
   checkBattleEndConditions: function() {
     // TODO set some kind of guard flag? didn't we used to have one?
+    if (this._battleOver) {
+      return true; // so we don't end the same battle twice
+    }
+    
     var activeParty = this.getActiveParty();
 
     // if all monsters are dead or fled, you win:
