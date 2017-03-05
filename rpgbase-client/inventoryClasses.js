@@ -59,7 +59,7 @@ Inventory.prototype = {
     if (this.isFull()) {
       return false;
     }
-    this.gainInstance(itemType.instantiate(this));
+    this.gainInstance(itemType.instantiate());
     return true;
   },
 

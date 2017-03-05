@@ -759,7 +759,7 @@ PlayerCharacter.prototype = {
 
   isEquipped: function(instance) {
     for (var slot in this._equippedItems) {
-      if (this._equippedItems[slot] == instance) {
+      if (this._equippedItems[slot] === instance) {
         return true;
       }
     }
