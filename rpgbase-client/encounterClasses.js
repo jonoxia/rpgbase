@@ -963,6 +963,7 @@ BattleSystem.prototype = {
     if (this._animator) {
       this._animator.cancelAllCallbacks();
     }
+    this.eventService.clearQueue(); // clear out any events still pending
     this.emptyMenuStack();
     this.pcMenus = [];
     this._fixedDisplayBoxes = [];
