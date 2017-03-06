@@ -199,8 +199,23 @@ Player.prototype = {
   },
 
   addCharacter: function(playerCharacter) {
+    var index = this.party.indexOf( playerCharacter );
+    if (index > -1) {
+      throw "Can't add " + playerCharacter.name + " they're already in the party";
+    }
     playerCharacter._marchOrder = this.party.length;
     this.party.push(playerCharacter);
+  },
+
+  removeCharacter: function(playerCharacter) {
+    var index = this.party.indexOf( playerCharacter );
+    if (index === -1) {
+      throw "Can't remove " + playerCharacter.name + " they're not in the party";
+    }
+    this.party.splice(index, 1);
+    $.each(this.party, function(i, character) {
+      character._marchOrder = i;
+    });
   },
 
   getParty: function() {
