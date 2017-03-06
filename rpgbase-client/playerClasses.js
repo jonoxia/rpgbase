@@ -759,7 +759,7 @@ PlayerCharacter.prototype = {
 
   isEquipped: function(instance) {
     for (var slot in this._equippedItems) {
-      if (this._equippedItems[slot] == instance) {
+      if (this._equippedItems[slot] === instance) {
         return true;
       }
     }
@@ -812,7 +812,7 @@ PlayerCharacter.prototype.getEquipmentStat = function(statName) {
   var statValue = 0;
   for (var slot in this._equippedItems) {
     if (this._equippedItems[slot]) {
-      var mod = this._equippedItems[slot].getEquipStat(statName);
+      var mod = this._equippedItems[slot].getEquipStat(statName, this);
       statValue += mod;
     }
   }

@@ -1105,6 +1105,10 @@ BattleSystem.prototype = {
 
   checkBattleEndConditions: function() {
     // TODO set some kind of guard flag? didn't we used to have one?
+    if (this._battleOver) {
+      return true; // so we don't end the same battle twice
+    }
+    
     var activeParty = this.getActiveParty();
 
     // if all monsters are dead or fled, you win:
@@ -1198,7 +1202,8 @@ BatCmd.prototype = {
     return {usable: true, reason: ""};
   },
   canUse: function(system, user) {
-    return this.checkUsablity(user).usable;
+     // deprecated but kept for backwards compatibility
+    return this.checkUsability(user).usable;
   },
   effect: function(system, user, target) {
     var result = this.checkUsability(system, user);
