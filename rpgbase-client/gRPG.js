@@ -221,8 +221,12 @@ var gRPG = (function(){
       this._subMode = this._modeRegistry[name];
 
       // switch input to menu style:
+      var keys = this._mapInputHandler.keysThatAreDown.slice();
       this._mapInputHandler.stopListening();
       this._menuInputHandler.startListening();
+      // Preserve key state across the switch in input handlers.
+      // (TODO: should there be features in keyboardClasses.js to do this?)
+      this._menuInputHandler.keysThatAreDown = keys;
 
       // TODO in some cases we want to do subMode.menuSystem.open(self.player);
       // ... but not in all cases?

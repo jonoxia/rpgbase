@@ -76,13 +76,12 @@ function PlotDialogSystem(htmlElem, cursorImg, width, height) {
 }
 MenuSystemMixin(PlotDialogSystem.prototype);
 PlotDialogSystem.prototype.handleKey = function(keyCode) {
-  if (keyCode == CANCEL_BUTTON) {
-    // Ignore cancel button - plot points cannot be canceled.
-    return;
-  }
-  if (this.menuStack.length > 0) {
-    var topMenu = this.menuStack[ this.menuStack.length - 1];
-    topMenu.onKey(keyCode);
+  // Only the confirm button does anything:
+  if (keyCode === CONFIRM_BUTTON) {
+    if (this.menuStack.length > 0) {
+      var topMenu = this.menuStack[ this.menuStack.length - 1];
+      topMenu.onKey(keyCode);
+    }
   }
 };
 PlotDialogSystem.prototype.showPortraitBox = function(portrait) {

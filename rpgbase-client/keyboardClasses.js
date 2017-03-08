@@ -30,7 +30,6 @@ function NoRepeatKeyHandler(keyCallback) {
 }
 NoRepeatKeyHandler.prototype = {
   startListening: function() {
-    this.keysThatAreDown = [];
     $(document).bind("keydown", this.onKeydown);
     $(document).bind("keyup", this.onKeyup);
   },
