@@ -462,6 +462,8 @@ ScriptedEvent.prototype = {
     this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
     // and resume player control.
+    // since we're back on map screen we should resume map music:
+    this._mapScreen.playMusicForCurrentMap();
   }
 };
 

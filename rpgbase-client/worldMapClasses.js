@@ -311,6 +311,16 @@ MapScreen.prototype = {
     this._audioPlayer = audio;
   },
 
+  playMusicForCurrentMap: function() {
+    var domain = this._currentDomain;
+    if (this._audioPlayer && domain.musicTrack) {
+      if (domain.musicTrack !== this._audioPlayer.getCurrentTrack()) {
+        console.log("Changing music track to " + domain.musicTrack);
+        this._audioPlayer.changeTrack(domain.musicTrack, true);
+      }
+    }
+  },
+
   setNewDomain: function( domain ) {
     if (this._currentDomain) {
       this._currentDomain.unload();
@@ -319,12 +329,7 @@ MapScreen.prototype = {
     this._scrollX = 0;
     this._scrollY = 0;
     this._currentDomain.load();
-    if (this._audioPlayer && domain.musicTrack) {
-      if (domain.musicTrack !== this._audioPlayer.getCurrentTrack()) {
-        console.log("Changing music track to " + domain.musicTrack);
-        this._audioPlayer.changeTrack(domain.musicTrack, true);
-      }
-    }
+    this.playMusicForCurrentMap();
   },
 
   getLandType: function( x, y ) {
