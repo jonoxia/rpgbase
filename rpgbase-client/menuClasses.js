@@ -145,7 +145,9 @@ function MenuSystemMixin(subClassPrototype) {
 
       cssFontSize: 18, // only applies to css menus 
       cssBorderWidth: 3, // same -- TODO merge with canvas text styles
-      cssPadding: 20 // same
+      cssPadding: 20, // same
+
+      maxMenuLength: 0 // if not zero, menus with more than x items become scrolling
     };
   };
 
@@ -205,10 +207,15 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.makeMenu = function() {
+    var maxLength = null;
+    if (this._positioning.maxMenuLength) {
+      maxLength = this._positioning.maxMenuLength;
+    }
     if (this.menuImpl == "canvas") {
-      return new CanvasCmdMenu(this._cursorImg, this);
+      // TODO the maxLength argument doesn't do anything for Canvas menus yet.
+      return new CanvasCmdMenu(this._cursorImg, this, maxLength);
     } else {
-      return new CssCmdMenu(this._htmlElem, this);
+      return new CssCmdMenu(this._htmlElem, this, maxLength);
     }
   };
 

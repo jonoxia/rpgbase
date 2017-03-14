@@ -61,13 +61,96 @@ function CssMixin(subclassPrototype) {
 }
 
 
-function CssCmdMenu(container, menuSystem) {
+function CssCmdMenu(container, menuSystem, maxRows) {
   this._init();
   this.container = container;
   this.menuSystem = menuSystem;
   this.cursorHtml = "<blink>&#x25B6;</blink>";
+  // if maxRows is provided and there are more rows than that, this becomes
+  // a scrolling menu.
+  if (maxRows) {
+    this._maxRows = maxRows;
+  }
+  this._scrollOffset = 0;
 }
 CssCmdMenu.prototype = {
+
+  _calculateScroll: function() {
+    if (!this._maxRows) {
+      this._scrollOffset = 0;
+      return;
+    }
+    if (this.cmdList.length <= this._maxRows) {
+      this._scrollOffset = 0;
+      return;
+    }
+    // say there are 12 items and we're showing 6
+    // when we get to
+    this._scrollOffset = this.selectedIndex - this._maxRows + 3;
+    if (this._scrollOffset < 0) {
+      this._scrollOffset = 0;
+      return;
+    }
+    var maxScroll = this.cmdList.length - this._maxRows;
+    //max rows + scroll offset must be  < this.cmdList.elgnth
+    if (this._scrollOffset > maxScroll) {
+      this._scrollOffset = maxScroll;
+    }
+  },
+
+  _calcRowsToShow: function() {
+    if (!this._maxRows) {
+      return this.cmdList.length;
+    }
+    return Math.min( this._maxRows, this.cmdList.length);
+  },
+
+  _populateTable: function() {
+    var numRows = this._calcRowsToShow();
+    this.table.empty();
+    for (var i = 0; i < numRows; i++) {
+     
+      var row = $("<tr></tr>");
+      var cell = $("<td></td>");
+      cell.html();
+      row.append(cell); //left cell
+      
+      cell = $("<td></td>");
+      var name;
+      if (i + this._scrollOffset > this.cmdList.length - 1) {
+        name = " scroll " + this._scrollOffset;
+      } else {
+        var name = this.cmdList[i + this._scrollOffset].name;
+      }
+      cell.html(name);
+      row.append(cell); // right cell
+      
+      this.table.append(row);
+    }
+
+    if (this.cmdList.length > numRows + this._scrollOffset) {
+      var row = $("<tr></tr>");
+      var cell = $("<td></td>");
+      cell.html();
+      row.append(cell); //left cell
+      cell = $("<td></td>");
+      cell.html("&nbsp;&nbsp;(...)");
+      row.append(cell);
+      this.table.append(row);
+    }
+
+    // TODO setting the font size here seems redundant with setting it in
+    // CssMixin display function, but if I don't do it here it doesn't work.
+    // for some reason.
+    // Scale the body font:
+    var fontSize = this.menuSystem.getFontSize();
+    this.table.find("td").css("font-size", fontSize + "pt");
+    // Scale the title font:
+    this.parentTag.find("span").css("font-size", fontSize + "pt");
+    // Scale the line height so that line heights don't change as you move
+    // the cursor:
+    this.table.find("td").css("line-height", Math.floor(1.1*fontSize) + "pt");
+  },
 
   _generateHtml: function() {
     // TODO this works in a subtly different way from the other CssMixin
@@ -83,32 +166,7 @@ CssCmdMenu.prototype = {
     this.table = $("<table></table>");
     this.parentTag.append(this.table);
     
-    var self = this;
-    
-    for (var c in this.cmdList) {
-      var row = $("<tr></tr>");
-      var cell = $("<td></td>");
-      cell.html();
-      row.append(cell);
-      cell = $("<td></td>");
-      var name = this.cmdList[c].name;
-      cell.html(name);
-      row.append(cell);
-      this.table.append(row);
-    }
     this.showArrowAtIndex(0);
-
-    // TODO setting the font size here seems redundant with setting it in
-    // CssMixin display function, but if I don't do it here it doesn't work.
-    // for some reason.
-    // Scale the body font:
-    var fontSize = this.menuSystem.getFontSize();
-    this.table.find("td").css("font-size", fontSize + "pt");
-    // Scale the title font:
-    this.parentTag.find("span").css("font-size", fontSize + "pt");
-    // Scale the line height so that line heights don't change as you move
-    // the cursor:
-    this.table.find("td").css("line-height", Math.floor(1.1*fontSize) + "pt");
 
     // Give it the "menu" class (this brings it in front of other boxes)
     this.parentTag.addClass("menu");
@@ -116,10 +174,13 @@ CssCmdMenu.prototype = {
   },
   
   showArrowAtIndex: function(index) {
+    this._calculateScroll();
+    this._populateTable();
+    
     var rows = this.table.find("tr");
     for (var r = 0; r < rows.length; r++) {
       var cell = $(rows[r]).find("td")[0];
-      if (r == index) {
+      if (r + this._scrollOffset === index) {
 	$(cell).html(this.cursorHtml);
       } else {
 	$(cell).empty();
