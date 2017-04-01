@@ -65,7 +65,7 @@ CSVLoader.prototype = {
 
     // No match found for filename:
     if (this.allowDefaults) {
-      console.log("WARNING: no CSV file named " + filename);
+      console.warn("WARNING: no CSV file named " + filename);
       return [];
     } else {
       throw "No CSV file named " + filename;
@@ -95,7 +95,7 @@ CSVLoader.prototype = {
 
     // No match found for filename:
     if (this.allowDefaults) {
-      console.log("WARNING: no CSV file named " + filename);
+      console.warn("WARNING: no CSV file named " + filename);
       return [];
     } else {
       throw "No CSV file named " + filename;
