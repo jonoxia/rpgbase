@@ -933,7 +933,9 @@ BattleSystem.prototype = {
       fighters[i].setStatus("fleeing", false);
       // any special end-of-round effects (e.g. poison damage)
     }
-
+    this.clearMsg(); // moved clearMsg before endRound stuff so that
+    // endRound events can show messages and have them be visible at the
+    // start of next round. Keep an eye on whether this causes any problems.
     this.eventService.fireGameEvent("end-round", {fighters: fighters});
 
     if (this._wholePartyCmd) {
@@ -941,7 +943,7 @@ BattleSystem.prototype = {
         this._wholePartyCmd.onEndRound(this, this.getActiveParty());
       }
     }
-    this.clearMsg();
+    // clearMsg was here
     this.updateStats(); // in case end of round effects changed 
     // anything
     if (!this._battleOver) {
