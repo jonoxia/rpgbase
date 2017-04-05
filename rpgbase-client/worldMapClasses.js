@@ -703,14 +703,40 @@ MapScreen.prototype = {
     return null;
   },
 
-  flash: function(color, numFrames) {
+  flash: function(color, holdFrames, fadeOutFrames, fadeInFrames) {
     // flashes the map screen the given color over the given number of frames
     var self = this;
+    if (!fadeOutFrames) {
+      fadeOutFrames = 0;
+    }
+    if (!fadeInFrames) {
+      fadeInFrames = 0;
+    }
+    var numFrames = holdFrames + fadeOutFrames + fadeInFrames;
+    var r, g, b;
+    switch(color) {
+    case "black":
+      r = 0; g = 0; b= 0;
+      break;
+    case "white":
+      r = 255; g = 255; b= 255;
+      break;
+    case "red":
+      r = 255; g =0; b = 0;
+      break;
+    }
+
     this._animator.playSfx(numFrames, function(ctx, frame) {
-            ctx.fillStyle = color;
-            ctx.fillRect(0, 0, self._screenWidth,
-                         self._screenHeight);
-        });
+      var alpha;
+      if (frame < fadeOutFrames) {
+        alpha = frame * (1.0 / fadeOutFrames);
+      } else if (frame > fadeOutFrames + holdFrames) {
+        alpha = 1.0 - ( (1.0 / fadeInFrames) * (frame - fadeOutFrames - holdFrames));
+      }
+      ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+      ctx.fillRect(0, 0, self._screenWidth,
+                   self._screenHeight);
+    });
   },
 
   getNeighbor: function(x, y, dx, dy) {
