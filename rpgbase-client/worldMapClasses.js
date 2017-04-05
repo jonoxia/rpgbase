@@ -50,6 +50,13 @@ Map.prototype = {
         trigger.passThrough = true;
       }
     }
+    // set default width and height to 1
+    if (trigger.hasOwnProperty('x') && !trigger.hasOwnProperty('width')) {
+      trigger.width = 1;
+    }
+    if (trigger.hasOwnProperty('y') && !trigger.hasOwnProperty('height')) {
+      trigger.height = 1;
+    }
     this._stepHandlers.push({
         trigger: trigger,
         result: result});
@@ -80,8 +87,9 @@ Map.prototype = {
 
       var triggered = true;
       if (trigger.x != undefined) {
-        if (trigger.x != x ||
-            trigger.y != y) {
+        // TODO i don't think this is the recommended way to check if it exists...
+        if ((x < trigger.x || x > trigger.x + trigger.width - 1 ) ||
+            (y < trigger.y || y > trigger.y + trigger.height - 1 )) {
           triggered = false;
         }
       }
@@ -104,8 +112,8 @@ Map.prototype = {
               y != 0 && y != this._dimY-1) {
             triggered = false;
           }
-              
         }
+        // TODO apparently i never implemented specific-edge?
       }
       
       if (triggered) {
