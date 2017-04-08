@@ -770,9 +770,12 @@ BattleSystem.prototype = {
       if (fighters[i].canAct()) {
         var action = fighters[i].getLockedInCmd();
 
+        // note this target may not be final target
         var attackEventData = {source: fighters[i],
                                cmd: action.cmd,
-                               target: action.target}; // may not be final target
+                               target: action.target,
+                               hits: []
+                              }; 
 
         // The four event stages of every attack:
         this.eventService.queueGameEvent("attack-declared", attackEventData);
@@ -789,7 +792,8 @@ BattleSystem.prototype = {
     // counterattacks, bonus attacks, etc.
     var counterAttackData = {source: fighter,
                              cmd: cmd,
-                             target: target
+                             target: target,
+                             hits: []
                             };
     // since we're stacking these, put them on in the reverse order that we want
     // them to happen:
@@ -1156,6 +1160,28 @@ BattleSystem.prototype = {
       return true;
     }
     return false;
+  },
+
+  addToHitList: function(battler) {
+    /* for issue jonoxia/mongolian-princess#138
+     * instead of just firing a hit event when a target is hit by an attack,
+     * we keep a list of targets hit inside the attack-resolved event.
+     * So one attack that hits mulitple enemies still only generates one hit
+     * event. The '.hits' property of the event data will contain a list of
+     * all targets who where hit, so listeners can check it. */
+    var hitEvent = null;
+    for (var i = 0; i < this.eventService._eventQueue.length; i++) {
+      if (this.eventService._eventQueue[i].name === "attack-resolved") {
+        hitEvent = this.eventService._eventQueue[i];
+        if (hitEvent.data.hits.indexOf(battler) === -1) {
+          hitEvent.data.hits.push(battler);
+        }
+        break;
+      }
+    }
+    if (!hitEvent) {
+      console.warn("Trying to record a hit but no attack-resolved event");
+    }
   }
 };
 MenuSystemMixin(BattleSystem.prototype);
