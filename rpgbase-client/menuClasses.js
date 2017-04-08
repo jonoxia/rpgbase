@@ -846,12 +846,20 @@ function ScrollingTextBoxMixin(subclassPrototype) {
       this.currLine ++;
       this.refresh();
     } else {
-      // if done, treat any key as cancel button
-      this.menuSystem.handleKey(CANCEL_BUTTON);
+      // if done, any key causes this scrolling box to close:
+      this.menuSystem.popMenu(); // will end up calling this.close()
+      // so we don't need to call this.close() explicitly.
+
+      /* Note that unlike the cancel button handler in handleKey(),
+       * this method does not close the menu system, even if this
+       * scrollingTextBox was the last menu in the stack. It's up to
+       * the menu system code to close itself in that case. (One way
+       * to do so is by adding a closeCallback to this text box.)
+       *  -- bug jonoxia/mongolian-princess#178        */
+      
       for (var i = 0; i < this._closeCallbacks.length; i++) {
         this._closeCallbacks[i]();
       }
-      this.close();
     }
   },
 

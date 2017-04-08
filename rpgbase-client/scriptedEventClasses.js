@@ -125,15 +125,9 @@ ScriptedEvent.prototype = {
 
   scrollText: function(text, callback) {
     var dlg = this._dialoglog;
-    // This code is duplicated from Dialoglog.scrollText()
     dlg.clearMsg();
     var textBox = dlg.scrollText(text);
-    textBox.onClose(function() {
-      //textBox.close();
-      //textBox.parentTag.hide();
-      dlg.popMenu(); // needed?
-      callback();
-    });
+    textBox.onClose(callback);
   },
 
   // could make a new menu system just for holding the keyboard
