@@ -837,13 +837,14 @@ BattleSystem.prototype = {
 
     // For single target attacks, check target is still valid:
     var target = eventData.target;
+    var cmd = eventData.cmd;
     if (target.hasOwnProperty("_statBlock")) {
       // meaning target is an individual ally/enemy and not a string code
-      if (target._dead || target.hasStatus("fled")) {
+      if ((target._dead && !cmd.targetsDead) || target.hasStatus("fled")) {
         // Cannot target battlers who have died or fled already.
         // TODO other reasons something can no longer be targeted??
-        // TODO EXCEPTION
-        // revive spells could target dead fighters
+        // set targetsDead = true for commands that are supposed to target
+        // dead people, e.g. Revive spell.
 
         if (this._autoRetarget) {
           /* If autoRetarget option is true, select a new random target:
