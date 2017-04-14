@@ -998,6 +998,9 @@ Dialoglog.prototype = {
     }
   },
 
+  scrollText: function() {
+  },
+
   multipartTextDisplay: function(textSegments) {
     /* pass in a list of objects with .text and .img properties, like:
      * [{text: "bla bla bla", img: "hero.jpg"}]
@@ -1051,3 +1054,19 @@ Dialoglog.prototype = {
   },
 };
 MenuSystemMixin(Dialoglog.prototype);
+// Override the mixin's scrollText function:
+Dialoglog.prototype.parentScrollText = Dialoglog.prototype.scrollText;
+Dialoglog.prototype.scrollText = function(dialogText) {
+  var textBox = this.parentScrollText(dialogText);
+  var self = this;
+  // This is to make sure the dialog mode gets closed after a simple dialog
+  // consisting of just one scrollText() call -- close the mode when the scrolling
+  // text box closes.
+  // (-- bug jonoxia/mongolian-princess#178)
+  textBox.onClose(function() {
+    if (self._freelyExit) {
+      self.close();
+    }
+  });
+  return textBox;
+}
