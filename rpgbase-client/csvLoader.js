@@ -56,6 +56,12 @@ CSVLoader.prototype = {
   getDicts: function (filename) {
     if (this.data[filename]) {
       var rawCSV = this.data[filename];
+
+      /* Skip blank lines: */
+      var lines = rawCSV.split("\n");
+      lines = lines.filter(function(x) { return x !== ""});
+      rawCSV = lines.join("\n");
+      
       var results = Papa.parse(rawCSV, {header: true});
       // TODO use dynamicParsing! then I don't have to parseInt everywhere
       return results.data;
