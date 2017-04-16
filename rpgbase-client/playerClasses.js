@@ -205,6 +205,7 @@ Player.prototype = {
     }
     playerCharacter._marchOrder = this.party.length;
     this.party.push(playerCharacter);
+    playerCharacter.onJoinParty();
   },
 
   removeCharacter: function(playerCharacter) {
@@ -212,6 +213,7 @@ Player.prototype = {
     if (index === -1) {
       throw "Can't remove " + playerCharacter.name + " they're not in the party";
     }
+    playerCharacter.onLeaveParty();
     this.party.splice(index, 1);
     $.each(this.party, function(i, character) {
       character._marchOrder = i;
@@ -599,6 +601,8 @@ function PlayerCharacter() {
 
   this._battleSpells = [];
   this._fieldSpells = [];
+
+  this._passives = []; // passive abilities
 }
 PlayerCharacter.prototype = {
   serializableClassName: "PlayerCharacter",
@@ -812,6 +816,40 @@ PlayerCharacter.prototype = {
     if (useInField) {
       this._fieldSpells.push(spellCmd);
     }
+  },
+
+  learnPassive: function(passive, engine) {
+    if (this.hasPassive(passive.name)) {
+      console.warn("Character " + this.name + " already knows " + passive.name);
+      return;
+    }
+    this._passives.push(passive);
+    // If i'm already in the party when i learn this, turn it on immediately:
+    if (engine.player.getParty().indexOf(this) > -1) {
+      passive.startListening(this);
+    }
+  },
+  // TODO may need a symmetrical unlearnPassive?
+ 
+  hasPassive: function(pName) {
+    return (this._passives.filter(function(x) {
+      return x.name === pName; }).length > 0);
+  },
+
+  onJoinParty: function() {
+    // Start all the PC's passives listening
+    var self = this;
+    $.each(this._passives, function(i, p) {
+      p.startListening(self);
+    });
+  },
+
+  onLeaveParty: function() {
+    // Stop all the PC's passives from listening
+    var self = this;
+    $.each(this._passives, function(i, p) {
+      p.stopListening(self);
+    });
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);
@@ -856,6 +894,39 @@ PlayerCharacter.prototype.getStat = function(statName) {
   }
   statValue += this.getEquipmentStat(statName);
   return statValue;
+};
+
+
+function PassiveAbility(name) {
+  /* Just a wrapper for a set of listeners that can be added/removed
+   * for a character's passive (i.e. triggered) abilities. Doesn't do
+   * anything by itself, until you give it some onActivate and
+   * onDeactivate callbacks, or unless you check pc.hasPassive()*/
+  this.name = name;
+  this._helptext = "";
+  this._activateCallback = null;
+  this._deactivateCallback = null;
+}
+PassiveAbility.prototype = {
+  setHelptext: function(newText) {
+    this._helptext = newText;
+  },
+  onActivate: function(callback) {
+    this._activateCallback = callback;
+  },
+  onDeactivate: function(callback) {
+    this._deactivateCallback = callback;
+  },
+  startListening: function(pc) {
+    if (this._activateCallback) {
+      this._activateCallback(pc);
+    }
+  },
+  stopListening: function(pc) {
+    if (this._deactivateCallback) {
+      this._deactivateCallback(pc);
+    }
+  }
 };
 
 
