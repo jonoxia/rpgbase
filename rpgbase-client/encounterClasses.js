@@ -462,7 +462,18 @@ BattleSystem.prototype = {
     return monsters;
   },
   
-  startBattle: function(player, encounter, landType) {
+  startBattle: function(player, encounter, landType, options) {
+    /* player: the player object.
+     * encounter: either a dictionary of monster number and type, or an encounter
+     *   object with a .monsters property. see below.
+     * landType: a code for where the encounter is taking place, used to select
+     *   background image.
+     * options: if provided, an object - supports the following options:
+     *   .startMsg: a message displayed instead of default startBattleMsg
+     *   .startConvo: a multipart conversation, optionally with portraits,
+     *      of the kind that you'd pass into dialoglog. Battle starts after
+     *      whole conversation is finished.
+     */
     // TODO this is similar to MenuSystemMixin.open() but not quite
     // the same:
     var self = this;
@@ -531,10 +542,6 @@ BattleSystem.prototype = {
     }
     this._fixedDisplayBoxes.push(this._monsterHitPoints);
 
-    // Show start of battle message:
-    if (this.startBattleMsg && this.startBattleMsg != "") {
-      this.showMsg(this.startBattleMsg);
-    }
     this.emptyMenuStack();
     this.pcMenus = [];
 
@@ -564,10 +571,34 @@ BattleSystem.prototype = {
 
       var nextAnimation = this._animationQueue.shift();
       // TODO this only handles one animation, would there ever be multiple?
-      nextAnimation.onFinish(function() {  self.showStartRoundMenu(); });
+      nextAnimation.onFinish(function() {
+        // after animation continue with the next step of starting battle:
+        self._showStartMessage(options);
+      });
       this._animator.runAnimation(nextAnimation);
     } else {
-      self.showStartRoundMenu();
+      // if no animation, continue with the next step immediately:
+      this._showStartMessage(options);
+    }
+  },
+
+  _showStartMessage: function(options) {
+    /* Continuation of startBattle after the starting animation.
+     * If there's a whole start-of-battle conversation, require the player
+     * to page through it before the battle proper starts. If there's just
+     * a single line, show it as a non-blocking message. */
+    if (options && options.startConvo && options.startConvo.length > 0) {
+      var self = this;
+      this._multipartTextDisplay(options.startConvo, function() {
+        self.hideStatusBoxes("portrait");
+        self.showStartRoundMenu();
+      });
+    } else if (options && options.startMsg && options.startMsg !== "") {
+      this.showMsg(options.startMsg);
+      this.showStartRoundMenu();
+    } else if (this.startBattleMsg && this.startBattleMsg != "") {
+      this.showMsg(this.startBattleMsg);
+      this.showStartRoundMenu();
     }
   },
 

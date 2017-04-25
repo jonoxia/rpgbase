@@ -647,6 +647,64 @@ function MenuSystemMixin(subClassPrototype) {
       }
     });
   };
+
+  subClassPrototype._multipartTextDisplay = function(textSegments, afterClose) {
+    /* Base implementation for both Dialoglog conversations and pre-Battle
+     * conversations. textSegments is a list of objects with .text and .img
+     * properties, like:
+     * [{text: "bla bla bla", img: "hero.jpg"}]
+     * scrolls each text segment while showing the corresponding image.
+     * afterClose is a callback that happens after the player closes the last
+     * line of the conversation.
+     */
+    if (textSegments.length == 0) { return; }
+    var self = this;
+
+    var previouslyCouldExit = this._freelyExit;
+    this._freelyExit = false; // lock us into the dialog until it's finished,
+    // because otherwise the dialoglog will close as soon as the first scrolling
+    // text box closes
+
+    if (!this.portraitBox) {
+      this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
+      this.addStatusBox(this.portraitBox, "portrait");
+      this.portraitBox.setPos(this._positioning.imgLeft,
+                              this._positioning.imgTop);
+      // TODO setOutsideDimensions, maybe?
+    }
+
+    var segmentIndex = 0;
+    var proceed = function() {
+      var nextSegment = textSegments[segmentIndex];
+
+      var textBox = self.makeScrollingTextBox(nextSegment.text);
+      self.pushMenu(textBox);
+      textBox.setPos(self._positioning.msgLeft,
+                     self._positioning.msgTop);
+      // TODO setOutsideDimensions, maybe?
+      
+      if (nextSegment.img == null) {
+        self.hideStatusBoxes("portrait");
+      } else {
+        self.showStatusBoxes("portrait");
+        var imgWidth = self._calculatedScale * self._positioning.imgWidth;
+        var imgHeight = self._calculatedScale * self._positioning.imgHeight;
+        self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);
+      }
+      
+      if (segmentIndex < textSegments.length - 1) {
+        segmentIndex ++;
+        textBox.onClose(proceed);
+      } else {
+        self._freelyExit = previouslyCouldExit; // restore old value
+        if (afterClose) {
+          textBox.onClose(afterClose);
+        }
+      }
+    };
+
+    proceed();
+  };
 }
 
 function FieldMenu(htmlElem, cursorImg, width, height, commandSet, uiText) {
@@ -1002,56 +1060,12 @@ Dialoglog.prototype = {
   },
 
   multipartTextDisplay: function(textSegments) {
-    /* pass in a list of objects with .text and .img properties, like:
-     * [{text: "bla bla bla", img: "hero.jpg"}]
-     * scrolls each text segment while showing the corresponding image
-     */
-    if (textSegments.length == 0) { return; }
+    // maybe change this name to something like multipartConversation?
     var self = this;
-    this._freelyExit = false; // lock us into the dialog until it's finished,
-    // because otherwise the dialoglog will close as soon as the first scrolling
-    // text box closes
+    // close dialoglog after last part of conversation is done:
+    this._multipartTextDisplay(textSegments, function() {self.close();});
+  }
 
-    if (!this.portraitBox) {
-      this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
-      this.addStatusBox(this.portraitBox, "portrait");
-      this.portraitBox.setPos(this._positioning.imgLeft,
-                              this._positioning.imgTop);
-      // TODO setOutsideDimensions, maybe?
-    }
-
-    var segmentIndex = 0;
-    var proceed = function() {
-      var nextSegment = textSegments[segmentIndex];
-
-      var textBox = self.makeScrollingTextBox(nextSegment.text);
-      self.pushMenu(textBox);
-      textBox.setPos(self._positioning.msgLeft,
-                     self._positioning.msgTop);
-      // TODO setOutsideDimensions, maybe?
-      
-      if (nextSegment.img == null) {
-        self.hideStatusBoxes("portrait");
-      } else {
-        self.showStatusBoxes("portrait");
-        var imgWidth = self._calculatedScale * self._positioning.imgWidth;
-        var imgHeight = self._calculatedScale * self._positioning.imgHeight;
-        self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);
-      }
-      
-      if (segmentIndex < textSegments.length - 1) {
-        segmentIndex ++;
-        textBox.onClose(proceed);
-      } else {
-        self._freelyExit = true;
-        textBox.onClose(function() {
-          self.close();
-        });
-      }
-    };
-
-    proceed();
-  },
 };
 MenuSystemMixin(Dialoglog.prototype);
 // Override the mixin's scrollText function:
