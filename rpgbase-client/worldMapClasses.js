@@ -14,6 +14,8 @@ function Map(id, data, spritesheet, mapImplType) {
   this._loadHandlers = [];
   this._unloadHandlers = [];
 
+  this._switchStates = {}; // for puzzle switches
+
   if (mapImplType) {
     this._mapImpl = mapImplType;
     if (mapImplType === "singleImage") {
@@ -267,6 +269,18 @@ Map.prototype = {
   addBackgroundImg: function(newBackgroundImg) {
     // behavior undefined if this is not a singleIMageMap
     this.backgroundImgs.push(newBackgroundImg);
+  },
+
+  getSwitchState: function(code) {
+    if (!this._switchStates[code]) {
+      this._switchStates[code] = false;
+      // so they all default to false without us having to explicitly set them up
+    }
+    return this._switchStates[code];
+  },
+
+  setSwitchState: function(code, value) {
+    this._switchStates[code] = value;
   }
 }
 
