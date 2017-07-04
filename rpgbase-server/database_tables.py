@@ -20,8 +20,19 @@ class MapData(SQLObject):
     imageFile = StringCol()
     isOverworld = BoolCol()
     isTileset = BoolCol()
-    
+    npcCSV = StringCol()
+    sceneryCSV = StringCol()
+
+class SceneryResource(SQLObject):
+    filename = StringCol()
+    width = IntCol()
+    height = IntCol()
+    anchorX = IntCol()
+    anchorY = IntCol()
+    defaultType = StringCol()
+
 
 if __name__ == "__main__":
     SavedGame.createTable()
     MapData.createTable()
+    SceneryResource.createTable()

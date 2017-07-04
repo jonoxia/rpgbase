@@ -23,6 +23,8 @@ if __name__ == "__main__":
         width = int(q.getfirst("width", 0))
         height = int(q.getfirst("height", 0))
         mapData = q.getfirst("data", "")
+        npcData = q.getfirst("npcs", "")
+        sceneryData = q.getfirst("scenery", "")
         imageFile = q.getfirst("image", "")
         isOverworld = (q.getfirst("overworld", "false") == "true")
         isTileset = (q.getfirst("tileset", "false") == "true")
@@ -32,6 +34,8 @@ if __name__ == "__main__":
             oldMap = query[0]
             #oldMap.mapName = mapName
             oldMap.mapDataCSV = mapData
+            oldMap.npcCSV = npcData
+            oldMap.sceneryCSV = sceneryData
             oldMap.width = width
             oldMap.height = height
             oldMap.imageFile = imageFile
@@ -55,6 +59,8 @@ if __name__ == "__main__":
             mp = query[0]
             mapData = {"mapName": mp.mapName,
                        "mapDataCSV": mp.mapDataCSV,
+                       "npcCSV": mp.npcCSV,
+                       "sceneryCSV": mp.sceneryCSV,
                        "width": mp.width,
                        "height": mp.height,
                        "imageFile": mp.imageFile,
