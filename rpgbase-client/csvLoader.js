@@ -55,6 +55,7 @@ CSVLoader.prototype = {
 
   getDicts: function (filename) {
     if (this.data[filename]) {
+      // offline case
       var rawCSV = this.data[filename];
 
       /* Skip blank lines: */
@@ -65,8 +66,21 @@ CSVLoader.prototype = {
       var results = Papa.parse(rawCSV, {header: true});
       // TODO use dynamicParsing! then I don't have to parseInt everywhere
       return results.data;
+      
     } else if (this.spreadsheets[filename]) {
+      // normal online case:
       return this.spreadsheets[filename].getWorksheetAsDicts(filename);
+
+      /* no exact match but filename has pattern "<mapname>_npcs.csv" or
+       * <mapname>_scenery.csv" then that refers to a tab of the master
+       * NPCs.csv or master scenery.csv document. Use just "npcs.csv" /
+       * "scenery.csv" as the first key, and the full name as the second key*/
+    } else if (filename.indexOf("_scenery.csv") > -1) {
+      console.log("Attempting to load " + filename + " as a tab of scenery.csv");
+      return this.spreadsheets["scenery.csv"].getWorksheetAsDicts(filename);
+    } else if (filename.indexOf("_npcs.csv") > -1) {
+      console.log("Attempting to load " + filename + " as a tab of NPCs.csv");
+      return this.spreadsheets["NPCs.csv"].getWorksheetAsDicts(filename);
     }
 
     // No match found for filename:
