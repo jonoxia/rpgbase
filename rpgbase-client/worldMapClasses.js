@@ -24,6 +24,7 @@ function Map(id, data, spritesheet, mapImplType) {
   } else {
     this._mapImpl = "tilemap"; // default
   }
+  this.foregroundImg = null;
 }
 Map.prototype = {
   getId: function() {
@@ -267,8 +268,12 @@ Map.prototype = {
   },
 
   addBackgroundImg: function(newBackgroundImg) {
-    // behavior undefined if this is not a singleIMageMap
+    // does nothing if this is not a singleImageMap
     this.backgroundImgs.push(newBackgroundImg);
+  },
+
+  addForegroundImg: function(newForegroundImg) {
+    this.foregroundImg = newForegroundImg;
   },
 
   getSwitchState: function(code) {
@@ -546,6 +551,9 @@ MapScreen.prototype = {
   },
   
   _renderSingleImgMap: function() {
+    /* it's called "single image" but it actually supports multiple images,
+     * mainly to support appending a camp map to the side of a town map in
+     * Eagle Princess, but also for any case where we want to composite maps*/
     var self = this;
     $.each(this._currentDomain.backgroundImgs, function(i, background) {
       var drawX = self.tilePixelsX * (background.offsetX - self._scrollX );
@@ -556,6 +564,21 @@ MapScreen.prototype = {
       }
       self._ctx.drawImage(background.img, drawX, drawY);
     });
+  },
+
+  _renderRoofLayer: function() {
+    /* Could easily be expanded to allow any number of foreground images,
+     * just like renderSingleImgMap above, but for now we only need one */
+    var self = this;
+    var foreground = this._currentDomain.foregroundImg;
+    
+    var drawX = self.tilePixelsX * (foreground.offsetX - self._scrollX );
+    var drawY = self.tilePixelsY * (foreground.offsetY - self._scrollY );
+    if (self.scrollAdjustment) {
+      drawX += self.scrollAdjustment.x;
+      drawY += self.scrollAdjustment.y;
+    }
+    self._ctx.drawImage(foreground.img, drawX, drawY);
   },
 
   render: function() {
@@ -592,6 +615,11 @@ MapScreen.prototype = {
     });
     for (var i = 0; i < mapSprites.length; i++) {
       mapSprites[i].plot(this, this.scrollAdjustment);
+    }
+
+    // if there's a foreground/ "roof" layer, draw that last:
+    if (this._currentDomain.foregroundImg) {
+      this._renderRoofLayer();
     }
 
     // draw any special fx:
