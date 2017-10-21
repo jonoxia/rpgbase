@@ -355,7 +355,8 @@ BattleSystem.prototype = {
         // desired by some games but not moonserpent.
         cmdMenu.addCommand(name, function() {
           self.pushMenu(self.makeMenuForPC(pc, cmd));
-          self.eventService.fireGameEvent("submenu-shown", {name: cmd.name});
+          self.eventService.fireGameEvent("submenu-shown", {name: cmd.name,
+                                                            pcName: pc.name});
         });
       } else {
 
