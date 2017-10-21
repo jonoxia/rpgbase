@@ -456,7 +456,8 @@ BattleSystem.prototype = {
         var monster = group.type.instantiate();
         // name them e.g. "Biteworm A", "Biteworm B" etc.
         var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        monster.setName(group.type.name + " " + letters[i]);
+        monster.setName(group.type.name + " " + letters[i],
+                        group.type.pluralName);
         monsters.push(monster);
       }
     });
@@ -1361,6 +1362,7 @@ function MonsterType(img, name, statBlock, commandList) {
   this._loot = null; // loot table
   this._resistances = null; // damage type weakenesses/resistances
   this._aiCallback = null;
+  this.pluralName = this.name + "s"; // overwrite this for irregular plurals
 }
 MonsterType.prototype = {
   onEffect: function(effectName, callback) {
@@ -1539,8 +1541,9 @@ function Monster(img, statBlock, cmdList, effectHandlers, aiCallback) {
   this._aiCallback = aiCallback;
 };
 Monster.prototype = {
-  setName: function(name) {
+  setName: function(name, pluralName) {
     this.name = name;
+    this.pluralName = pluralName;
   },
   setPos: function(x, y) {
     this.x = x;
