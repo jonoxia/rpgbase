@@ -178,6 +178,16 @@ ItemType.prototype = {
                                     this._equipSlot, this._equipType,
                                     this._equipStats, this._equipQualities,
                                     this._defaultPrice);
+
+    // TODO apply this in a more organized way
+    instance.sortOrder = this.sortOrder;
+    // For instance, if we could make the ItemType into the prototype of all
+    // itemInstances, we wouldn't even have to copy any of the static data to
+    // the instance...
+    // Failing that, have a "metadata" dictionary that always gets copied to
+    // instances, and make sortOrder just a part of metadata.
+    // (defaultPrice could also be metadata)
+
     return instance;
   },
 
