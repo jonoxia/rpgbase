@@ -471,7 +471,8 @@ function MapSpriteMixin(subClassPrototype) {
                              spriteOffsetX, spriteOffsetY,
                              this._width, this._height,
                              x, y,
-                             this._width, this._height);
+                             this._width * mapScreen.spriteScale,
+                             this._height * mapScreen.spriteScale);
   };
 
   subClassPrototype.scalePlot = function(ctx, scaleWidth, scaleHeight,
