@@ -384,6 +384,7 @@ var gRPG = (function(){
                       screenHeight: 600,
                       scale: 1.0,
                       spriteScaleFactor: 1.0,
+                      downsampleFactor: 1.0,
                       pixelsPerSquare: 16,
                       widthSquares: 20,
                       heightSquares: 18,
@@ -405,6 +406,7 @@ var gRPG = (function(){
                                      settings.pixelsPerSquare,
                                      settings.mapAnimFrameTime);
       mapScreen.spriteScale = settings.spriteScaleFactor;
+      mapScreen.downsampleFactor = settings.downsampleFactor;
 
       mapScreen.hasOwnAnimator = true;
       mapScreen._mapRegistry = {};

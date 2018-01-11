@@ -555,14 +555,18 @@ MapScreen.prototype = {
      * mainly to support appending a camp map to the side of a town map in
      * Eagle Princess, but also for any case where we want to composite maps*/
     var self = this;
+    var ds = this.downsampleFactor || 1;
     $.each(this._currentDomain.backgroundImgs, function(i, background) {
-      var drawX = self.tilePixelsX * (background.offsetX - self._scrollX );
-      var drawY = self.tilePixelsY * (background.offsetY - self._scrollY );
+      var drawX = self.tilePixelsX * (background.offsetX - ds*self._scrollX );
+      var drawY = self.tilePixelsY * (background.offsetY - ds*self._scrollY );
       if (self.scrollAdjustment) {
-        drawX += self.scrollAdjustment.x;
-        drawY += self.scrollAdjustment.y;
+        drawX += ds*self.scrollAdjustment.x;
+        drawY += ds*self.scrollAdjustment.y;
       }
+      self._ctx.save();
+      self._ctx.scale(1.0/ds, 1.0/ds);
       self._ctx.drawImage(background.img, drawX, drawY);
+      self._ctx.restore();
     });
   },
 
@@ -570,15 +574,19 @@ MapScreen.prototype = {
     /* Could easily be expanded to allow any number of foreground images,
      * just like renderSingleImgMap above, but for now we only need one */
     var self = this;
+    var ds = this.downsampleFactor || 1;
     var foreground = this._currentDomain.foregroundImg;
     
-    var drawX = self.tilePixelsX * (foreground.offsetX - self._scrollX );
-    var drawY = self.tilePixelsY * (foreground.offsetY - self._scrollY );
+    var drawX = self.tilePixelsX * (foreground.offsetX - ds*self._scrollX );
+    var drawY = self.tilePixelsY * (foreground.offsetY - ds*self._scrollY );
     if (self.scrollAdjustment) {
-      drawX += self.scrollAdjustment.x;
-      drawY += self.scrollAdjustment.y;
+      drawX += ds*self.scrollAdjustment.x;
+      drawY += ds*self.scrollAdjustment.y;
     }
+    self._ctx.save();
+    self._ctx.scale(1.0/ds, 1.0/ds);
     self._ctx.drawImage(foreground.img, drawX, drawY);
+    self._ctx.restore();
   },
 
   render: function() {
