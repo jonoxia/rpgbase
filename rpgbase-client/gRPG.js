@@ -88,17 +88,19 @@ var gRPG = (function(){
     // implement scaling:
     this.canvas = this.settings.htmlElem[0];
     var ctx = this.canvas.getContext("2d");
-    if (this.settings.scale && this.settings.scale != 1) {
+    if (this.settings.scale) { // && this.settings.scale != 1) {
       // Zoom in the canvas to given factor, without anti-aliasing:
       ctx.mozImageSmoothingEnabled = false;
       ctx.webkitImageSmoothingEnabled = false;
       ctx.imageSmoothingEnabled = false;
       ctx.save();
+      var ratio;
       if (this.settings.scale == "auto") {
-        this.scaleToWindow();
+        ratio = this.getRatioFromWindowSize();
       } else {
-        ctx.scale(this.settings.scale, this.settings.scale);
+	ratio = this.settings.scale;
       }
+      this.setScale(ratio);
     }
 
     this.player = new Player();
@@ -106,7 +108,7 @@ var gRPG = (function(){
   GameEngine.prototype = {
     // TODO Needs to have mechanism for saving/loading globals
 
-    scaleToWindow: function() {
+    getRatioFromWindowSize: function() {
       var windowSize = {width: $(window).width(),
                         height: $(window).height()};
       var gameSize = {width: this.settings.screenWidth,
@@ -116,8 +118,15 @@ var gRPG = (function(){
                     height: windowSize.height/gameSize.height};
 
       var ratio = ratios.width < ratios.height ? ratios.width : ratios.height;
+      return ratio;
+    },
+
+    setScale: function(ratio) {
+      var gameSize = {width: this.settings.screenWidth,
+                      height: this.settings.screenHeight};
       $("#mapscreen-canvas").attr("width", gameSize.width * ratio);
       $("#mapscreen-canvas").attr("height", gameSize.height * ratio);
+      console.log("Set width and height to " +  gameSize.width*ratio + ", " + gameSize.height*ratio);
       var ctx = this.canvas.getContext("2d");
       ctx.scale(ratio, ratio);
       
