@@ -659,6 +659,11 @@ BattleSystem.prototype = {
   },
 
   showStartRoundMenu: function() {
+    if (this.checkBattleEndConditions()) {
+      // edge case - the battle is over before it starts - bail out!
+      return;
+    }
+    
     // Adjust PC menu contents in case there were any changes last round
     // (e.g. single-use items used up)
     this.pcMenus = [];
