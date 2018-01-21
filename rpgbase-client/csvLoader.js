@@ -74,13 +74,16 @@ CSVLoader.prototype = {
       /* no exact match but filename has pattern "<mapname>_npcs.csv" or
        * <mapname>_scenery.csv" then that refers to a tab of the master
        * NPCs.csv or master scenery.csv document. Use just "npcs.csv" /
-       * "scenery.csv" as the first key, and the full name as the second key*/
+       * "scenery.csv" as the first key, and the full name as the second key
+       * TODO this is eagle-princess specific and shouldn't be in RPGBase*/
     } else if (filename.indexOf("_scenery.csv") > -1) {
       console.log("Attempting to load " + filename + " as a tab of scenery.csv");
       return this.spreadsheets["scenery.csv"].getWorksheetAsDicts(filename);
     } else if (filename.indexOf("_npcs.csv") > -1) {
       console.log("Attempting to load " + filename + " as a tab of NPCs.csv");
       return this.spreadsheets["NPCs.csv"].getWorksheetAsDicts(filename);
+    } else if (filename === "story_recaps.csv") {
+      return this.spreadsheets["cutscenes.csv"].getWorksheetAsDicts(filename);
     }
 
     // No match found for filename:
