@@ -1001,6 +1001,14 @@ BattleSystem.prototype = {
     this._endBattleText += text;
   },
 
+  addEndBattleConvo: function(convoData) {
+    this._endBattleConvo = convoData; // should it append if called multiple times?
+
+    /* This is not passed in from options because it may be set in response to
+     * "end-battle" event, for instance. If there's endBattleText and
+     * endBattleConvo, the convo happens first, then the text. */
+  },
+
   endBattle: function(resolutionType) {
     // Trigger a ScrollingTextBox to come up
     // with end of battle messages; closing the ScrollingTextBox
@@ -1063,7 +1071,34 @@ BattleSystem.prototype = {
       this._endBattleText = defaultMsgs[resolutionType];
     }
 
+    /* TODO there's sort of a conflict here between two (three?) ways of inserting
+     * text into the battle - there's a Moon Serpent way (encounter.win) and there's
+     * a Eagle Princess way (options.startConvo) and i think both should be
+     * refactored into something where the encounter registers an event listener
+     * and the event listener sticks conversation into the battle message queue. */
+    
+    /* we could almost just build this on top of encounter.win / encounter.lose --
+     * that's SO CLOSE to what we need. */
 
+
+    /* There can be both "endBattleConvo" (e.g. a story conversation happening
+     * within the battle system after the battle ends) as well as "endBattleText"
+     * (e.g. listing of experience rewards, items found, level ups, etc.)
+     * endBattleConvo comes first if present. */
+    var self = this;
+    if (this._endBattleConvo) {
+      var self = this;
+      this._multipartTextDisplay(this._endBattleConvo, function() {
+        self.hideStatusBoxes("portrait");
+        self._scrollEndBattleText();
+      });
+    } else {
+      // no end battle convo, go straight to end battle text:
+      this._scrollEndBattleText();
+    }
+  },
+
+  _scrollEndBattleText: function () {
     var endBattleText = this.scrollText(this._endBattleText);
     var self = this;
     endBattleText.onClose(function() {
