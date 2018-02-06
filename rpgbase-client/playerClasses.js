@@ -261,14 +261,15 @@ Player.prototype = {
   },
 
   findRoomForAnItem: function(dialoglog, itemName, successCallback) {
+    // TODO this is only relevant to games that use per-character inventory
+    // so maybe it doesn't belong here. Not sure where it would belong though.
+    
     for (var i = 0; i < this.party.length; i++) {
       if (!this.party[i].inventoryIsFull()) {
         successCallback(this.party[i]);
         return;
       }
     }
-
-    // TODO should this stuff be moved to the Dialoglog class or what?
 
     // Nobody has room - prompt if you want to drop something
     dialoglog.open(this);

@@ -496,6 +496,7 @@ BattleSystem.prototype = {
     this.peacefulResolutionText = null;
     this.monsters = [];
     this._endBattleText = "";
+    this._endBattleConvo = null;
 
     var encounterGroups = null;
     // A mixed-type encounter could look like this:
