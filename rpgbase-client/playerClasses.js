@@ -391,8 +391,8 @@ function MapSpriteMixin(subClassPrototype) {
     // the "constructor" for map sprites -- must be called by the
     // constructor of the subclass to initialize relevant attributes
     this._img = spriteSheet;
-    this._x = 0;
-    this._y = 0;
+    /*this._x = 0;
+    this._y = 0;*/ // why did we do this?  does it break anything if we don't do it?
     this._spriteSlice = {x: 0, y: 0};
     this._defaultSpriteSlice = {x: 0, y: 0};
     this._width = width;
