@@ -29,6 +29,9 @@ var Spreadsheet = (function(Tabletop){
        return sheet.toArray();
     },
     getWorksheetAsDicts: function(worksheetName) {
+      if (!this.tabletopInfo[worksheetName]) {
+	throw "Could not find worksheet named " + worksheetName;
+      }
       return this.tabletopInfo[worksheetName].elements;
     }
   };
