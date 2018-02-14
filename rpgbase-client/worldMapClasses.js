@@ -110,13 +110,33 @@ Map.prototype = {
       }
 
       if (trigger.edge != undefined) {
-        if (trigger.edge == "any") {
+        switch (trigger.edge) {
+        case "east":
+          if (x != this._dimX-1) {
+            triggered = false;
+          }
+          break;
+        case "west":
+          if (x != 0) {
+            triggered = false;
+          }
+          break;
+        case "north":
+          if (y != 0) {
+            triggered = false;
+          }
+          break;
+        case "south":
+          if (y != this._dimY-1) {
+            triggered = false;
+          }
+          break;
+        case "any":
           if (x != 0 && x != this._dimX-1 &&
               y != 0 && y != this._dimY-1) {
             triggered = false;
           }
         }
-        // TODO apparently i never implemented specific-edge?
       }
       
       if (triggered) {
