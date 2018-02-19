@@ -18,10 +18,10 @@ class MapData(SQLObject):
     height = IntCol()
     mapDataCSV = StringCol()
     imageFile = StringCol()
-    isOverworld = BoolCol()
     isTileset = BoolCol()
     npcCSV = StringCol()
     sceneryCSV = StringCol()
+    mapType = StringCol()
 
 class SceneryResource(SQLObject):
     filename = StringCol()
