@@ -26,7 +26,7 @@ if __name__ == "__main__":
         npcData = q.getfirst("npcs", "")
         sceneryData = q.getfirst("scenery", "")
         imageFile = q.getfirst("image", "")
-        isOverworld = (q.getfirst("overworld", "false") == "true")
+        mapType = q.getfirst("mapType", "")
         isTileset = (q.getfirst("tileset", "false") == "true")
 
         query = MapData.selectBy(mapName = mapName)
@@ -39,7 +39,7 @@ if __name__ == "__main__":
             oldMap.width = width
             oldMap.height = height
             oldMap.imageFile = imageFile
-            oldMap.isOverworld = isOverworld
+            oldMap.mapType = mapType
             oldMap.isTileset = isTileset
         else:
             MapData(mapName = mapName,
@@ -47,7 +47,7 @@ if __name__ == "__main__":
                     width = width,
                     height = height,
                     imageFile = imageFile,
-                    isOverworld = isOverworld,
+                    mapType = mapType,
                     isTileset = isTileset)
                    
         msg = "Saved"
@@ -64,7 +64,7 @@ if __name__ == "__main__":
                        "width": mp.width,
                        "height": mp.height,
                        "imageFile": mp.imageFile,
-                       "isOverworld": mp.isOverworld,
+                       "mapType": mp.mapType,
                        "isTileset": mp.isTileset}
             msg = simplejson.dumps(mapData)
         else:
