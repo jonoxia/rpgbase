@@ -206,3 +206,14 @@ AudioPlayer.prototype = {
 // TODO if we can figure out how to get notified that an audio file
 // finished loading, we could combine this with asset loader.
 
+function gup( name )
+{
+    name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+    var regexS = "[\\?&]"+name+"=([^&#]*)";
+    var regex = new RegExp( regexS );
+    var results = regex.exec( window.location.href );
+    if( results == null )
+	return "";
+    else
+	return unescape(results[1]);
+}

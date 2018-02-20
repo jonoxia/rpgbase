@@ -371,6 +371,7 @@ BattleSystem.prototype = {
         if (!result.usable) {
           cmdMenu.addCommand(name, function() {
             // Show reason why command is not usable:
+            self.eventService.fireGameEvent("invalid-selection", {});
             self.scrollText(result.reason);
           });
           return;
@@ -814,7 +815,7 @@ BattleSystem.prototype = {
                                cmd: action.cmd,
                                target: action.target,
                                hits: []
-                              }; 
+                              };
 
         // The four event stages of every attack:
         this.eventService.queueGameEvent("attack-declared", attackEventData);
