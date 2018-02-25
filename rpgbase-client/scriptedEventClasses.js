@@ -98,7 +98,9 @@ PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
   var imgHeight = this._calculatedScale * this._positioning.imgHeight;
   this.portraitBox.setImg(portrait, imgWidth, imgHeight);
 };
-
+PlotDialogSystem.prototype.hidePortraitBox = function() {
+  this.hideStatusBoxes("portrait");
+};
 
 
 
@@ -134,10 +136,12 @@ ScriptedEvent.prototype = {
   // focus during scripted events...
   npcSpeak: function(npc, text) {
     var self = this;
+    var dlg = this._dialoglog;
     this._addStep(function() {
-        self.scrollText(text, function() {
-            self.nextStep();
-        });
+      dlg.hidePortraitBox(); // because npcs don't have portraits
+      self.scrollText(text, function() {
+        self.nextStep();
+      });
     }); 
     return this; // for daisy-chaining
   },
