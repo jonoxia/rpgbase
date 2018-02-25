@@ -44,9 +44,7 @@ function CmdMenuMixin(subClassProto) {
 
   subClassProto.chooseSelected =  function() {
     var cmd = this.cmdList[this.selectedIndex];
-    console.log("Choose selected -- do i have an event service??");
     if (this.menuSystem.eventService) {
-      console.log("Firing selection-made event");
       this.menuSystem.eventService.fireGameEvent("selection-made", {menu: this});
     }
     cmd.execute();
