@@ -1092,15 +1092,15 @@ BattleSystem.prototype = {
       var self = this;
       this._multipartTextDisplay(this._endBattleConvo, function() {
         self.hideStatusBoxes("portrait");
-        self._scrollEndBattleText();
+        self._scrollEndBattleText(resolutionType);
       });
     } else {
       // no end battle convo, go straight to end battle text:
-      this._scrollEndBattleText();
+      this._scrollEndBattleText(resolutionType);
     }
   },
 
-  _scrollEndBattleText: function () {
+  _scrollEndBattleText: function (resolutionType) {
     var endBattleText = this.scrollText(this._endBattleText);
     var self = this;
     endBattleText.onClose(function() {
