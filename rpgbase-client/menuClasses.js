@@ -674,17 +674,24 @@ function MenuSystemMixin(subClassPrototype) {
       this.portraitBox.setPos(this._positioning.imgLeft,
                               this._positioning.imgTop);
       // TODO setOutsideDimensions, maybe?
-    }
 
+    }
+    console.log("multipart text display starting ");
     var segmentIndex = 0;
     var proceed = function() {
       var nextSegment = textSegments[segmentIndex];
-
+      console.log("I am on segment " + segmentIndex);
+      
       var textBox = self.makeScrollingTextBox(nextSegment.text);
       self.pushMenu(textBox);
       textBox.setPos(self._positioning.msgLeft,
                      self._positioning.msgTop);
-      // TODO setOutsideDimensions, maybe?
+      console.log("Positioning msgWidth is " + self._positioning.msgWidth);
+      if (self._positioning.msgWidth !== "auto") {
+        console.log("Setting outer dimensions of text box to " + self._positioning.msgWidth + ", " +  self._positioning.msgHeight);
+        textBox.setOuterDimensions(self._positioning.msgWidth,
+                                   self._positioning.msgHeight);
+      }
       
       if (nextSegment.img == null) {
         self.hideStatusBoxes("portrait");

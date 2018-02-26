@@ -263,6 +263,9 @@ CssFixedImgBox.prototype.setImg = function(newImg, width, height) {
 CssFixedImgBox.prototype._generateHtml = function() {
   this.imgTag = $("<img/>");
   this.imgTag.attr("src", this.imgUrl);
+  if (this.menuSystem._positioning.imgPadding) {
+    this.parentTag.css("padding", this.menuSystem._positioning.imgPadding);
+  }
   this.parentTag.append(this.imgTag);
 };
 // TODO addClass("menu") and / or addClass("stats") ?

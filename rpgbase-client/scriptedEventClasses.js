@@ -129,6 +129,13 @@ ScriptedEvent.prototype = {
     var dlg = this._dialoglog;
     dlg.clearMsg();
     var textBox = dlg.scrollText(text);
+    console.log("Positioning msgWidth is " + dlg._positioning.msgWidth);
+    if (dlg._positioning.msgWidth !== "auto") {
+      console.log("Setting outer dimensions of text box to " + dlg._positioning.msgWidth + ", " +  dlg._positioning.msgHeight);
+      textBox.setOuterDimensions(dlg._positioning.msgWidth,
+                                 dlg._positioning.msgHeight);
+    }
+
     textBox.onClose(callback);
   },
 
