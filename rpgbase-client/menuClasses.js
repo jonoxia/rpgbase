@@ -1025,11 +1025,17 @@ BackgroundImgBox.prototype = {
     this._imgYOffset = (this._height - height)/2;
   },
   stackPanel: function(img, x, y) {
-    // draws the given panel at the given x, y on top of already present images, manga-panel
+    // draws the given panel at the given x, y on top of already present images, manga-panel-style
+    console.log("Background Img Box.stack panel: " + img + " x = " + x + " y = " + y);
     this._panels.push({img: img, x: x, y: y});
   },
   clearPanelStack: function() {
     this._panels = [];
+  },
+  clearNamedPanel: function(imgFileName) {
+    this._panels = this._panels.filter(function(x) {
+      return (x.img.src.indexOf(imgFileName) === -1);
+    });
   },
   clearImg: function() {
     this._img = null;

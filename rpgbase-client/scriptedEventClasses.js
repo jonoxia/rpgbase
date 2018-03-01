@@ -68,6 +68,9 @@ function PlotDialogSystem(htmlElem, cursorImg, width, height) {
   this._rootMenu = new BackgroundImgBox(width, height);
   this._freelyExit = false;
 
+  this._waitingForKeypress = null; // used to support a command to wait for keypress
+  // before advancing to next step.
+
   var self = this;
   this.onClose(function() {
     self.hideStatusBoxes("portrait");
@@ -78,7 +81,12 @@ MenuSystemMixin(PlotDialogSystem.prototype);
 PlotDialogSystem.prototype.handleKey = function(keyCode) {
   // Only the confirm button does anything:
   if (keyCode === CONFIRM_BUTTON) {
-    if (this.menuStack.length > 0) {
+    console.log("Plot dialog system got a confirm-button press");
+    // Are we waiting for a keypress?
+    if (this._waitingForKeypress) {
+      this._waitingForKeypress();
+    } else if (this.menuStack.length > 0) {
+      // otherwise pass keypress along to top menu in stack.
       var topMenu = this.menuStack[ this.menuStack.length - 1];
       topMenu.onKey(keyCode);
     }
@@ -100,6 +108,10 @@ PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
 };
 PlotDialogSystem.prototype.hidePortraitBox = function() {
   this.hideStatusBoxes("portrait");
+};
+PlotDialogSystem.prototype.waitForKeyPress = function(callback) {
+  this.clearMsg();
+  this._waitingForKeypress = callback;
 };
 
 
@@ -405,9 +417,24 @@ ScriptedEvent.prototype = {
         self._dialoglog._rootMenu.clearPanelStack();
       }
       self._dialoglog._rootMenu.stackPanel(img, x, y);
-      window.setTimeout(function() {
-        self.nextStep();
-      }, 500);
+      self.nextStep();
+    });
+  },
+
+  clearPanel: function(imgFileName) {
+    var self = this;
+    this._addStep(function() {
+      console.log("Trying to clear panel named " + imgFileName);
+      self._dialoglog._rootMenu.clearNamedPanel(imgFileName);
+      self.nextStep();
+    });
+  },
+
+  clearAllPanels: function() {
+    var self = this;
+    this._addStep(function() {
+      self._dialoglog._rootMenu.clearPanelStack();
+      self.nextStep();
     });
   },
 
@@ -435,6 +462,27 @@ ScriptedEvent.prototype = {
                 self.nextStep();
             }, 500);
           }, 250);
+    });
+  },
+
+  waitForKey: function() {
+    var self = this;
+    console.log("Adding step to wait for keypress");
+    this._addStep(function() {
+      console.log("Waiting for keypress");
+      self._dialoglog.waitForKeyPress(function() {
+        console.log("Keypress happened");
+        self.nextStep();
+      });
+    });
+  },
+
+  waitForMs: function(milliseconds) {
+    var self = this;
+    this._addStep(function() {
+      window.setTimeout(function() {
+        self.nextStep();
+      }, milliseconds);
     });
   },
 
