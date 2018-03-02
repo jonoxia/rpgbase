@@ -232,6 +232,7 @@ ScriptedEvent.prototype = {
     this._addStep(function() {
       dlg.showPortraitBox(portrait);
       self.scrollText(text, function() {
+        dlg.hidePortraitBox();
         self.nextStep();
       });
     });
