@@ -198,7 +198,7 @@ function CssScrollingTextBox(text, menuSystem) {
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this.linesAtOnce = 3; // TODO don't hardcode me
-  var maxCharsPerLine = 40; // TODO don't hardcode me either
+  var maxCharsPerLine = 36; // TODO don't hardcode me either
   this._closeCallbacks = []; // TODO isn't this in the base class?
   this.lines = this.splitLines(text, maxCharsPerLine);
 
@@ -211,6 +211,13 @@ CssScrollingTextBox.prototype._generateHtml = function() {
   // this was called "update"
   this.textLines = this.lines.slice(this.currLine,
                                     this.currLine + this.linesAtOnce).join("<br>");
+
+  // TODO the following is to allow scrolling text boxes to have a different font
+  // size from menus, but it's a very hacky way of accomplishing it.
+  if (this.menuSystem.getFontSize("scrolling") != this.menuSystem.getFontSize()) {
+    this.parentTag.css("font-size", this.menuSystem.getFontSize("scrolling") + "pt");
+  }
+
   return this.textLines;
 };
 

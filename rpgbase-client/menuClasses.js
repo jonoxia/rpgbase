@@ -605,8 +605,12 @@ function MenuSystemMixin(subClassPrototype) {
     return topMenu.cmdList[topMenu.selectedIndex];
   };
 
-  subClassPrototype.getFontSize = function() {
+  subClassPrototype.getFontSize = function(forWindowType) {
     // This is only relevant for CSS menus
+    if (forWindowType === "scrolling" && this._positioning.scrollTextFontSize) {
+      // Allow different font size for scrolling text than for other menus:
+      return Math.floor(this._positioning.scrollTextFontSize * this._calculatedScale);
+    }
     return Math.floor(this._positioning.cssFontSize * this._calculatedScale);
   };
 
@@ -937,6 +941,9 @@ function ScrollingTextBoxMixin(subclassPrototype) {
 
   subclassPrototype.splitLines = function(text, maxLineLength) {
     // split text up into lines:
+
+    // TODO this doesn't quite work right at the margins, because it ignores
+    // the fact that some letters are wider than others. Capitols especially.
     var words = text.split(" ");
     var lines = [];
     var currLine = words.shift();
