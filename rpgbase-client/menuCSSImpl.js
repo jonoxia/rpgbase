@@ -166,7 +166,7 @@ CssCmdMenu.prototype = {
     this.table = $("<table></table>");
     this.parentTag.append(this.table);
     
-    this.showArrowAtIndex(0);
+    this.showArrowAtIndex( this._defaultSelectedIndex );
 
     // Give it the "menu" class (this brings it in front of other boxes)
     this.parentTag.addClass("menu");

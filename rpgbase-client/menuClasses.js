@@ -1,6 +1,7 @@
 function CmdMenuMixin(subClassProto) {
   subClassProto._init = function() {
     this.cmdList = [];
+    this._defaultSelectedIndex = 0;
     this.selectedIndex = 0;
     this.title = null;
   };
@@ -65,7 +66,7 @@ function CmdMenuMixin(subClassProto) {
   };
 
   subClassProto.reset = function() {
-    this.selectedIndex = 0;
+    this.selectedIndex = this._defaultSelectedIndex;
   };
 
   subClassProto.hasCmd = function(cmdName) {
@@ -83,6 +84,13 @@ function CmdMenuMixin(subClassProto) {
       names.push(this.cmdList[i].name);
     }
     return names;
+  };
+
+  subClassProto.setDefault = function(index) {
+    // Takes an index integer. When the menu opens, the cursor will be set
+    // to that number. If no default is set, default default is 0.
+    this._defaultSelectedIndex = index;
+    this.selectedIndex = this._defaultSelectedIndex;
   };
 
 }
