@@ -192,22 +192,20 @@ CmdMenuMixin(CssCmdMenu.prototype);
 CssMixin(CssCmdMenu.prototype);
 
 
-
-function CssScrollingTextBox(text, menuSystem) {
-  this.currLine = 0;
+function CssOldScrollingTextBox(text, menuSystem) {
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this.linesAtOnce = 3; // TODO don't hardcode me
   var maxCharsPerLine = 36; // TODO don't hardcode me either
   this._closeCallbacks = []; // TODO isn't this in the base class?
+  this.currLine = 0;
   this.lines = this.splitLines(text, maxCharsPerLine);
-
-};
-ScrollingTextBoxMixin(CssScrollingTextBox.prototype);
-CssMixin(CssScrollingTextBox.prototype);
+}
+ScrollingTextBoxMixin(CssOldScrollingTextBox.prototype);
+CssMixin(CssOldScrollingTextBox.prototype);
 // TODO add unit test for this
 // had a parentTag.addClass("msg-display"), put that somewhere
-CssScrollingTextBox.prototype._generateHtml = function() {
+CssOldScrollingTextBox.prototype._generateHtml = function() {
   // this was called "update"
   this.textLines = this.lines.slice(this.currLine,
                                     this.currLine + this.linesAtOnce).join("<br>");
@@ -220,6 +218,35 @@ CssScrollingTextBox.prototype._generateHtml = function() {
 
   return this.textLines;
 };
+
+  
+
+function CssScrollingTextBox(text, menuSystem) {
+  this.menuSystem = menuSystem;
+  this.container = menuSystem._htmlElem;
+  this._closeCallbacks = []; // TODO isn't this in the base class?
+  this.pages = this.splitLines(text, 108);
+  this.currPage = 0;
+};
+TimerTextBoxMixin(CssScrollingTextBox.prototype);
+CssMixin(CssScrollingTextBox.prototype);
+CssScrollingTextBox.prototype._generateHtml = function() {
+  this.startPage();
+
+  // TODO the following is to allow scrolling text boxes to have a different font
+  // size from menus, but it's a very hacky way of accomplishing it.
+  if (this.menuSystem.getFontSize("scrolling") != this.menuSystem.getFontSize()) {
+    this.parentTag.css("font-size", this.menuSystem.getFontSize("scrolling") + "pt");
+  }
+  return "";
+};
+// The following added for TimerTextBoxMixin support
+CssScrollingTextBox.prototype.setText = function(newText) {
+  if (this.parentTag) {
+    this.parentTag.html(newText);
+  }
+};
+
 
 function CssFixedTextBox(textLines, menuSystem) {
   //this._init();
