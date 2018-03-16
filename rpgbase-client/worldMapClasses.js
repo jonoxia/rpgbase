@@ -376,8 +376,11 @@ MapScreen.prototype = {
     this._currentDomain = domain;
     this._scrollX = 0;
     this._scrollY = 0;
-    this._currentDomain.load();
     this.playMusicForCurrentMap();
+    // load comes last because it might trigger a cutscene that does who knows
+    // what else, and we don't want to do anything like change the music after
+    // the cutscene has already changed it.
+    this._currentDomain.load();
   },
 
   getLandType: function( x, y ) {
