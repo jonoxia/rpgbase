@@ -227,6 +227,7 @@ function CssScrollingTextBox(text, menuSystem) {
   this._closeCallbacks = []; // TODO isn't this in the base class?
   this.pages = this.splitLines(text, 108);
   this.currPage = 0;
+  this.fullText = text;
 };
 TimerTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);

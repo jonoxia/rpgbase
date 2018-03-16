@@ -699,9 +699,7 @@ function MenuSystemMixin(subClassPrototype) {
       self.pushMenu(textBox);
       textBox.setPos(self._positioning.msgLeft,
                      self._positioning.msgTop);
-      console.log("Positioning msgWidth is " + self._positioning.msgWidth);
       if (self._positioning.msgWidth !== "auto") {
-        console.log("Setting outer dimensions of text box to " + self._positioning.msgWidth + ", " +  self._positioning.msgHeight);
         textBox.setOuterDimensions(self._positioning.msgWidth,
                                    self._positioning.msgHeight);
       }
@@ -938,7 +936,7 @@ function TimerTextBoxMixin(subclassPrototype) {
       }
       self.position += scrollSpeed;
       self.setText( pageText.slice(0, self.position) );
-    }, 75); // 
+    }, 75);
   };
 
   subclassPrototype.finishPage = function() {
