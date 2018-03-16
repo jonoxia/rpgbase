@@ -86,6 +86,8 @@ CSVLoader.prototype = {
       return this.spreadsheets["cutscenes.csv"].getWorksheetAsDicts(filename);
     } else if (filename === "encounter_dialog.csv") {
       return this.spreadsheets["encounter_cards.csv"].getWorksheetAsDicts(filename);
+    } else if (filename === "party_battle_animation_timing.csv") {
+      return this.spreadsheets["party_fixed_data.csv"].getWorksheetAsDicts(filename);
     }
 
     // No match found for filename:

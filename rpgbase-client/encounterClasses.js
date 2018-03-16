@@ -372,7 +372,8 @@ BattleSystem.prototype = {
           cmdMenu.addCommand(name, function() {
             // Show reason why command is not usable:
             self.eventService.fireGameEvent("invalid-selection", {});
-            self.scrollText(result.reason);
+            self.scrollText(result.reason).finishPage();
+            // is "scrollText().finishPage()" the new .showMsg() ?
           });
           return;
         }
@@ -945,12 +946,14 @@ BattleSystem.prototype = {
     // the heartbeat of the battle system, keeps events and animations flowing in the
     // correct order.
 
+    // Control battle speed by inserting delays here?
+
     if (this.eventService.queueIsEmpty()) {
       this.finishRound();
     } else {
       this.eventService.processGameEvent();
-      // after processing each event, play all queued animations before proceeding to next
-      // event.
+      // after processing each event, play all queued animations before proceeding
+      // to next event.
       var self = this;
       if (this._animationQueue.length > 0) {
         // play all the animations here before calling runEventQueue as last callback
@@ -963,9 +966,11 @@ BattleSystem.prototype = {
         this._animator.runAnimation(this._attackSFX);
       } else {
         // TODO is this a good place for a "yield" continuation?
+
         this.runEventQueue();
-        // TODO JS doesn't optimize tail recursion so this ends up making the call stack
-        // really deep. hmmm.
+        // TODO JS doesn't optimize tail recursion so this ends up making the
+        // call stack really deep. hmmm. Should probably rewrite this as a while()
+        // loop.
       }
     }
   },
@@ -1102,6 +1107,11 @@ BattleSystem.prototype = {
 
   _scrollEndBattleText: function (resolutionType) {
     var endBattleText = this.scrollText(this._endBattleText);
+    if (this._positioning.msgWidth !== "auto") {
+        endBattleText.setOuterDimensions(this._positioning.msgWidth,
+                                         this._positioning.msgHeight);
+    }
+
     var self = this;
     endBattleText.onClose(function() {
       self._freelyExit = true;
@@ -1148,7 +1158,7 @@ BattleSystem.prototype = {
     /* Unlike showMsg, this shows the given message for a certain period of time
      * before proceeding with the battle. If you queueMsg multiple times then
      * the messages appear in sequence. Use it to make text more readable. */
-    var anim = new Animation(12);
+    var anim = new Animation( 12 );
     var self = this;
     anim.onFrame(function(frameNum) {
       if (frameNum == 1) {
