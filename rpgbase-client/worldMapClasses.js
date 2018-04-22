@@ -326,6 +326,7 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this.margins = {left: 3, top: 3, right: 3, bottom: 3};
   this.pixelOffset = {x: 0, y: 0};
   this.scrollAdjustment = {x: 0, y: 0};
+  this.spriteScale = 1.0;
   this._screenWidth = numTilesX * tilePixelsX;
   this._screenHeight = numTilesY * tilePixelsY;
   // TODO set width and height of canvas element based on this?
