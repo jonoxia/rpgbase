@@ -320,9 +320,7 @@ ScriptedEvent.prototype = {
     // the party, that one only moves the "camera".
     var self = this;
     this._addStep(function() {
-      self._mapScreen.setNewDomain(mapDomain);
-      self._player.enterMapScreen(self._mapScreen, x, y);
-      self.nextStep();
+      self._mapScreen.switchTo(mapDomain.getId());
     });
     return this;
   },
@@ -330,6 +328,7 @@ ScriptedEvent.prototype = {
   pcEnter: function(pc, mapDomain, x, y) {
     var self = this;
     this._addStep(function() {
+      // TODO do we want to exitOldDomain? scrollToShow? no?
       self._mapScreen.setNewDomain(mapDomain);
       pc.setPos(x, y);
       pc.setFacing(0, 1);
@@ -385,6 +384,7 @@ ScriptedEvent.prototype = {
   switchMapDomain: function(mapDomain, x, y) {
     var self = this;
     this._addStep(function() {
+      self._mapScreen.exitOldDomain();
       self._mapScreen.setNewDomain(mapDomain);
       if (typeof x == 'undefined')  {
           // if x, y not specified, scroll to player location

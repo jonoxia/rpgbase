@@ -369,10 +369,15 @@ MapScreen.prototype = {
     }
   },
 
-  setNewDomain: function( domain ) {
+  exitOldDomain: function() {
     if (this._currentDomain) {
       this._currentDomain.unload();
     }
+  },
+
+  setNewDomain: function( domain ) {
+    // it used to call exitOldDomain here; does separating that cause any
+    // problems?
     this._currentDomain = domain;
     this._scrollX = 0;
     this._scrollY = 0;

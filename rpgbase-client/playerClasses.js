@@ -30,7 +30,7 @@ Player.prototype = {
       this.party[i].setPos(x, y);
       this.party[i].clearLastMoved();
     }
-    mapScreen.scrollToShow(x, y);
+    // This used to call scrollToShow but i've moved that out; any problem?
   },
 
   marchInOrder: function() {
@@ -92,6 +92,14 @@ Player.prototype = {
         // disembark.
         if (!canMove) {
           this.inVehicle.bump(self.mapScreen, dx, dy);
+        }
+        // if you are in a fast vehicle, try to move a second square
+        // if possible:
+        if (canMove && this.inVehicle.speedMultiplier == 2) {
+          if (this.inVehicle.canMove(self.mapScreen, 2*dx, 2*dy)) {
+            dx *= 2;
+            dy *= 2;
+          }
         }
       }
     }
@@ -942,6 +950,7 @@ function Vehicle() {
   this._playerOnboard = null;
   this._embarkCallback = null;
   this._bumpCallback = null;
+  this.speedMultiplier = 1;
 }
 Vehicle.prototype = {
   serializableClassName: "vehicle",

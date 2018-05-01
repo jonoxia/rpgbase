@@ -475,13 +475,20 @@ var gRPG = (function(){
       
       mapScreen.putPlayerAt = function(player, mapName, x, y) {
         this.player = player;
-        this.setNewDomain(this.getMap(mapName));
-        player.enterMapScreen(this, x, y);
+        this.switchTo(mapName, x, y);
+        // was: setNewDomain, then enterMapScreen.
+        // setNewDomain does unload, then sets domain, then loads, then starts music
+        // enterMapScreen sets references, then sets position to x,y, then calls
+        // scrollToShow.
+        // What we actually want is:
+        // 1. unload, 2. set position to x,y, 3. load, 4. scrollToShow.
       };
 
       mapScreen.switchTo = function(mapName, x, y) {
-        this.setNewDomain(this.getMap(mapName));
+        this.exitOldDomain();
         this.player.enterMapScreen(this, x, y);
+        this.setNewDomain(this.getMap(mapName));
+        this.scrollToShow(x, y);
       };
 
       this.addMode(modeName, mapScreen);
