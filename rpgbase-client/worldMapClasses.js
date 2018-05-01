@@ -326,6 +326,7 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this.margins = {left: 3, top: 3, right: 3, bottom: 3};
   this.pixelOffset = {x: 0, y: 0};
   this.scrollAdjustment = {x: 0, y: 0};
+  this.spriteScale = 1.0;
   this._screenWidth = numTilesX * tilePixelsX;
   this._screenHeight = numTilesY * tilePixelsY;
   // TODO set width and height of canvas element based on this?
@@ -381,8 +382,11 @@ MapScreen.prototype = {
     this._currentDomain = domain;
     this._scrollX = 0;
     this._scrollY = 0;
-    this._currentDomain.load();
     this.playMusicForCurrentMap();
+    // load comes last because it might trigger a cutscene that does who knows
+    // what else, and we don't want to do anything like change the music after
+    // the cutscene has already changed it.
+    this._currentDomain.load();
   },
 
   getLandType: function( x, y ) {
