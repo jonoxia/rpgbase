@@ -935,7 +935,13 @@ function TimerTextBoxMixin(subclassPrototype) {
         return;
       }
       self.position += scrollSpeed;
-      self.setText( pageText.slice(0, self.position) );
+
+      /* All the text is present from the beginning (so the browser can wrap it
+       * correctly). We just make part of it invisible with CSS, and move the
+       * boundary between visible and invisible. */
+      var visibleText = pageText.slice(0, self.position);
+      var invisibleText = pageText.slice(self.position);
+      self.setText( visibleText + '<span class="invisible">' + invisibleText + '</span>');
     }, 75);
   };
 

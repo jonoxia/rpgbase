@@ -225,12 +225,28 @@ function CssScrollingTextBox(text, menuSystem) {
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this._closeCallbacks = []; // TODO isn't this in the base class?
-  this.pages = this.splitLines(text, 108);
+  this.pages = this._splitPages(text);
   this.currPage = 0;
   this.fullText = text;
 };
 TimerTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
+CssScrollingTextBox.prototype._splitPages = function(text) {
+  // TODO any number i pick is going to be too small if the text is "iiiiiiii" and
+  // too large if the text is "mmmmmmmmm". really need to either use some kind of
+  // measure-text method or else be smart and make the browser do my work for me.
+
+  /* Split into lines first, then combine 3 lines into a page. (If i just split
+   * 135 characters into a page, a long word at the end of a line might wrap and
+   * then push the end of the text off the page. Splitting into lines first
+   * fixes that. */
+  var lines = this.splitLines(text, 45);
+  var pages = [];
+  for (var startIndex = 0 ; startIndex < lines.length; startIndex += 3) {
+    pages.push(  lines.slice(startIndex, startIndex+3).join(" ") );
+  }
+  return pages;
+};
 CssScrollingTextBox.prototype._generateHtml = function() {
   this.startPage();
 
