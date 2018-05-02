@@ -320,7 +320,7 @@ ScriptedEvent.prototype = {
     // the party, that one only moves the "camera".
     var self = this;
     this._addStep(function() {
-      self._mapScreen.switchTo(mapDomain.getId());
+      self._mapScreen.switchTo(mapDomain.getId(), x, y);
     });
     return this;
   },

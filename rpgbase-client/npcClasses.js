@@ -16,6 +16,7 @@ NPC.prototype = {
     this._wanders = false;
     this._wanderloop = null;
     this._mapScreen = mapScreen;
+    this._cutsceneTriggers = [];
   },
 
   step: function(deltaX, deltaY) {
@@ -114,7 +115,25 @@ NPC.prototype = {
     this._talkCallback = callback;
   },
 
+  addCutsceneTrigger: function(trigger) {
+    this._cutsceneTriggers.push(trigger);
+  },
+  // TODO onTalk and addCutsceneTrigger are kinda sorta trying to get
+  // at the same thing, right? ideally need to be able to store multiple
+  // talk behaviors with some kind of priority order and pass-through logic
+
   talk: function(dialoglog, player) {
+    // see if any of our cutscene triggers are triggered. If not,
+    // call our normal talk callback.
+    for (var i = 0; i < this._cutsceneTriggers.length; i++) {
+      var played = this._cutsceneTriggers[i].checkTrigger();
+      if (played) {
+        return;
+      }
+    }
+    // TODO refactor this function slightly so "turn to face player and
+    // stop wandering" happens in either case?
+    // If we're still here, no cutscene was triggered.
     if (this._talkCallback) {
       // turn to face speaker;
       var playerFacing = player.getAliveParty()[0].getFacing();
