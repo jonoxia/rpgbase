@@ -977,30 +977,6 @@ function TimerTextBoxMixin(subclassPrototype) {
     this._closeCallbacks.push(callback);
   };
 
-  // copied from ScrollingTextBoxMixin
-  subclassPrototype.splitLines = function(text, maxLineLength) {
-    // split text up into lines:
-
-    // TODO this doesn't quite work right at the margins, because it ignores
-    // the fact that some letters are wider than others. Capitols especially.
-    var words = text.split(" ");
-    var lines = [];
-    var currLine = words.shift();
-    while (words.length > 0) {
-      var word = words.shift();
-      if (currLine.length + word.length + 1 <= maxLineLength) {
-        currLine = currLine + " " + word;
-      } else {
-        lines.push(currLine);
-        currLine = word;
-      }
-    }
-    if (currLine.length > 0) {
-      lines.push(currLine);
-    }
-    return lines;
-  };
-
 }
 
 

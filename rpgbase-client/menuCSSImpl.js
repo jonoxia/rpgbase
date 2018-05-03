@@ -240,12 +240,49 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
    * 135 characters into a page, a long word at the end of a line might wrap and
    * then push the end of the text off the page. Splitting into lines first
    * fixes that. */
-  var lines = this.splitLines(text, 45);
+  
+  // Figure out maximum width of text in pixels before wrapping
+  // (logic copied from setOuterDimensions):
+  var scaleFactor = this.menuSystem._calculatedScale;
+  var positioning = this.menuSystem._positioning;
+  var padding = Math.ceil(positioning.cssPadding * scaleFactor);
+  var borders = Math.ceil(positioning.cssBorderWidth * scaleFactor);
+  var maxWidthPixels = scaleFactor * ( positioning.msgWidth - 2*padding - 2*borders);
+
+  var lines = this.splitLines(text, maxWidthPixels);
   var pages = [];
   for (var startIndex = 0 ; startIndex < lines.length; startIndex += 3) {
     pages.push(  lines.slice(startIndex, startIndex+3).join(" ") );
   }
   return pages;
+};
+CssScrollingTextBox.prototype.splitLines = function(text, maxWidthPixels) {
+  // Use hidden #width-test div to measure length.
+  // maxLineLength is in pixels.
+
+  // Make sure we're using the same font size:
+  $("#width-test").css("font-size", this.menuSystem.getFontSize("scrolling") + "pt");
+
+  var words = text.split(" ");
+  var lines = [];
+  var currLine = words.shift();
+  while (words.length > 0) {
+    var word = words.shift();
+    
+    $("#width-test").html( currLine + " " + word);
+    var lineLength = $("#width-test").innerWidth();
+    
+    if (lineLength <= maxWidthPixels) {
+      currLine = currLine + " " + word;
+    } else {
+      lines.push(currLine);
+      currLine = word;
+    }
+  }
+  if (currLine.length > 0) {
+    lines.push(currLine);
+  }
+  return lines;
 };
 CssScrollingTextBox.prototype._generateHtml = function() {
   this.startPage();
