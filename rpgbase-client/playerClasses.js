@@ -521,7 +521,7 @@ function MapSpriteMixin(subClassPrototype) {
     // don't walk through impassible terrain types
     if (this.canCross) { // i.e. if method has been defined
       var nextStepLandType = mapScreen.getLandType(newX, newY);
-      if (!this.canCross(nextStepLandType, mapScreen)) {
+      if (!this.canCross(nextStepLandType, mapScreen, deltaX, deltaY)) {
         return false;
       }
     }
