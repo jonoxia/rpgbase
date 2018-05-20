@@ -10,6 +10,7 @@ function Map(id, data, spritesheet, mapImplType) {
   this._npcs = [];
   this._vehicles = [];
   this._constructions = [];
+  this._popupScenery = [];
   this._id = id;
   this._loadHandlers = [];
   this._unloadHandlers = [];
@@ -170,10 +171,32 @@ Map.prototype = {
     }
   },
 
+  addPopupScenery: function(scenery, x, y) {
+    this._popupScenery.push(scenery);
+    if (x != undefined && y != undefined) {
+      scenery.setPos(x, y);
+    }
+    // TODO move Popup class out of eagle princess and put it here?
+  },
+
   removeNPC: function(npc) {
     var index = this._npcs.indexOf(npc);
     if (index > -1) {
       this._npcs.splice(index, 1);
+    }
+  },
+
+  removeVehicle: function(vehicle) {
+    var index = this._vehicles.indexOf(vehicle);
+    if (index > -1) {
+      this._vehicles.splice(index, 1);
+    }
+  },
+
+  removePopupScenery: function(scenery) {
+    var index = this._popupScenery.indexOf(scenery);
+    if (index > -1) {
+      this._popupScenery.splice(index, 1);
     }
   },
 
@@ -189,11 +212,8 @@ Map.prototype = {
     this._constructions = [];
   },
 
-  removeVehicle: function(vehicle) {
-    var index = this._vehicles.indexOf(vehicle);
-    if (index > -1) {
-      this._vehicles.splice(index, 1);
-    }
+  removeAllPopupScenery: function() {
+    this._popupScenery = [];
   },
 
   getNPCAt: function(x, y) {
@@ -202,6 +222,17 @@ Map.prototype = {
       var pos = this._npcs[i].getPos();
       if (pos.x == x && pos.y == y) {
         return this._npcs[i];
+      }
+    }
+    return null;
+  },
+
+  getPopupSceneryAt: function(x, y) {
+    // returns popup scenery object, or null if there is nobody
+    for (var i = 0; i < this._popupScenery.length; i++) {
+      var pos = this._popupScenery[i].getPos();
+      if (pos.x == x && pos.y == y) {
+        return this._popupScenery[i];
       }
     }
     return null;
@@ -228,6 +259,10 @@ Map.prototype = {
 
   getAllConstructedTiles: function() {
     return this._constructions;
+  },
+  
+  getAllPopupScenery: function() {
+    return this._popupScenery;
   },
 
   load: function() {
@@ -633,13 +668,16 @@ MapScreen.prototype = {
       tiles[i].plot(this, this.scrollAdjustment);
     }
 
-    // make an array of all player and NPC sprites:
+    // make an array of all player and NPC sprites, along with any
+    // scenery objects that need to be sorted into the Z-order for drawing:
     var party = this.player.getAliveParty();
     var npcs = this._currentDomain.getAllNPCs();
     // TODO - only get the ones on the screen given current scroll?
     var mapSprites = party.concat(npcs);
     var vehicles = this._currentDomain.getAllVehicles();
     mapSprites = mapSprites.concat(vehicles);
+    var scenery = this._currentDomain.getAllPopupScenery();
+    mapSprites = mapSprites.concat(scenery);
 
     // sort them all so southernmost are drawn last:
     mapSprites.sort(function(a, b) {
