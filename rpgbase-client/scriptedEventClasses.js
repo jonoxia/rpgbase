@@ -321,6 +321,7 @@ ScriptedEvent.prototype = {
     var self = this;
     this._addStep(function() {
       self._mapScreen.switchTo(mapDomain.getId(), x, y);
+      self.nextStep();
     });
     return this;
   },
