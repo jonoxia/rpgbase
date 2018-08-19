@@ -221,13 +221,17 @@ CssOldScrollingTextBox.prototype._generateHtml = function() {
 
   
 
-function CssScrollingTextBox(text, menuSystem) {
+function CssScrollingTextBox(text, menuSystem, title) {
+  // TODO XXX allow optionally a title to be set. Wrap it in a <span class=title>
+  // so that it can be styled with CSS. Title would always be shown regardless
+  // of what part of the scrolling text is currently in view.
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this._closeCallbacks = []; // TODO isn't this in the base class?
   this.pages = this._splitPages(text);
   this.currPage = 0;
   this.fullText = text;
+  this.title = title;
 };
 TimerTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
@@ -292,12 +296,31 @@ CssScrollingTextBox.prototype._generateHtml = function() {
   if (this.menuSystem.getFontSize("scrolling") != this.menuSystem.getFontSize()) {
     this.parentTag.css("font-size", this.menuSystem.getFontSize("scrolling") + "pt");
   }
+
   return "";
 };
 // The following added for TimerTextBoxMixin support
 CssScrollingTextBox.prototype.setText = function(newText) {
   if (this.parentTag) {
-    this.parentTag.html(newText);
+    this.parentTag.empty();
+    if (this.title) {
+      var titleElem = $("<span></span>").addClass("scrolling-title");
+      titleElem.text( this.title );
+      this.parentTag.append( titleElem );
+      this.parentTag.append( "<br>");
+    }
+    // Problems:
+    // 1. there are now 4 lines in the box, so the box needs to be taller or the
+    // margins need to be reduced.
+    // 2. only the first line is getting indented. because that's how <spans>
+    // as opposed to <divs> interpret "margin-left". If i make it a <div> then it
+    // gets its own border, though, which I don't want. Maybe make each line its
+    // own span so they all get the "margin-left: 1em" property?
+    // 3. don't show the portrait box if there's no portrait!!!
+    
+    var mainElem = $("<span></span>").addClass("scrolling-body");
+    mainElem.html(newText);
+    this.parentTag.append(mainElem);
   }
 };
 

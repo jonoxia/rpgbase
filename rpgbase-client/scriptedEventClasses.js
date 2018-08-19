@@ -137,10 +137,11 @@ ScriptedEvent.prototype = {
     return this; // for daisy-chaining
   },
 
-  scrollText: function(text, callback) {
+  scrollText: function(text, callback, title) {
     var dlg = this._dialoglog;
     dlg.clearMsg();
-    var textBox = dlg.scrollText(text);
+    console.log("calling dlg.scrollText with title "+ title);
+    var textBox = dlg.scrollText(text, title);
     console.log("Positioning msgWidth is " + dlg._positioning.msgWidth);
     if (dlg._positioning.msgWidth !== "auto") {
       console.log("Setting outer dimensions of text box to " + dlg._positioning.msgWidth + ", " +  dlg._positioning.msgHeight);
@@ -153,14 +154,14 @@ ScriptedEvent.prototype = {
 
   // could make a new menu system just for holding the keyboard
   // focus during scripted events...
-  npcSpeak: function(npc, text) {
+  npcSpeak: function(npc, text, title) {
     var self = this;
     var dlg = this._dialoglog;
     this._addStep(function() {
       dlg.hidePortraitBox(); // because npcs don't have portraits
       self.scrollText(text, function() {
         self.nextStep();
-      });
+      }, title);
     }); 
     return this; // for daisy-chaining
   },
@@ -215,26 +216,27 @@ ScriptedEvent.prototype = {
     // game in an unwinnable state.
   },
 
-  pcSpeak: function(pc, text) {
+  pcSpeak: function(pc, text, title) {
     // TODO pc arg is unused
     var self = this;
     this._addStep(function() {
         self.scrollText(text, function() {
             self.nextStep();
-        });
+        }, title);
     });
     return this;
   },
 
-  pcSpeakWithPortrait: function(text, portrait) {
+  pcSpeakWithPortrait: function(text, portrait, speaker) {
     var self = this;
     var dlg = this._dialoglog;
     this._addStep(function() {
       dlg.showPortraitBox(portrait);
+      console.log("Scrolling cutscene text with speaker = " + speaker);
       self.scrollText(text, function() {
         dlg.hidePortraitBox();
         self.nextStep();
-      });
+      }, speaker);
     });
     return this;
   },

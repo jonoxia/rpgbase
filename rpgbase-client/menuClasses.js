@@ -231,11 +231,12 @@ function MenuSystemMixin(subClassPrototype) {
     }
   };
 
-  subClassPrototype.makeScrollingTextBox = function(dialogText) {
+  subClassPrototype.makeScrollingTextBox = function(dialogText, title) {
+    console.log("makeScrollingTextBox with title = " + title);
     if (this.menuImpl == "canvas") {
-      return new CanvasScrollingTextBox(dialogText, this);
+      return new CanvasScrollingTextBox(dialogText, this, title);
     } else {
-      return new CssScrollingTextBox(dialogText, this);
+      return new CssScrollingTextBox(dialogText, this, title);
     }
   };
 
@@ -388,10 +389,12 @@ function MenuSystemMixin(subClassPrototype) {
     }
   };
 
-  subClassPrototype.scrollText = function(dialogText) {
+  subClassPrototype.scrollText = function(dialogText, title) {
     // Turn into a scrolling message box and push onto stack
+    // title is optional
+    console.log("Subclass prototype.scrollText title = " + title);
     this.clearMsg();
-    var textBox = this.makeScrollingTextBox(dialogText);
+    var textBox = this.makeScrollingTextBox(dialogText, title);
     this.pushMenu(textBox);
     textBox.setPos(this._positioning.msgLeft,
                    this._positioning.msgTop);
@@ -695,7 +698,7 @@ function MenuSystemMixin(subClassPrototype) {
       var nextSegment = textSegments[segmentIndex];
       console.log("I am on segment " + segmentIndex);
       
-      var textBox = self.makeScrollingTextBox(nextSegment.text);
+      var textBox = self.makeScrollingTextBox(nextSegment.text, nextSegment.speaker);
       self.pushMenu(textBox);
       textBox.setPos(self._positioning.msgLeft,
                      self._positioning.msgTop);
@@ -1031,6 +1034,10 @@ function ScrollingTextBoxMixin(subclassPrototype) {
     return lines;
   };
 
+  subclassPrototype.setTitle = function(title) {
+    this.title = title;
+  };
+
 };
 
 
@@ -1148,7 +1155,7 @@ Dialoglog.prototype = {
     }
   },
 
-  scrollText: function() {
+  scrollText: function(dialogText, title) {
   },
 
   multipartTextDisplay: function(textSegments) {
@@ -1162,8 +1169,8 @@ Dialoglog.prototype = {
 MenuSystemMixin(Dialoglog.prototype);
 // Override the mixin's scrollText function:
 Dialoglog.prototype.parentScrollText = Dialoglog.prototype.scrollText;
-Dialoglog.prototype.scrollText = function(dialogText) {
-  var textBox = this.parentScrollText(dialogText);
+Dialoglog.prototype.scrollText = function(dialogText, title) {
+  var textBox = this.parentScrollText(dialogText, title);
   var self = this;
   // This is to make sure the dialog mode gets closed after a simple dialog
   // consisting of just one scrollText() call -- close the mode when the scrolling
