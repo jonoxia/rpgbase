@@ -26,9 +26,14 @@ Player.prototype = {
   enterMapScreen: function(mapScreen, x, y) {
     this.mapScreen = mapScreen;
     mapScreen.setPlayer(this);
+    this.aliveParty = [];
     for (var i = 0; i < this.party.length; i++) {
       this.party[i].setPos(x, y);
       this.party[i].clearLastMoved();
+      if (this.party[i].isAlive()) {
+        // might as well update aliveParty while we're at it
+        this.aliveParty.push(this.party[i]);
+      }
     }
     // This used to call scrollToShow but i've moved that out; any problem?
   },

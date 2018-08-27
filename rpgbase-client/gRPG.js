@@ -472,7 +472,7 @@ var gRPG = (function(){
       mapScreen.getMap = function(name) {
         return this._mapRegistry[name];
       };
-      
+
       mapScreen.putPlayerAt = function(player, mapName, x, y) {
         this.player = player;
         this.switchTo(mapName, x, y);

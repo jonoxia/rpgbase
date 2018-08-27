@@ -62,11 +62,11 @@ CSVLoader.prototype = {
       var lines = rawCSV.split("\n");
       lines = lines.filter(function(x) { return x !== ""});
       rawCSV = lines.join("\n");
-      
+
       var results = Papa.parse(rawCSV, {header: true});
       // TODO use dynamicParsing! then I don't have to parseInt everywhere
       return results.data;
-      
+
     } else if (this.spreadsheets[filename]) {
       // normal online case:
       return this.spreadsheets[filename].getWorksheetAsDicts(filename);
@@ -116,7 +116,7 @@ CSVLoader.prototype = {
           results[row][col] = results[row][col].replace(" ", "");
         }
       }
-      
+
       return results;
     }
 
@@ -146,7 +146,7 @@ CSVLoader.prototype = {
 
     var numGoogleDocs = 0;
     var numGot = 0;
-    
+
     for (var key in googleDocsData) {
       if (googleDocsData.hasOwnProperty(key)) {
         numGoogleDocs++;
