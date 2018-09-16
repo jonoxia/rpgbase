@@ -4,7 +4,7 @@ function CssMixin(subclassPrototype) {
   subclassPrototype.refresh = function() {
     this.parentTag.html(this._generateHtml());
   };
-  
+
   subclassPrototype.display = subclassPrototype.parentDisplay = function() {
     if (this.parentTag) {
       this.parentTag.remove(); // so we won't get doubles if this is called again
@@ -16,7 +16,7 @@ function CssMixin(subclassPrototype) {
     this.container.append(this.parentTag);
     this.refresh();
   };
-  
+
   subclassPrototype.close = function() {
     if (this.parentTag) { // so this won't do anything if it's already closed
       this.parentTag.remove();
@@ -46,8 +46,17 @@ function CssMixin(subclassPrototype) {
     var dim = {x: width * scaleFactor,
                y: height * scaleFactor};
     // inset the width to make room for padding and borders
+
     dim.x -= (2*padding + 2*borders);
-    dim.y -= (2*padding + 2*borders);
+    if (this.title) {
+      /* If title is present (right now only CssScrollingTextBox has this
+       * field, but theoretically other subclasses could have it too) then
+       * make space for it by shrinking the top padding */
+      this.parentTag.css("padding-top", "0px");
+      dim.y -= (padding + 2*borders);
+    } else {
+      dim.y -= (2*padding + 2*borders);
+    }
     this.parentTag.css("width", dim.x + "px");
     this.parentTag.css("height", dim.y + "px");
   };
@@ -109,12 +118,12 @@ CssCmdMenu.prototype = {
     var numRows = this._calcRowsToShow();
     this.table.empty();
     for (var i = 0; i < numRows; i++) {
-     
+
       var row = $("<tr></tr>");
       var cell = $("<td></td>");
       cell.html();
       row.append(cell); //left cell
-      
+
       cell = $("<td></td>");
       var name;
       if (i + this._scrollOffset > this.cmdList.length - 1) {
@@ -124,7 +133,7 @@ CssCmdMenu.prototype = {
       }
       cell.html(name);
       row.append(cell); // right cell
-      
+
       this.table.append(row);
     }
 
@@ -165,18 +174,18 @@ CssCmdMenu.prototype = {
     }
     this.table = $("<table></table>");
     this.parentTag.append(this.table);
-    
+
     this.showArrowAtIndex( this._defaultSelectedIndex );
 
     // Give it the "menu" class (this brings it in front of other boxes)
     this.parentTag.addClass("menu");
     this.parentTag.focus();
   },
-  
+
   showArrowAtIndex: function(index) {
     this._calculateScroll();
     this._populateTable();
-    
+
     var rows = this.table.find("tr");
     for (var r = 0; r < rows.length; r++) {
       var cell = $(rows[r]).find("td")[0];
@@ -219,12 +228,12 @@ CssOldScrollingTextBox.prototype._generateHtml = function() {
   return this.textLines;
 };
 
-  
+
 
 function CssScrollingTextBox(text, menuSystem, title) {
-  // TODO XXX allow optionally a title to be set. Wrap it in a <span class=title>
-  // so that it can be styled with CSS. Title would always be shown regardless
-  // of what part of the scrolling text is currently in view.
+  /* If title is provided, it will always be shown regardless of what
+   * part of the scrolling text is currently in view. Wrap it in a
+   * <span class=title>so that it can be styled with CSS. */
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this._closeCallbacks = []; // TODO isn't this in the base class?
@@ -244,13 +253,16 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
    * 135 characters into a page, a long word at the end of a line might wrap and
    * then push the end of the text off the page. Splitting into lines first
    * fixes that. */
-  
+
   // Figure out maximum width of text in pixels before wrapping
   // (logic copied from setOuterDimensions):
   var scaleFactor = this.menuSystem._calculatedScale;
   var positioning = this.menuSystem._positioning;
   var padding = Math.ceil(positioning.cssPadding * scaleFactor);
   var borders = Math.ceil(positioning.cssBorderWidth * scaleFactor);
+  if (positioning.msgWidth == "auto") {
+    console.warn("CssScrollingTextBox doesn't know how to split pages if msgWidth is auto");
+  }
   var maxWidthPixels = scaleFactor * ( positioning.msgWidth - 2*padding - 2*borders);
 
   var lines = this.splitLines(text, maxWidthPixels);
@@ -272,10 +284,10 @@ CssScrollingTextBox.prototype.splitLines = function(text, maxWidthPixels) {
   var currLine = words.shift();
   while (words.length > 0) {
     var word = words.shift();
-    
+
     $("#width-test").html( currLine + " " + word);
     var lineLength = $("#width-test").innerWidth();
-    
+
     if (lineLength <= maxWidthPixels) {
       currLine = currLine + " " + word;
     } else {
@@ -309,15 +321,12 @@ CssScrollingTextBox.prototype.setText = function(newText) {
       this.parentTag.append( titleElem );
       this.parentTag.append( "<br>");
     }
-    // Problems:
-    // 1. there are now 4 lines in the box, so the box needs to be taller or the
-    // margins need to be reduced.
-    // 2. only the first line is getting indented. because that's how <spans>
+    // Problem with scrolling-body style:
+    // only the first line is getting indented. because that's how <spans>
     // as opposed to <divs> interpret "margin-left". If i make it a <div> then it
     // gets its own border, though, which I don't want. Maybe make each line its
     // own span so they all get the "margin-left: 1em" property?
-    // 3. don't show the portrait box if there's no portrait!!!
-    
+
     var mainElem = $("<span></span>").addClass("scrolling-body");
     mainElem.html(newText);
     this.parentTag.append(mainElem);

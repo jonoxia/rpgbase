@@ -97,7 +97,7 @@ function CmdMenuMixin(subClassProto) {
 
 function MenuSystemMixin(subClassPrototype) {
   subClassPrototype._init = function(htmlElem, cursorImg, width, height) {
-      
+
     this.menuStack = [];
     this._htmlElem = htmlElem;
     if (htmlElem) {
@@ -131,12 +131,12 @@ function MenuSystemMixin(subClassPrototype) {
       statsHeight: "auto",
       statsXOffset: 0,
       statsYOffset: 0,
-      
+
       msgLeft: 25,
       msgTop: 125,
       msgWidth: "auto", // not yet used
       msgHeight: "auto", // not yet used
-      
+
       menuLeft: 0,
       menuTop: 0,
       menuWidth: "auto", // not yet used
@@ -154,7 +154,7 @@ function MenuSystemMixin(subClassPrototype) {
       imgWidth: 100,
       imgHeight: 100,
 
-      cssFontSize: 18, // only applies to css menus 
+      cssFontSize: 18, // only applies to css menus
       cssBorderWidth: 3, // same -- TODO merge with canvas text styles
       cssPadding: 20, // same
 
@@ -169,7 +169,7 @@ function MenuSystemMixin(subClassPrototype) {
     if (title && title != "") {
       subMenu.setTitle(title);
     }
-    
+
     var addOneCmd = function(name, cmd) {
       // allow recursive submenus
       if (cmd.isContainer) {
@@ -232,7 +232,6 @@ function MenuSystemMixin(subClassPrototype) {
   };
 
   subClassPrototype.makeScrollingTextBox = function(dialogText, title) {
-    console.log("makeScrollingTextBox with title = " + title);
     if (this.menuImpl == "canvas") {
       return new CanvasScrollingTextBox(dialogText, this, title);
     } else {
@@ -265,7 +264,7 @@ function MenuSystemMixin(subClassPrototype) {
     return this._scalePositions(this._positioning.statsWidth,
                                 this._positioning.statsHeight);
   };
-  
+
   subClassPrototype._scalePositions = function(x, y) {
     if (y > 0 && this.menuImpl == "css") {
       y *= this._calculatedScale;
@@ -304,7 +303,7 @@ function MenuSystemMixin(subClassPrototype) {
 
   subClassPrototype.pushMenu = function(newMenu) {
     var x, y;
-    
+
     if (this.menuStack.length > 0) {
       var pos = this.getTopMenu().getPos();
       // if menuXOffset and menuYOffset are set, then we move each
@@ -392,7 +391,6 @@ function MenuSystemMixin(subClassPrototype) {
   subClassPrototype.scrollText = function(dialogText, title) {
     // Turn into a scrolling message box and push onto stack
     // title is optional
-    console.log("Subclass prototype.scrollText title = " + title);
     this.clearMsg();
     var textBox = this.makeScrollingTextBox(dialogText, title);
     this.pushMenu(textBox);
@@ -692,12 +690,10 @@ function MenuSystemMixin(subClassPrototype) {
       // TODO setOutsideDimensions, maybe?
 
     }
-    console.log("multipart text display starting ");
+
     var segmentIndex = 0;
     var proceed = function() {
       var nextSegment = textSegments[segmentIndex];
-      console.log("I am on segment " + segmentIndex);
-      
       var textBox = self.makeScrollingTextBox(nextSegment.text, nextSegment.speaker);
       self.pushMenu(textBox);
       textBox.setPos(self._positioning.msgLeft,
@@ -706,7 +702,7 @@ function MenuSystemMixin(subClassPrototype) {
         textBox.setOuterDimensions(self._positioning.msgWidth,
                                    self._positioning.msgHeight);
       }
-      
+
       if (nextSegment.img == null) {
         self.hideStatusBoxes("portrait");
       } else {
@@ -715,7 +711,7 @@ function MenuSystemMixin(subClassPrototype) {
         var imgHeight = self._calculatedScale * self._positioning.imgHeight;
         self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);
       }
-      
+
       if (segmentIndex < textSegments.length - 1) {
         segmentIndex ++;
         textBox.onClose(proceed);
@@ -930,7 +926,7 @@ function TimerTextBoxMixin(subclassPrototype) {
     this.setText("");
     var self = this;
     var scrollSpeed = this.menuSystem._positioning.textScrollSpeed;
-    
+
     this.timer = window.setInterval(function() {
       var pageText = self.pages[ self.currPage ];
       if (self.position >= pageText.length) {
