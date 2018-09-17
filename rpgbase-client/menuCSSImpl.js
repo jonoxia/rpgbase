@@ -237,10 +237,10 @@ function CssScrollingTextBox(text, menuSystem, title) {
   this.menuSystem = menuSystem;
   this.container = menuSystem._htmlElem;
   this._closeCallbacks = []; // TODO isn't this in the base class?
-  this.pages = this._splitPages(text);
-  this.currPage = 0;
-  this.fullText = text;
   this.title = title;
+  this.currPage = 0;
+  this.pages = this._splitPages(text);
+  //this.fullText = text; // is this used anywhere?
 };
 TimerTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
@@ -264,6 +264,12 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
     console.warn("CssScrollingTextBox doesn't know how to split pages if msgWidth is auto");
   }
   var maxWidthPixels = scaleFactor * ( positioning.msgWidth - 2*padding - 2*borders);
+  if (this.title) {
+    maxWidthPixels -= (scaleFactor * padding);
+    // This is because if there's a title, the text under the title gets
+    // indented. TODO: don't hard-code this, make a positioning property named
+    // indent or something.
+  }
 
   var lines = this.splitLines(text, maxWidthPixels);
   var pages = [];
@@ -320,16 +326,13 @@ CssScrollingTextBox.prototype.setText = function(newText) {
       titleElem.text( this.title );
       this.parentTag.append( titleElem );
       this.parentTag.append( "<br>");
-    }
-    // Problem with scrolling-body style:
-    // only the first line is getting indented. because that's how <spans>
-    // as opposed to <divs> interpret "margin-left". If i make it a <div> then it
-    // gets its own border, though, which I don't want. Maybe make each line its
-    // own span so they all get the "margin-left: 1em" property?
 
-    var mainElem = $("<span></span>").addClass("scrolling-body");
-    mainElem.html(newText);
-    this.parentTag.append(mainElem);
+      var mainElem = $("<div></div>").addClass("scrolling-body");
+      mainElem.html(newText);
+      this.parentTag.append(mainElem);
+    } else {
+      this.parentTag.html(newText);
+    }
   }
 };
 
