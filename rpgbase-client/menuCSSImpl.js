@@ -169,6 +169,7 @@ CssCmdMenu.prototype = {
     if (this.title) {
       var titleSpan = $("<span></span>");
       titleSpan.addClass("menu");
+      titleSpan.addClass("scrolling-title"); // ???
       titleSpan.html(this.title);
       this.parentTag.append(titleSpan);
     }
@@ -240,7 +241,7 @@ function CssScrollingTextBox(text, menuSystem, title) {
   this.title = title;
   this.currPage = 0;
   this.pages = this._splitPages(text);
-  //this.fullText = text; // is this used anywhere?
+  this.fullText = text; // used in unit tests
 };
 TimerTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);

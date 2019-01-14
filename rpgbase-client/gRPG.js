@@ -172,7 +172,7 @@ var gRPG = (function(){
         }
       });
     },
-    
+
     addMode: function(name, modeObject) {
       console.log("Adding mode " + name );
       this._modeRegistry[name] = modeObject;
@@ -180,7 +180,7 @@ var gRPG = (function(){
       console.log("Adding mode " + name + ", will give it my htmlElem = " + this.settings.htmlElem);
       modeObject.engine = this;
     },
-    
+
     getModeByName: function(name) {
       return this._modeRegistry[name];
     },
@@ -216,8 +216,8 @@ var gRPG = (function(){
       // start animator of new mode:
       this._mainMode.start();
 
-      this._mapInputHandler.startListening();      
-      // TODO weird things might happen if you called this while a 
+      this._mapInputHandler.startListening();
+      // TODO weird things might happen if you called this while a
       // sub-mode was active...
     },
 
@@ -248,7 +248,7 @@ var gRPG = (function(){
       // otherwise, just start the new one:
       this._subMode.start();
     },
-    
+
     closeMode: function() {
       if (this._subMode.hasOwnAnimator) {
         this._subMode.stop();
@@ -300,7 +300,7 @@ var gRPG = (function(){
       }
       return false;
     },
-    
+
     mainMenu: function(callback) {
     },
 
