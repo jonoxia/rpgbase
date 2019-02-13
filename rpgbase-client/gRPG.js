@@ -39,6 +39,39 @@ var gRPG = (function(){
     return settings;
   }
 
+  function LoadingScreenMode(htmlElem, frameRate) {
+    this._htmlElem = htmlElem;  // must be canvas
+    this._ctx = this._htmlElem.getContext("2d");
+
+    this._animator = new Animator(frameRate);
+  }
+  LoadingScreenMode.prototype = {
+    handleKey: function(keyCode) {
+      console.log("LOADING SCREEN EATING YOUR KEYPRESS");
+    },
+    hasOwnAnimator: function() {
+      return true;
+    },
+    getAnimator: function() {
+      return this._animator;
+    },
+    start: function() {
+      this._animator.start();
+      var self = this;
+      console.log("STARTING LOADING SCREEN ANIMATION");
+      this._animator.runAnimation(new Animation(100, function(frame) {
+        self._ctx.clearRect(0, 0, 1024, 768);
+        self._ctx.moveTo(100, 400);
+        self._ctx.font = "20px Georgia";
+        self._ctx.strokeText("THE LOADING SCREEN", 100, 300);
+      }, function() {
+      }));
+    },
+    stop: function() {
+      console.log("STOPPING LOADING SCREEN ANIMATION");
+      this._animator.stop();
+    }
+  };
 
   
   function GameEngine(canvasElem, width, height, options) {
@@ -373,8 +406,7 @@ var gRPG = (function(){
     // do save?
     // do load?
     // send player to ('mapname', x, y) ?
-
-
+    
     /* The Input Mode interface:
      * to be an input mode, an object must implement:
 
@@ -473,6 +505,9 @@ var gRPG = (function(){
         return this._mapRegistry[name];
       };
 
+      // a mapScreen mode requires a loading screen mode:
+      this.makeLoadingMode("loading", {});
+
       mapScreen.putPlayerAt = function(player, mapName, x, y, callback) {
         this.player = player;
         this.switchTo(mapName, x, y, callback);
@@ -491,15 +526,20 @@ var gRPG = (function(){
         /* TODO this breaks separation between rpgbase and eagleprincess
          * by assuming something called an epMap. Ultimately fold/unfold
          * functionality should just move into the rpgbase Map class. */
-        $("#loading-progress").show();
-        // TODO: Fold old domain!!
+
+        g_engine.openMode("loading");
         var self = this;
+        var previousDomain = this._currentDomain;
         this.getMap(mapName).epMap.unfold(function() {
-          $("#loading-progress").hide();
           self.exitOldDomain();
           self.player.enterMapScreen(self, x, y);
           self.setNewDomain(self.getMap(mapName));
           self.scrollToShow(x, y);
+          // fold up old map if any:
+          if (previousDomain) {
+            previousDomain.epMap.fold(); 
+          }
+          g_engine.closeMode();
           if (callback) {
             callback();
             // TODO: return Promise instead?
@@ -574,6 +614,14 @@ var gRPG = (function(){
       return battleSystem;
     },
 
+    makeLoadingMode: function(modeName, options) {
+      var settings = {htmlElem: null,
+                      mapAnimFrameTime: 40};
+      settings = overrideDefaults(settings, this, options);
+      var loadingScreen = new LoadingScreenMode(settings.htmlElem[0],settings.mapAnimFrameTime);
+      this.addMode(modeName, loadingScreen);
+      return loadingScreen;
+    },
 
     makeMazeMode: function(modeName, options) {
       // Defaults:
