@@ -473,9 +473,9 @@ var gRPG = (function(){
         return this._mapRegistry[name];
       };
 
-      mapScreen.putPlayerAt = function(player, mapName, x, y) {
+      mapScreen.putPlayerAt = function(player, mapName, x, y, callback) {
         this.player = player;
-        this.switchTo(mapName, x, y);
+        this.switchTo(mapName, x, y, callback);
         // was: setNewDomain, then enterMapScreen.
         // setNewDomain does unload, then sets domain, then loads, then starts music
         // enterMapScreen sets references, then sets position to x,y, then calls
@@ -484,11 +484,28 @@ var gRPG = (function(){
         // 1. unload, 2. set position to x,y, 3. load, 4. scrollToShow.
       };
 
-      mapScreen.switchTo = function(mapName, x, y) {
-        this.exitOldDomain();
-        this.player.enterMapScreen(this, x, y);
-        this.setNewDomain(this.getMap(mapName));
-        this.scrollToShow(x, y);
+      mapScreen.switchTo = function(mapName, x, y, callback) {
+        // NOW AN EXCITING ASYNC CALL
+        var mapMode = g_engine.getModeByName("map");
+
+        /* TODO this breaks separation between rpgbase and eagleprincess
+         * by assuming something called an epMap. Ultimately fold/unfold
+         * functionality should just move into the rpgbase Map class. */
+        $("#loading-progress").show();
+        // TODO: Fold old domain!!
+        var self = this;
+        this.getMap(mapName).epMap.unfold(function() {
+          $("#loading-progress").hide();
+          self.exitOldDomain();
+          self.player.enterMapScreen(self, x, y);
+          self.setNewDomain(self.getMap(mapName));
+          self.scrollToShow(x, y);
+          if (callback) {
+            callback();
+            // TODO: return Promise instead?
+          }
+        });
+
       };
 
       this.addMode(modeName, mapScreen);

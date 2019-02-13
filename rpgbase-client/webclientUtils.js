@@ -72,9 +72,43 @@ AssetLoader.prototype = {
     }
   },
 
-  deleteTags: function() {
-    // TODO
-    // remove from the page all tags I created
+  promiseToLoadThemAll: function() {
+
+    return new Promise(function(resolve, reject) {
+      if (this._thingsToLoad == 0) {
+        resolve();
+      }
+      for (var t = 0; t < this._thingsToLoad; t++) {
+        (function(thing) {
+	  thing.tag.onload = function() {
+	    self._thingsLoaded ++;
+            thing.loaded = true;
+	    if (updateFunc) {
+	      updateFunc( self._thingsLoaded / self._thingsToLoad );
+	    }
+	    if (self._thingsLoaded == self._thingsToLoad) {
+	      resolve();
+	    }
+	  };
+	  thing.tag.src = thing.url;
+        })(this._things[t]);
+      }
+      // when do we know to Reject? add a timer? or is there actually a load-failed
+      // event we can listen for on images?
+    });
+  },
+
+  cleanUp: function() {
+    /* Remove all of my loaded references. Note that any variable that stored
+     * the return value from .add() would still have the reference, and it must
+     * be deleted there as well in order to release the memory. */
+    $.each(this._things, function(i, x) {
+      delete x.tag;
+      delete x;
+    });
+    this._things = [];
+    this._thingsLodaed = 0;
+    this._thingsToLoad = 0;
   }
 };
 
