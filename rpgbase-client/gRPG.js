@@ -44,6 +44,7 @@ var gRPG = (function(){
     this._ctx = this._htmlElem.getContext("2d");
 
     this._animator = new Animator(frameRate);
+    this._percentLoaded = 0;
   }
   LoadingScreenMode.prototype = {
     handleKey: function(keyCode) {
@@ -58,18 +59,20 @@ var gRPG = (function(){
     start: function() {
       this._animator.start();
       var self = this;
-      console.log("STARTING LOADING SCREEN ANIMATION");
       this._animator.runAnimation(new Animation(100, function(frame) {
         self._ctx.clearRect(0, 0, 1024, 768);
         self._ctx.moveTo(100, 400);
         self._ctx.font = "20px Georgia";
-        self._ctx.strokeText("THE LOADING SCREEN", 100, 300);
+        var text = (100*self._percentLoaded) + " % Loaded"
+        self._ctx.strokeText(text, 100, 300);
       }, function() {
       }));
     },
     stop: function() {
-      console.log("STOPPING LOADING SCREEN ANIMATION");
       this._animator.stop();
+    },
+    setPercent: function(percentLoaded) {
+      this._percentLoaded = percentLoaded;
     }
   };
 
@@ -381,26 +384,29 @@ var gRPG = (function(){
 
     start: function(startingMode, callback) {
       var self = this;
+      // (does it make sense for engine.start to just always start you in loading screen mode
+      // instead of taking an argument?)
+      this.mainMode("loading");
       console.log("Gonna loadThemAll");
       // This is a common place for startup to fail, because if
       // any of the loading files doesnt' load, the callback never
       // gets called
-      this.loader.loadThemAll(function() {
-        console.log("Loaded them all");
-        $("#loading-progress").hide();
-        self.mainMode(startingMode);
-        if (callback) {
-          callback();
+      this.loader.loadThemAll(
+        function() {
+          console.log("Loaded them all");
+          self.mainMode(startingMode);
+          if (callback) {
+            callback();
+          }
+        },
+        function(percentLoaded) {
+          // the progress bar callback function
+          self.getModeByName("loading").setPercent(percentLoaded);
         }
-      },
-      function(progress) {
-        // the progress bar callback function
-        $("#loading-progress").html("LOADING IMAGES " + Math.floor(progress * 100) + "% ..."); 
-      });
-	window.setTimeout(function() {
-	    self.loader.listUnloaded(); // just for debug
-	}, 5000);
-
+      );
+      window.setTimeout(function() {
+	self.loader.listUnloaded(); // just for debug
+      }, 5000);
     },
 
     // do save?
@@ -521,31 +527,38 @@ var gRPG = (function(){
 
       mapScreen.switchTo = function(mapName, x, y, callback) {
         // NOW AN EXCITING ASYNC CALL
-        var mapMode = g_engine.getModeByName("map");
 
         /* TODO this breaks separation between rpgbase and eagleprincess
          * by assuming something called an epMap. Ultimately fold/unfold
          * functionality should just move into the rpgbase Map class. */
 
-        g_engine.openMode("loading");
+        // instant switch breaks basically ALL unit tests.
+        // Changing the switchTo function to not call unfold() fixes many of the
+        // unit tests.
+        // however making loadThemAll return immediately, which i'd expect to
+        // do the exact same thing, introduces a new bug ("No library called cutscenes")
+        // even in tests that are otherwise passing ???
+        this.engine.mainMode("loading");
         var self = this;
         var previousDomain = this._currentDomain;
         this.getMap(mapName).epMap.unfold(function() {
           self.exitOldDomain();
           self.player.enterMapScreen(self, x, y);
-          self.setNewDomain(self.getMap(mapName));
+          var newDomain = self.getMap(mapName)
+          self.setNewDomain(newDomain);
           self.scrollToShow(x, y);
           // fold up old map if any:
-          if (previousDomain) {
+          if (previousDomain && previousDomain !== newDomain ) {
+            // it's valid to call putPlayerAt(mapYouAreAlreadyIn, newX, newY) which
+            // will trigger this, so make sure we don't fold the map in that case!!!
             previousDomain.epMap.fold(); 
           }
-          g_engine.closeMode();
-          if (callback) {
-            callback();
-            // TODO: return Promise instead?
-          }
+          self.engine.mainMode("map"); // close the loading screen // TODO XXX what if the name is not map?
+          if (callback) { callback(); }
+          // TODO: return Promise instead?
+        }, function(updatePercent) {
+          self.engine.getModeByName("loading").setPercent(updatePercent);
         });
-
       };
 
       this.addMode(modeName, mapScreen);

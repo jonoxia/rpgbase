@@ -17,6 +17,7 @@ NPC.prototype = {
     this._wanderloop = null;
     this._mapScreen = mapScreen;
     this._cutsceneTriggers = [];
+    this.name = null;
   },
 
   step: function(deltaX, deltaY) {

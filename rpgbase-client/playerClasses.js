@@ -118,7 +118,7 @@ Player.prototype = {
       // always allow us to move in order to embark into a
       // vehicle:
       if (aVehicle) {
-          canMove = true;
+        canMove = true;
       }
     }
     var scrolliness = this.mapScreen.calcAutoScroll( mainChar._x, 
