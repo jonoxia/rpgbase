@@ -1,34 +1,117 @@
 function Map(id, data, spritesheet, mapImplType) {
-  // mapData must be 2d array of landtype codes.
-  this._mapData = data;
-  this._dimX = data[0].length;
-  this._dimY = data.length;
-
-  this._img = spritesheet;
-
-  this._stepHandlers = [];
-  this._npcs = [];
-  this._vehicles = [];
-  this._constructions = [];
-  this._popupScenery = [];
-  this._id = id;
-  this._loadHandlers = [];
-  this._unloadHandlers = [];
-
-  this._switchStates = {}; // for puzzle switches
-
-  if (mapImplType) {
-    this._mapImpl = mapImplType;
-    if (mapImplType === "singleImage") {
-      this.backgroundImgs = [{offsetX: 0, offsetY: 0, img: spritesheet}];
-      this.downsampleFactor = 1.0;
-    }
-  } else {
-    this._mapImpl = "tilemap"; // default
+  if (id) {
+    this._mapInit(id, data, spritesheet, mapImplType);
   }
-  this.foregroundImg = null;
 }
 Map.prototype = {
+  _mapInit: function(id,  data, spritesheet, mapImplType) {
+    // mapData must be 2d array of landtype codes.
+    this.folded = true;
+    this._assetLoader = null;
+    this._foregroundImageFile = null; // holds the filename as opposed to actual image
+    this._imageFile = null; // ditto
+    this._backgroundMusicTrack = null; // ditto
+
+    this._mapData = data;
+    this._dimX = data[0].length;
+    this._dimY = data.length;
+    
+    this._img = spritesheet;
+    
+    this._stepHandlers = [];
+    this._npcs = [];
+    this._vehicles = [];
+    this._constructions = [];
+    this._popupScenery = [];
+    this._id = id;
+    this._loadHandlers = [];
+    this._unloadHandlers = [];
+    
+    this._switchStates = {}; // for puzzle switches
+    
+    if (mapImplType) {
+      this._mapImpl = mapImplType;
+      if (mapImplType === "singleImage") {
+        this.backgroundImgs = [{offsetX: 0, offsetY: 0, img: spritesheet}];
+        this.downsampleFactor = 1.0;
+      }
+    } else {
+      this._mapImpl = "tilemap"; // default
+    }
+    this.foregroundImg = null;
+  },
+  //  TODO probly make a new constructor that takes foreground, background, etc. and
+  // just stores them, doesn't load them.
+
+  unfold: function(callback, progressBarFunction) {
+    if (!this.folded) {
+      callback();
+    }
+
+    console.log(this._id + " is unfolding!!");
+    this._assetLoader = new AssetLoader();
+
+    var mapBgImg = this._assetLoader.add(this._imageFile);
+    this._img = mapBgImg;
+    this.backgroundImgs = [{offsetX: 0, offsetY: 0, img: mapBgImg}];
+      
+    if (this._backgroundMusicTrack) {
+      this.setMusicTrack(this._backgroundMusicTrack);
+      if (this.engine.audioPlayer) {
+        this.engine.audioPlayer.preload(this._backgroundMusicTrack);
+      }
+    }
+
+    if (this._foregroundImageFile) {
+      var img = this._assetLoader.add(this._foregroundImageFile);
+      this.addForegroundImg({offsetX: 0, offsetY: 0, img: img});
+    }
+
+    var self = this;
+    // This pre-loads all the image files needed for NPCs and popups:
+    this._collectNPCAssets();
+    this._collectPopupAssets();
+
+    self.downloadFromMapEditor(this.engine, function() {
+      self._assetLoader.loadThemAll(function() {
+        self.folded = false;
+        callback();
+      }, progressBarFunction);
+    });
+  },
+
+  fold: function() {
+    // TODO call this._assetLoader.cleanup() once that's implemented?
+    console.log(this.name + " is folding!!");
+    this._assetLoader = null;
+    this._limbo = [];
+    
+    // Remove the map's background and
+    // foreground images, music track, and mapData arrays:
+    this._img = null;
+    this.backgroundImgs = [];
+    this.foregroundImg = null;
+    var mapData = [[1,1],[1,1]]; // just a placeholder
+    this._mapData = mapData;
+    this._dimX = 0;
+    this._dimY = 0;
+    // TODO clear out the loaded audio track (I think that's held in the audio player)
+
+    this.folded = true;
+  },
+
+  _collectNPCAssets: function() {
+    // override in subclass and implement!
+  },
+
+  _collectPopupAssets: function() {
+    // override in subclass and implement!
+  },
+
+  downloadFromMapEditor: function(engine, callback)  {
+    throw "DownloadFromMapEditor is unimplemented in rpgbase Map class, override me in subclass";
+  },
+
   getId: function() {
     return this._id;
   },

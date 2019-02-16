@@ -528,20 +528,10 @@ var gRPG = (function(){
       mapScreen.switchTo = function(mapName, x, y, callback) {
         // NOW AN EXCITING ASYNC CALL
 
-        /* TODO this breaks separation between rpgbase and eagleprincess
-         * by assuming something called an epMap. Ultimately fold/unfold
-         * functionality should just move into the rpgbase Map class. */
-
-        // instant switch breaks basically ALL unit tests.
-        // Changing the switchTo function to not call unfold() fixes many of the
-        // unit tests.
-        // however making loadThemAll return immediately, which i'd expect to
-        // do the exact same thing, introduces a new bug ("No library called cutscenes")
-        // even in tests that are otherwise passing ???
         this.engine.mainMode("loading");
         var self = this;
         var previousDomain = this._currentDomain;
-        this.getMap(mapName).epMap.unfold(function() {
+        this.getMap(mapName).unfold(function() {
           self.exitOldDomain();
           self.player.enterMapScreen(self, x, y);
           var newDomain = self.getMap(mapName)
@@ -551,7 +541,7 @@ var gRPG = (function(){
           if (previousDomain && previousDomain !== newDomain ) {
             // it's valid to call putPlayerAt(mapYouAreAlreadyIn, newX, newY) which
             // will trigger this, so make sure we don't fold the map in that case!!!
-            previousDomain.epMap.fold(); 
+            previousDomain.fold(); 
           }
           self.engine.mainMode("map"); // close the loading screen // TODO XXX what if the name is not map?
           if (callback) { callback(); }
