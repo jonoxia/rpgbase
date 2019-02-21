@@ -73,6 +73,7 @@ function PlotDialogSystem(htmlElem, cursorImg, width, height) {
 
   var self = this;
   this.onClose(function() {
+    console.log("scriptedEventClasses PlotDialogSystem onClose callback");
     self.hideStatusBoxes("portrait");
     self._rootMenu.clearPanelStack();
   });
@@ -128,10 +129,30 @@ function ScriptedEvent(plotMgr, plotFlagName, dialoglog) {
   this._dialoglog = dialoglog;
 }
 ScriptedEvent.prototype = {
-  npcEnter: function(npc, x, y) {
+  npcEnter: function(npcName, npcSpriteFile, mapId, x, y) {
     var self = this;
+    
+    // TODO this could become assetLoader.add in a future where the cutscene gets its
+    // own asset loader.
+    var spritesheet = self._plotMgr.engine.loadImage("sprites/" + npcSpriteFile);
+    
+    self.showAnotherMap(mapId, x, y); // will do nothing if we're already on that map
+
+    console.log("Adding the npcEnter step");
     this._addStep(function() {
-      self._mapScreen._currentDomain.addNPC(npc, x, y);
+      var engine = self._plotMgr.engine;
+      var actor;
+      if (engine.hasLibrary("npc")) {
+        actor = engine.libraryLoad("npc", npcName);
+      }
+      if (!actor) {
+        // we don't know an NPC with this name yet -- instantiate one!
+        actor = new NPC(spritesheet, self._mapScreen);
+        actor.name = npcName;
+        engine.librarySave("npc", npcName, actor);
+      }
+      self._mapScreen._currentDomain.addNPC(actor, x, y);
+      console.log("Resovling npcEnter step");
       self.nextStep();
     });
     return this; // for daisy-chaining
@@ -157,41 +178,58 @@ ScriptedEvent.prototype = {
   npcSpeak: function(npc, text, title) {
     var self = this;
     var dlg = this._dialoglog;
+    console.log("Adding an NPC SPeak step");
     this._addStep(function() {
       dlg.hidePortraitBox(); // because npcs don't have portraits
       self.scrollText(text, function() {
+        console.log("Resovling npcSpeak step");
         self.nextStep();
       }, title);
     }); 
     return this; // for daisy-chaining
   },
   
-  npcMove: function(npc, directionList) {
+  npcMove: function(npcName, directionList) {
     var self = this;
+    console.log("Adding an NPC Move step");
     this._addStep(function() {
-      npc.walkPath(directionList, function() {
+      var engine = self._plotMgr.engine;
+      var actor;
+      if (engine.hasLibrary("npc")) {
+        actor = engine.libraryLoad("npc", npcName);
+      }
+      actor.walkPath(directionList, function() {
+        console.log("Resovling npcMove step");
         self.nextStep();
       });
     });
     return this; // for daisy-chaining
   },
 
-  npcMoveTo: function(npc, x, y) {
+  npcMoveTo: function(npcName, x, y) {
     var self = this;
+    console.log("Adding an NPC MoveTo step");
     this._addStep(function() {
       // do stuff here
       // TODO call nextStep when npc move animation is done
+      console.log("Resovling npcMoveTo step");
       self.nextStep();
     });
     return this; // for daisy-chaining
   },
 
-  npcExit: function(npc) {
+  npcExit: function(npcName) {
     var self = this;
+    console.log("Adding an NPC Exit step");
     this._addStep(function() {
-      // do stuff here
-      self._mapScreen._currentDomain.removeNPC(npc);
+      var engine = self._plotMgr.engine;
+      var actor;
+      if (engine.hasLibrary("npc")) {
+        actor = engine.libraryLoad("npc", npcName);
+      }
+      self._mapScreen._currentDomain.removeNPC(actor);
       // wow that's encapsulation breaky
+      console.log("Resovling npcExit step");
       self.nextStep();
     });
     return this; // for daisy-chaining
@@ -206,6 +244,7 @@ ScriptedEvent.prototype = {
         function(receiver) {
           receiver.gainItem(itemType);
           self.scrollText(receiver.name + " OBTAINED " + itemType._name + "!", function() {
+            console.log("Resovling getItem step");
             self.nextStep();
           });
         });
@@ -220,9 +259,10 @@ ScriptedEvent.prototype = {
     // TODO pc arg is unused
     var self = this;
     this._addStep(function() {
-        self.scrollText(text, function() {
-            self.nextStep();
-        }, title);
+      self.scrollText(text, function() {
+        console.log("Resovling pcSpeak step");
+        self.nextStep();
+      }, title);
     });
     return this;
   },
@@ -235,6 +275,7 @@ ScriptedEvent.prototype = {
       console.log("Scrolling cutscene text with speaker = " + speaker);
       self.scrollText(text, function() {
         dlg.hidePortraitBox();
+        console.log("Resovling pcSpeakWithPortrait step");
         self.nextStep();
       }, speaker);
     });
@@ -290,10 +331,11 @@ ScriptedEvent.prototype = {
            * lead character. */
           var stepAnim = simplifiedMove(self._player,
                                         self._mapScreen, deltaX, deltaY);
-          stepAnim.onFinish(function() {
-              self.nextStep();
-          });
-          self._mapScreen.animate(stepAnim);
+        stepAnim.onFinish(function() {
+          console.log("Resovling doAddStep step step");
+          self.nextStep();
+        });
+        self._mapScreen.animate(stepAnim);
       });
     }
 
@@ -319,39 +361,69 @@ ScriptedEvent.prototype = {
   partyEnter: function(mapDomain, x, y) {
     // Puts party onto map at location x, y.
     // Different from switchMapDomain because this one moves
-    // the party, that one only moves the "camera".
+    // the party, that one only moves the "camera".    
     var self = this;
+    console.log("Adding a PartyEnter step");
     this._addStep(function() {
-      self._mapScreen.switchTo(mapDomain.getId(), x, y);
-      self.nextStep();
+      self._mapScreen.switchTo(mapDomain.getId(), x, y, function() {
+        console.log("Resovling partyEnter step");
+        self.nextStep();
+      });
     });
     return this;
   },
 
-  pcEnter: function(pc, mapDomain, x, y) {
+  pcEnter: function(pc, mapId, x, y) {
     var self = this;
+    console.log("Adding a PCEnter step");
+    // puts the given PC into the given map at x,y and displays that map, but
+    // without changing the *player's* current map.
+
+    // TODO: this is actually an incoherent concept as the engine currently operates.
+    // the map screen draws npcs and it draws the party. PCs have no concept of which
+    // map they're in.
+
+    // approach one: a map shown during a cutscene is not actually a map it's an image
+    // backdrop with sprites in front of it. there's no pcEnter or npcEnter just
+    // spriteEnter(spritesheet, name, mapDomain, x, y)
+
+    // approach two: it's a real map, but when we make a "PC" enter we're really creating
+    // an NPC using that PC's spritesheet. 
+
+    // approach three: every PC actually does have a "what map am I on" variable. Instead
+    // of drawing "the party", the map draws whatever PCs are on the current map. Possibly
+    // player.getAliveParty() could have an optional "what map" argument. This would be
+    // very useful as a basis for future "multiple parties, switch between them" feature.
+
+    // this means that every time the player goes to a new map we need to explicitly set the
+    // "what map are you on?" of each party member.
+    //self.showAnotherMap(mapId, x, y); // this does nothing if we're already in that map
     this._addStep(function() {
-      // TODO do we want to exitOldDomain? scrollToShow? no?
+      // TODO actually place the PC into the map... how?
+
       self._mapScreen.setNewDomain(mapDomain);
       pc.setPos(x, y);
       pc.setFacing(0, 1);
+      console.log("Resovling pcEnter step");
       self.nextStep();
     });
     return this;
   },
 
   pcMove: function(pc, directionList) {
-      var self = this;
+    var self = this;
     function doAddStep(deltaX, deltaY) {
+      console.log("Adding a PCMove step");
       self._addStep(function() {
           var numAnimFrames = pc.walkAnimationFrames;
           var stepAnim = pc.makeStepAnimation(self._mapScreen,
                                               numAnimFrames,
                                               deltaX, deltaY);
-          stepAnim.onFinish(function() {
-              self.nextStep();
-          });
-          self._mapScreen.animate(stepAnim);
+        stepAnim.onFinish(function() {
+          console.log("Resovling pcEnter step");
+          self.nextStep();
+        });
+        self._mapScreen.animate(stepAnim);
       });
     }
 
@@ -376,37 +448,76 @@ ScriptedEvent.prototype = {
 
   pcMoveTo: function(pc, x, y) {
     var self = this;
+    console.log("Adding a PCMoveTo step");
     this._addStep(function() {
       // do stuff here
       // TODO call nextStep when pc move animation finishes
+      console.log("Resovling PCMoveTo step");
       self.nextStep();
     });
     return this; // for daisy-chaining
   },
 
-  switchMapDomain: function(mapDomain, x, y) {
+  pcExit: function() {
     var self = this;
+    console.log("Adding a PCExit step");
     this._addStep(function() {
-      self._mapScreen.exitOldDomain();
-      self._mapScreen.setNewDomain(mapDomain);
-      if (typeof x == 'undefined')  {
-          // if x, y not specified, scroll to player location
-          var mainChar = self._player.aliveParty[0];
-          var pos = mainChar.getPos();
-          x = pos.x; y = pos.y;
-      }
-      self._mapScreen.scrollToShow(x, y);
-      // TODO animate scrolling of map screen...
+      // TODO what the heck does this even mean? If they're in the party and
+      // the party is here, how do we stop showing them without removing
+      // them from the party?
+      console.log("Resovling PCExit step");
       self.nextStep();
     });
     return this; // for daisy-chaining
+  },
+
+  // formerly known as switchMapDomain()
+  showAnotherMap: function(mapId, x, y) {
+    // moves the "camera" to this map without moving the PCs to this map. Unfolds
+    // the new map but does NOT trigger onLoad/onUnload.
+    var self = this;
+    console.log("Adding the showAnotherMap step");
+    this._addStep(function() {
+      console.log("showAnotherMap is resolving");
+      if (mapId === self._mapScreen.getCurrentMapId()) {
+        // if we're already in this domain, it's a no-op:
+        console.log("Resovling showAnotherMap step (no-op)");
+        self.nextStep();
+      } else {
+        var previousDomain = self._mapScreen._currentDomain;
+        var newDomain = self._mapScreen.getMap(mapId);
+        newDomain.unfold(function() {
+          // do NOT call exitOldDomain or setNewDomain as those will trigger
+          // onLoad() / onUnload() which we don't want
+          self._mapScreen._currentDomain = newDomain; // so encapsulation-breaky
+          self._mapScreen._scrollX = 0;
+          self._mapScreen._scrollY = 0;
+          // if x/y  provided, then scroll to show that location:
+          if (typeof x !== 'undefined') {
+            self._mapScreen.scrollToShow(x, y);
+          }
+          // fold up previous map to put away if needed:
+          if (previousDomain && previousDomain !== newDomain) {
+            previousDomain.fold();
+          }
+          console.log("Resovling showAnotherMap step (unfolded case)");
+          self.nextStep();
+        });
+        // TODO xxx is refreshing NPCs part of unfold or part of load? does unfold call load?
+        // what do we gotta do to make sure unfold is called everywhere but load() is only
+        // called if the player party enters the map.
+      }
+    });
+    return this;
   },
 
   scrollMapTo: function(x, y) {
     var self = this;
+    console.log("Adding a scrollMapTo step");
     this._addStep(function() {
       self._mapScreen.scrollToShow(x, y);
       // TODO animate scrolling of map screen...
+      console.log("Resovling scrollMapTo step");
       self.nextStep();
     });
     return this; // for daisy-chaining
@@ -415,29 +526,35 @@ ScriptedEvent.prototype = {
   stackPanel: function(img, x, y, doClear) {
     // stacks the given manga panel image on top of other images already there, manga-style
     var self = this;
+    console.log("Adding a stckPanel step");
     this._addStep(function() {
       self._dialoglog._rootMenu.blacken(true);
       if (doClear) {
         self._dialoglog._rootMenu.clearPanelStack();
       }
       self._dialoglog._rootMenu.stackPanel(img, x, y);
+      console.log("Resovling stackPanel step");
       self.nextStep();
     });
   },
 
   clearPanel: function(imgFileName) {
     var self = this;
+    console.log("Adding a clearPanell step");
     this._addStep(function() {
       console.log("Trying to clear panel named " + imgFileName);
       self._dialoglog._rootMenu.clearNamedPanel(imgFileName);
+      console.log("Resovling clearPanel step");
       self.nextStep();
     });
   },
 
   clearAllPanels: function() {
     var self = this;
+    console.log("Adding a clearAllPanels step");
     this._addStep(function() {
       self._dialoglog._rootMenu.clearPanelStack();
+      console.log("Resovling clearAllPanels step");
       self.nextStep();
     });
   },
@@ -445,24 +562,28 @@ ScriptedEvent.prototype = {
   showPicture: function(img, width, height) {
     // displays the image alone and centered
     var self = this;
+        console.log("Adding a showPicture step");
     this._addStep(function() {
       self._dialoglog._rootMenu.blacken(true);
       window.setTimeout(function() {
         self._dialoglog._rootMenu.setImg(img, width, height);
         window.setTimeout(function() {
-                self.nextStep();
-            }, 500);
+          console.log("Resovling showPicture step");
+          self.nextStep();
+        }, 500);
       }, 250);
     });
   },
 
   hidePicture: function() {
     var self = this;
+    console.log("Adding a hidePicgture step");
     this._addStep(function() {
       window.setTimeout(function() {
         self._dialoglog._rootMenu.clearImg();
         window.setTimeout(function() {
           self._dialoglog._rootMenu.blacken(false);
+          console.log("Resovling hidePicture step");
                 self.nextStep();
             }, 500);
           }, 250);
@@ -476,6 +597,7 @@ ScriptedEvent.prototype = {
       console.log("Waiting for keypress");
       self._dialoglog.waitForKeyPress(function() {
         console.log("Keypress happened");
+        console.log("Resovling waitForKey step");
         self.nextStep();
       });
     });
@@ -483,8 +605,10 @@ ScriptedEvent.prototype = {
 
   waitForMs: function(milliseconds) {
     var self = this;
+    console.log("Adding a wait-for-ms step");
     this._addStep(function() {
       window.setTimeout(function() {
+        console.log("Resovling waitForMs step");
         self.nextStep();
       }, milliseconds);
     });
@@ -492,13 +616,16 @@ ScriptedEvent.prototype = {
 
   _addStep: function(stepFunction) {
     this._steps.push(stepFunction);
+    console.log("_addStep called. there are now " + this._steps.length + " steps.");
   },
 
   nextStep: function() {
     this.currStep += 1;
+    console.log("nextStep called, advancing currStep to " + this.currStep + " out of " + this._steps.length);
     if (this.currStep < this._steps.length) {
       this._steps[this.currStep].call(this);
     } else {
+      console.log("Therefore finishing");
       this._finish();
     }
   },
@@ -516,6 +643,7 @@ ScriptedEvent.prototype = {
 
   _finish: function() {
     this._dialoglog.emptyMenuStack();
+    console.log("SCRIPTED EVENT._FINISH");
     this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
     // and resume player control.

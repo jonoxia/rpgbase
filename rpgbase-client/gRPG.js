@@ -263,6 +263,7 @@ var gRPG = (function(){
       if (!this._modeRegistry.hasOwnProperty(name)) {
         throw "There is no mode named " + name;
       }
+      console.log("GameEngine.openMode for " + name);
       this._subMode = this._modeRegistry[name];
 
       // switch input to menu style:
@@ -286,6 +287,7 @@ var gRPG = (function(){
     },
 
     closeMode: function() {
+      console.log("GameEngine.closeMode");
       if (this._subMode.hasOwnAnimator) {
         this._subMode.stop();
         this._mainMode.start();
@@ -534,7 +536,7 @@ var gRPG = (function(){
         this.getMap(mapName).unfold(function() {
           self.exitOldDomain();
           self.player.enterMapScreen(self, x, y);
-          var newDomain = self.getMap(mapName)
+          var newDomain = self.getMap(mapName);
           self.setNewDomain(newDomain);
           self.scrollToShow(x, y);
           // fold up old map if any:
@@ -808,6 +810,7 @@ var gRPG = (function(){
 
       plotMode.engine = this;
       plotMode.onClose(function() {
+        console.log("PLOT MODE ONCLOSE");
         plotMode.engine.closeMode();
       });
       plotMode.hasOwnAnimtor = false;

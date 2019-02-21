@@ -45,7 +45,9 @@ Map.prototype = {
 
   unfold: function(callback, progressBarFunction) {
     if (!this.folded) {
+      // do nothing if called a second time
       callback();
+      return;
     }
 
     console.log(this._id + " is unfolding!!");
@@ -304,6 +306,16 @@ Map.prototype = {
     for (var i = 0; i < this._npcs.length; i++) {
       var pos = this._npcs[i].getPos();
       if (pos.x == x && pos.y == y) {
+        return this._npcs[i];
+      }
+    }
+    return null;
+  },
+  
+  getNPCByName: function(name) {
+    // returns npc object, or null if there is nobody
+    for (var i = 0; i < this._npcs.length; i++) {
+      if (this._npcs[i].name === name) {
         return this._npcs[i];
       }
     }
