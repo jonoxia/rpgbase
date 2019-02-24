@@ -223,11 +223,14 @@ ScriptedEvent.prototype = {
     console.log("Adding an NPC Exit step");
     this._addStep(function() {
       var engine = self._plotMgr.engine;
-      var actor;
-      if (engine.hasLibrary("npc")) {
-        actor = engine.libraryLoad("npc", npcName);
+      var actor =  self._mapScreen._currentDomain.getNPCByName(npcName);
+      if (actor) {
+        console.log("Domain has " + self._mapScreen._currentDomain.getAllNPCs().length + " npcs. Removing one...");
+        self._mapScreen._currentDomain.removeNPC(actor);
+        console.log("Domain now has " + self._mapScreen._currentDomain.getAllNPCs().length + " npcs.");
+      } else {
+        console.warn("No NPC named " +  npcName + " in map " + self._mapScreen._currentDomain._id);
       }
-      self._mapScreen._currentDomain.removeNPC(actor);
       // wow that's encapsulation breaky
       console.log("Resovling npcExit step");
       self.nextStep();
