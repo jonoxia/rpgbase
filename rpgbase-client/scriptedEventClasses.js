@@ -401,7 +401,7 @@ ScriptedEvent.prototype = {
     this._addStep(function() {
       // TODO actually place the PC into the map... how?
 
-      self._mapScreen.setNewDomain(mapDomain);
+      self._mapScreen.setNewDomain(mapId);
       pc.setPos(x, y);
       pc.setFacing(0, 1);
       console.log("Resovling pcEnter step");
@@ -634,6 +634,9 @@ ScriptedEvent.prototype = {
     var self = this;
     self._player = player;
     self._mapScreen = mapScreen;
+    self._priorMapSetting = {map: mapScreen.getCurrentMapId(), // save this to restore it after cutscene ends
+			     x: mapScreen._scrollX,
+			     y: mapScreen._scrollY};
     self._dialoglog.open(self._player);
     this._plotMgr.setFlag(this._plotFlagName);
 
@@ -644,6 +647,25 @@ ScriptedEvent.prototype = {
   _finish: function() {
     this._dialoglog.emptyMenuStack();
     console.log("SCRIPTED EVENT._FINISH");
+
+    // Restore us to the map we were on before cutscene started:
+    var self = this;
+    // TODO code duplicated from showAnotherMap, factor out:
+    if (this._mapScreen.getCurrentMapId() != this._priorMapSetting.map) {
+      var previousDomain = self._mapScreen._currentDomain;
+      var newDomain = self._mapScreen.getMap(this._priorMapSetting.map);
+      newDomain.unfold(function() {
+        // do NOT call exitOldDomain or setNewDomain as those will trigger
+        // onLoad() / onUnload() which we don't want
+        self._mapScreen._currentDomain = newDomain; // so encapsulation-breaky
+	var pos = self._mapScreen.player.getAliveParty()[0].getPos();
+	self._mapScreen.scrollToShow(pos.x, pos.y);
+        if (previousDomain && previousDomain !== newDomain) {
+          previousDomain.fold();
+        }
+      });
+    }
+    
     this._dialoglog.close();
     // TODO put party back in order, center map screen on them,
     // and resume player control.
