@@ -23,7 +23,7 @@ Player.prototype = {
     // to get our ducks in a row.
   },
 
-  enterMapScreen: function(mapScreen, x, y) {
+  enterMapScreen: function(mapScreen, mapId, x, y) {
     this.mapScreen = mapScreen;
     mapScreen.setPlayer(this);
     this.aliveParty = [];
@@ -34,6 +34,8 @@ Player.prototype = {
         // might as well update aliveParty while we're at it
         this.aliveParty.push(this.party[i]);
       }
+      // every PC in the party is now set to this map:
+      this.party[i].setMapId(mapId);
     }
     // This used to call scrollToShow but i've moved that out; any problem?
   },
@@ -618,6 +620,9 @@ function PlayerCharacter() {
   this._fieldSpells = [];
 
   this._passives = []; // passive abilities
+
+  this._mapId = null; // ID of the map I'm standing on.
+  // TODO Maybe this should go in MapSpriteMixin??
 }
 PlayerCharacter.prototype = {
   serializableClassName: "PlayerCharacter",
@@ -865,6 +870,14 @@ PlayerCharacter.prototype = {
     $.each(this._passives, function(i, p) {
       p.stopListening(self);
     });
+  },
+
+  setMapId: function(mapId) {
+    this._mapId = mapId; // TODO maybe make this part of MapSpriteMixin.setPos() ?
+  },
+
+  getMapId: function() {
+    return this._mapId;
   }
 };
 BattlerMixin.call(PlayerCharacter.prototype);

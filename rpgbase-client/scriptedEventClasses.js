@@ -361,14 +361,14 @@ ScriptedEvent.prototype = {
     return this;
   },
 
-  partyEnter: function(mapDomain, x, y) {
+  partyEnter: function(mapId, x, y) {
     // Puts party onto map at location x, y.
     // Different from switchMapDomain because this one moves
     // the party, that one only moves the "camera".    
     var self = this;
     console.log("Adding a PartyEnter step");
     this._addStep(function() {
-      self._mapScreen.switchTo(mapDomain.getId(), x, y, function() {
+      self._mapScreen.switchTo(mapId, x, y, function() {
         console.log("Resovling partyEnter step");
         self.nextStep();
       });
@@ -487,6 +487,7 @@ ScriptedEvent.prototype = {
         console.log("Resovling showAnotherMap step (no-op)");
         self.nextStep();
       } else {
+        // TODO move the bulk of this to gRPG.js or worldMapClasses.js
         var previousDomain = self._mapScreen._currentDomain;
         var newDomain = self._mapScreen.getMap(mapId);
         newDomain.unfold(function() {
@@ -619,16 +620,13 @@ ScriptedEvent.prototype = {
 
   _addStep: function(stepFunction) {
     this._steps.push(stepFunction);
-    console.log("_addStep called. there are now " + this._steps.length + " steps.");
   },
 
   nextStep: function() {
     this.currStep += 1;
-    console.log("nextStep called, advancing currStep to " + this.currStep + " out of " + this._steps.length);
     if (this.currStep < this._steps.length) {
       this._steps[this.currStep].call(this);
     } else {
-      console.log("Therefore finishing");
       this._finish();
     }
   },
@@ -637,9 +635,6 @@ ScriptedEvent.prototype = {
     var self = this;
     self._player = player;
     self._mapScreen = mapScreen;
-    self._priorMapSetting = {map: mapScreen.getCurrentMapId(), // save this to restore it after cutscene ends
-			     x: mapScreen._scrollX,
-			     y: mapScreen._scrollY};
     self._dialoglog.open(self._player);
     this._plotMgr.setFlag(this._plotFlagName);
 
@@ -649,31 +644,24 @@ ScriptedEvent.prototype = {
 
   _finish: function() {
     this._dialoglog.emptyMenuStack();
-    console.log("SCRIPTED EVENT._FINISH");
-
-    // Restore us to the map we were on before cutscene started:
     var self = this;
-    // TODO code duplicated from showAnotherMap, factor out:
-    if (this._mapScreen.getCurrentMapId() != this._priorMapSetting.map) {
-      var previousDomain = self._mapScreen._currentDomain;
-      var newDomain = self._mapScreen.getMap(this._priorMapSetting.map);
-      newDomain.unfold(function() {
-        // do NOT call exitOldDomain or setNewDomain as those will trigger
-        // onLoad() / onUnload() which we don't want
-        self._mapScreen._currentDomain = newDomain; // so encapsulation-breaky
-	var pos = self._mapScreen.player.getAliveParty()[0].getPos();
-	self._mapScreen.scrollToShow(pos.x, pos.y);
-        if (previousDomain && previousDomain !== newDomain) {
-          previousDomain.fold();
-        }
+    // Restore map screen camera focus to the player's actual location:
+    var playerPos = self._mapScreen.player.getAliveParty()[0].getPos()
+    var playerMapId = self._mapScreen.player.getAliveParty()[0].getMapId();
+
+    // switchTo will handle scrolling screen, changing music, etc.
+    if (playerMapId != self._mapScreen.getCurrentMapId()) {
+      this._mapScreen.switchTo(playerMapId, playerPos.x, playerPos.y, function() {
+        self._dialoglog.close();
       });
+    } else {
+      // if we don't need to switch maps, we might still need to scroll back to pos
+      // x,y and resume music?? TODO XXX
+
+      // alternately: make mapScreen.switchTo do this stuff if called with the map
+      // name it's already in?
+      self._dialoglog.close();
     }
-    
-    this._dialoglog.close();
-    // TODO put party back in order, center map screen on them,
-    // and resume player control.
-    // since we're back on map screen we should resume map music:
-    this._mapScreen.playMusicForCurrentMap();
   }
 };
 

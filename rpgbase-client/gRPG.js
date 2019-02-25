@@ -525,6 +525,10 @@ var gRPG = (function(){
         // scrollToShow.
         // What we actually want is:
         // 1. unload, 2. set position to x,y, 3. load, 4. scrollToShow.
+
+        // TODO this function is completely redundant since switchTo calls player.enterMapScreen
+        // which calls mapScreen.setPlayer !!!  get rid of this one and maybe rename switchTo
+        // to putPlayerAt?
       };
 
       mapScreen.switchTo = function(mapName, x, y, callback) {
@@ -535,7 +539,7 @@ var gRPG = (function(){
         var previousDomain = this._currentDomain;
         this.getMap(mapName).unfold(function() {
           self.exitOldDomain();
-          self.player.enterMapScreen(self, x, y);
+          self.player.enterMapScreen(self, mapName, x, y);
           var newDomain = self.getMap(mapName);
           self.setNewDomain(newDomain);
           self.scrollToShow(x, y);
