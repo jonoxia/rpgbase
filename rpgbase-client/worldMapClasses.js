@@ -9,6 +9,7 @@ Map.prototype = {
     this.folded = true;
     this._assetLoader = null;
     this._foregroundImageFile = null; // holds the filename as opposed to actual image
+    this._foregroundMaskFile = null;
     this._imageFile = null; // ditto
     this._backgroundMusicTrack = null; // ditto
 
@@ -32,7 +33,7 @@ Map.prototype = {
     if (mapImplType) {
       this._mapImpl = mapImplType;
       if (mapImplType === "singleImage") {
-        this.backgroundImgs = [{offsetX: 0, offsetY: 0, img: spritesheet}];
+        this.backgroundImgs = []; //[{offsetX: 0, offsetY: 0, img: spritesheet}];
         this.downsampleFactor = 1.0;
       }
     } else {
@@ -55,7 +56,7 @@ Map.prototype = {
 
     var mapBgImg = this._assetLoader.add(this._imageFile);
     this._img = mapBgImg;
-    this.backgroundImgs = [{offsetX: 0, offsetY: 0, img: mapBgImg}];
+    this.addBackgroundImg({offsetX: 0, offsetY: 0, img: mapBgImg}); // XXX ????
       
     if (this._backgroundMusicTrack) {
       this.setMusicTrack(this._backgroundMusicTrack);
@@ -65,8 +66,14 @@ Map.prototype = {
     }
 
     if (this._foregroundImageFile) {
-      var img = this._assetLoader.add(this._foregroundImageFile);
-      this.addForegroundImg({offsetX: 0, offsetY: 0, img: img});
+      var fgImgData = {offsetX: 0,
+                       offsetY: 0,
+                       img: this._assetLoader.add(this._foregroundImageFile)
+                      };
+      if (this._foregroundMaskFile) {
+        fgImgData.mask = this._assetLoader.add(this._foregroundMaskFile);
+      }
+      this.addForegroundImg(fgImgData);
     }
 
     var self = this;
@@ -467,6 +474,10 @@ function MapScreen(htmlElem, numTilesX, numTilesY, tilePixelsX,
   this._animator = new Animator(frameRate,
                                 function() { self.render(); });
   this._audioPlayer = null;
+
+  // used for compositing transparencies:
+  this._scratchpad = null;
+  this._scratchpadCtx = null;
 }
 MapScreen.prototype = {
   getCurrentMapId: function() {
@@ -730,6 +741,31 @@ MapScreen.prototype = {
     });
   },
 
+  setScratchpadContext: function(scratchpad) {
+    this._scratchpad = scratchpad;
+    this._scratchpadCtx = scratchpad.getContext("2d");
+  },
+  
+  _drawMaskedImage: function(mask, image, drawX, drawY, scale) {
+    // use mask to block out image on scratchpad:
+    // TODO don't redo composite operation if parameters haven't changed since
+    // last time!
+    if ((drawX != this._lastMaskedDrawX) || (drawY != this._lastMaskedDrawY)) {
+      this._scratchpadCtx.save();
+      this._scratchpadCtx.clearRect(0, 0, 1024, 768);
+      this._scratchpadCtx.scale(scale, scale);
+      this._scratchpadCtx.drawImage(mask, drawX, drawY);
+      this._scratchpadCtx.globalCompositeOperation = "source-atop";
+      this._scratchpadCtx.drawImage(image, drawX, drawY);
+      this._scratchpadCtx.globalCompositeOperation = "source-over";
+      this._scratchpadCtx.restore();
+      this._lastMaskedDrawX = drawX;
+      this._lastMaskedDrawY = drawY;
+    }
+    // copy scratchpad to main canvas
+    this._ctx.drawImage(this._scratchpad, 0, 0);
+  },
+
   _renderRoofLayer: function() {
     /* Could easily be expanded to allow any number of foreground images,
      * just like renderSingleImgMap above, but for now we only need one */
@@ -743,10 +779,16 @@ MapScreen.prototype = {
       drawX += ds*self.scrollAdjustment.x;
       drawY += ds*self.scrollAdjustment.y;
     }
-    self._ctx.save();
-    self._ctx.scale(1.0/ds, 1.0/ds);
-    self._ctx.drawImage(foreground.img, drawX, drawY);
-    self._ctx.restore();
+
+    if (this._scratchpad && foreground.mask) {
+      this._drawMaskedImage(foreground.mask, foreground.img, drawX, drawY, 1.0/ds);
+    } else {
+      self._ctx.save();
+      self._ctx.scale(1.0/ds, 1.0/ds);
+      self._ctx.drawImage(foreground.img, drawX, drawY);
+      self._ctx.restore();
+    }
+
   },
 
   render: function() {
