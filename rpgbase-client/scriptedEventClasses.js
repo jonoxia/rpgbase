@@ -93,7 +93,8 @@ PlotDialogSystem.prototype.handleKey = function(keyCode) {
     }
   }
 };
-PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
+/*PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
+  // AAAAAAAAA this is a complete reimplementation of multipartTextDisplay!!!
   if (!this.portraitBox) {
       this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
       this.addStatusBox(this.portraitBox, "portrait");
@@ -109,7 +110,7 @@ PlotDialogSystem.prototype.showPortraitBox = function(portrait) {
 };
 PlotDialogSystem.prototype.hidePortraitBox = function() {
   this.hideStatusBoxes("portrait");
-};
+};*/
 PlotDialogSystem.prototype.waitForKeyPress = function(callback) {
   this.clearMsg();
   this._waitingForKeypress = callback;
@@ -178,9 +179,8 @@ ScriptedEvent.prototype = {
   npcSpeak: function(npc, text, title) {
     var self = this;
     var dlg = this._dialoglog;
-    console.log("Adding an NPC SPeak step");
+    console.log("Adding an NPC Speak step");
     this._addStep(function() {
-      dlg.hidePortraitBox(); // because npcs don't have portraits
       self.scrollText(text, function() {
         console.log("Resovling npcSpeak step");
         self.nextStep();
@@ -274,13 +274,13 @@ ScriptedEvent.prototype = {
     var self = this;
     var dlg = this._dialoglog;
     this._addStep(function() {
-      dlg.showPortraitBox(portrait);
       console.log("Scrolling cutscene text with speaker = " + speaker);
-      self.scrollText(text, function() {
-        dlg.hidePortraitBox();
-        console.log("Resovling pcSpeakWithPortrait step");
-        self.nextStep();
-      }, speaker);
+      dlg._multipartTextDisplay(
+        [{text: text, img: portrait, speaker: speaker}],
+        function() {
+          console.log("Resovling pcSpeakWithPortrait step");
+          self.nextStep();
+        });
     });
     return this;
   },

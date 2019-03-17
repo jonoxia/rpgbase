@@ -669,7 +669,7 @@ function MenuSystemMixin(subClassPrototype) {
     /* Base implementation for both Dialoglog conversations and pre-Battle
      * conversations. textSegments is a list of objects with .text and .img
      * properties, like:
-     * [{text: "bla bla bla", img: "hero.jpg"}]
+     * [{text: "bla bla bla", img: "hero.jpg", speaker: "Hero"}]
      * scrolls each text segment while showing the corresponding image.
      * afterClose is a callback that happens after the player closes the last
      * line of the conversation.
@@ -682,14 +682,18 @@ function MenuSystemMixin(subClassPrototype) {
     // because otherwise the dialoglog will close as soon as the first scrolling
     // text box closes
 
-    if (!this.portraitBox) {
+    // TODO I had portraits hard-coded to go into their own box; but then we
+    // changed the eagle princess design and now they go inside the scrolling text box;
+    // really we should refactor this so it can support both options (as menuPositions
+    // settings?)
+    /*if (!this.portraitBox) {
       this.portraitBox = new CssFixedImgBox("", this); // TODO canvasImpl alternative
       this.addStatusBox(this.portraitBox, "portrait");
       this.portraitBox.setPos(this._positioning.imgLeft,
                               this._positioning.imgTop);
       // TODO setOutsideDimensions, maybe?
 
-    }
+    }*/
 
     var segmentIndex = 0;
     var proceed = function() {
@@ -705,11 +709,13 @@ function MenuSystemMixin(subClassPrototype) {
 
       if (nextSegment.img == null) {
         self.hideStatusBoxes("portrait");
+        textBox.portraitUrl = null;
       } else {
-        self.showStatusBoxes("portrait");
+        textBox.portraitUrl = nextSegment.img;
+        /*self.showStatusBoxes("portrait");
         var imgWidth = self._calculatedScale * self._positioning.imgWidth;
         var imgHeight = self._calculatedScale * self._positioning.imgHeight;
-        self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);
+        self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);*/
       }
 
       if (segmentIndex < textSegments.length - 1) {

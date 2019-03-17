@@ -341,6 +341,10 @@ BattleSystem.prototype = {
     }
   },
 
+  monsterMenu: function(title, callback) {
+    this.chooseOne(title, this.monsters, callback);
+  },
+
   makeMenuForPC: function(pc, cmdSet) {
     var self = this;
     var cmdMenu = this.makeMenu();
@@ -388,7 +392,7 @@ BattleSystem.prototype = {
           // if it targets one enemy, then picking it pops open
           // the enemy menu:
           cmdMenu.addCommand(name, function() {
-            self.chooseOne("", self.monsters, function(target) {
+            self.monsterMenu("", function(target) {
               self.choosePCCommand(pc, cmd, target);
             });
           });

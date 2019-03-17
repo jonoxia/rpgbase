@@ -48,15 +48,15 @@ function CssMixin(subclassPrototype) {
     // inset the width to make room for padding and borders
 
     dim.x -= (2*padding + 2*borders);
-    if (this.title) {
+    /*if (this.title) {
       /* If title is present (right now only CssScrollingTextBox has this
        * field, but theoretically other subclasses could have it too) then
        * make space for it by shrinking the top padding */
-      this.parentTag.css("padding-top", "0px");
+    /*  this.parentTag.css("padding-top", "0px");
       dim.y -= (padding + 2*borders);
     } else {
       dim.y -= (2*padding + 2*borders);
-    }
+    }*/
     this.parentTag.css("width", dim.x + "px");
     this.parentTag.css("height", dim.y + "px");
   };
