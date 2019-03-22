@@ -176,19 +176,24 @@ function Animator(frameLength, afterFrame) {
   };
   this.SFX = null;
   this.fastForward = false;
+  this.running = false;
 }
 Animator.prototype = {
   start: function() {
+    this.running = true;
     this._timer = window.setInterval(this._loop, this._frameLength);
   },
 
   stop: function() {
+    this.running = false;
     if (this._timer) {
       window.clearInterval(this._timer);
     }
     this._timer = null;
     // cancel all pending animations:
     this._currentAnimations = [];
+    // clear SFX:
+    this.SFX = null;
   },
 
   onFrameDone: function(callback) {
@@ -218,15 +223,22 @@ Animator.prototype = {
   playSfx: function(numFrames, callback) {
     var self = this;
     this.SFX = new Animation(numFrames,
-                              function(frame) {
+                             function(frame) {
                               },
                               function() {
-                                  self.SFX= null;
+                                self.SFX= null;
                               });
     this.SFX.onDraw(function(ctx, frame) {
-            callback(ctx, frame);
-        });
+      callback(ctx, frame);
+    });
     this.runAnimation(this.SFX);
+  },
+
+  cancelSfx: function() {
+    var canceled = this.SFX;
+    this.SFX = null;
+    this._currentAnimations = this._currentAnimations.filter(
+      function(x) { return x !== canceled });
   }
 
 };

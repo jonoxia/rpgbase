@@ -983,10 +983,12 @@ MapScreen.prototype = {
 
     this._animator.playSfx(numFrames, function(ctx, frame) {
       var alpha;
-      if (frame < fadeOutFrames) {
+      if ((fadeOutFrames > 0) && (frame <= fadeOutFrames)) {
         alpha = frame * (1.0 / fadeOutFrames);
-      } else if (frame > fadeOutFrames + holdFrames) {
+      } else if ((fadeInFrames > 0) && (frame >= fadeOutFrames + holdFrames)) {
         alpha = 1.0 - ( (1.0 / fadeInFrames) * (frame - fadeOutFrames - holdFrames));
+      } else {
+        alpha = 0;
       }
       ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
       ctx.fillRect(0, 0, self._screenWidth,

@@ -43,8 +43,11 @@ var gRPG = (function(){
     this._htmlElem = htmlElem;  // must be canvas
     this._ctx = this._htmlElem.getContext("2d");
 
-    this._animator = new Animator(frameRate);
+    var self = this;
+    this._animator = new Animator(frameRate,
+                                  function() {self.render();});
     this._percentLoaded = 0;
+    this._frameCount = 0;
   }
   LoadingScreenMode.prototype = {
     handleKey: function(keyCode) {
@@ -57,16 +60,31 @@ var gRPG = (function(){
       return this._animator;
     },
     start: function() {
+      if (this._scracthpadCtx) {
+        // Save a snapshot of whatever is on screen now, so we can do
+        // a fade-out animation over it if desired.
+        this._scratchpadCtx.drawImage(this._htmlElem, 0, 0);
+      }
+      this._frameCount = 0;
       this._animator.start();
-      var self = this;
-      this._animator.runAnimation(new Animation(100, function(frame) {
-        self._ctx.clearRect(0, 0, 1024, 768);
-        self._ctx.moveTo(100, 400);
-        self._ctx.font = "20px Georgia";
-        var text = (100*self._percentLoaded) + " % Loaded"
-        self._ctx.strokeText(text, 100, 300);
-      }, function() {
-      }));
+    },
+
+    setScratchpadContext: function(htmlElem) {
+      // TODO maybe this and mapmode could get access to it via gRPG the way
+      // they get htmlElem, instead?
+      this._scratchpad = htmlElem;
+      this._scratchpadCtx = this._scratchpad.getContext("2d");
+    },
+
+    onRender: function(renderCallback) {
+      this._renderCallback = renderCallback;
+    },
+
+    render: function() {
+      if (this._renderCallback) {
+        this._renderCallback(this._ctx, this._frameCount, this._percentLoaded);
+      }
+      this._frameCount ++;
     },
     stop: function() {
       this._animator.stop();
@@ -514,7 +532,7 @@ var gRPG = (function(){
       };
 
       // a mapScreen mode requires a loading screen mode:
-      this.makeLoadingMode("loading", {});
+      this.makeLoadingMode("loading", options); // TODO this is janky
 
       mapScreen.putPlayerAt = function(player, mapName, x, y, callback) {
         this.player = player;
@@ -537,6 +555,7 @@ var gRPG = (function(){
         this.engine.mainMode("loading");
         var self = this;
         var previousDomain = this._currentDomain;
+
         this.getMap(mapName).unfold(function() {
           self.exitOldDomain();
           self.player.enterMapScreen(self, mapName, x, y);
@@ -549,9 +568,12 @@ var gRPG = (function(){
             // will trigger this, so make sure we don't fold the map in that case!!!
             previousDomain.fold(); 
           }
-          self.engine.mainMode("map"); // close the loading screen // TODO XXX what if the name is not map?
+
+          self.flash("black", 0, 0, 24); // 24 frames fade-back-in
+          // this flash never fades back in
+          self.engine.mainMode("map"); // close the loading screen // TODO XXX what if the name is not map? too many assumptions here
           if (callback) { callback(); }
-          // TODO: return Promise instead?
+            // TODO: return Promise instead?
         }, function(updatePercent) {
           self.engine.getModeByName("loading").setPercent(updatePercent);
         });
