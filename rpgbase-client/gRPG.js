@@ -60,7 +60,7 @@ var gRPG = (function(){
       return this._animator;
     },
     start: function() {
-      if (this._scracthpadCtx) {
+      if (this._scratchpadCtx) {
         // Save a snapshot of whatever is on screen now, so we can do
         // a fade-out animation over it if desired.
         this._scratchpadCtx.drawImage(this._htmlElem, 0, 0);
