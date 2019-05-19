@@ -231,7 +231,7 @@ CssOldScrollingTextBox.prototype._generateHtml = function() {
 
 
 
-function CssScrollingTextBox(text, menuSystem, title) {
+function CssScrollingTextBox(text, menuSystem, title, portraitUrl) {
   /* If title is provided, it will always be shown regardless of what
    * part of the scrolling text is currently in view. Wrap it in a
    * <span class=title>so that it can be styled with CSS. */
@@ -240,8 +240,14 @@ function CssScrollingTextBox(text, menuSystem, title) {
   this._closeCallbacks = []; // TODO isn't this in the base class?
   this.title = title;
   this.currPage = 0;
-  this.pages = this._splitPages(text);
   this.fullText = text; // used in unit tests
+  if (portraitUrl) {
+    console.log("cssScrollingTextBox constructor setting portraitUrl to " + portraitUrl);
+    this.portraitUrl = portraitUrl;
+  } else {
+    this.portraitUrl = null;
+  }
+  this.pages = this._splitPages(text);
 };
 TimerTextBoxMixin(CssScrollingTextBox.prototype);
 CssMixin(CssScrollingTextBox.prototype);
@@ -265,11 +271,10 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
     console.warn("CssScrollingTextBox doesn't know how to split pages if msgWidth is auto");
   }
   var maxWidthPixels = scaleFactor * ( positioning.msgWidth - 2*padding - 2*borders);
-  if (this.title) {
-    maxWidthPixels -= (scaleFactor * padding);
-    // This is because if there's a title, the text under the title gets
-    // indented. TODO: don't hard-code this, make a positioning property named
-    // indent or something.
+  if (this.portraitUrl) {
+    // subtract the width of the portrait from the usable area for page wrapping
+    maxWidthPixels -= scaleFactor * (positioning.imgWidth);
+  } else {
   }
 
   var lines = this.splitLines(text, maxWidthPixels);
@@ -334,6 +339,8 @@ CssScrollingTextBox.prototype.setText = function(newText) {
     } else {
       this.parentTag.html(newText);
     }
+    // TODO: if we have portraitUrl then show it. this is currently being
+    // done in userland code that overrides this method.
   }
 };
 
