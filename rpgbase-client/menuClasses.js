@@ -231,11 +231,12 @@ function MenuSystemMixin(subClassPrototype) {
     }
   };
 
-  subClassPrototype.makeScrollingTextBox = function(dialogText, title) {
+  subClassPrototype.makeScrollingTextBox = function(dialogText, title, imageUrl) {
+    console.log("makeScrollingTextBox setting portraitUrl to " + imageUrl);
     if (this.menuImpl == "canvas") {
       return new CanvasScrollingTextBox(dialogText, this, title);
     } else {
-      return new CssScrollingTextBox(dialogText, this, title);
+      return new CssScrollingTextBox(dialogText, this, title, imageUrl);
     }
   };
 
@@ -392,7 +393,8 @@ function MenuSystemMixin(subClassPrototype) {
     // Turn into a scrolling message box and push onto stack
     // title is optional
     this.clearMsg();
-    var textBox = this.makeScrollingTextBox(dialogText, title);
+    var textBox = this.makeScrollingTextBox(dialogText, title, null);
+    // TODO we could support passing in an imageUrl to scrollText() ?
     this.pushMenu(textBox);
     textBox.setPos(this._positioning.msgLeft,
                    this._positioning.msgTop);
@@ -698,24 +700,14 @@ function MenuSystemMixin(subClassPrototype) {
     var segmentIndex = 0;
     var proceed = function() {
       var nextSegment = textSegments[segmentIndex];
-      var textBox = self.makeScrollingTextBox(nextSegment.text, nextSegment.speaker);
+      var textBox = self.makeScrollingTextBox(nextSegment.text, nextSegment.speaker,
+                                              nextSegment.img);
       self.pushMenu(textBox);
       textBox.setPos(self._positioning.msgLeft,
                      self._positioning.msgTop);
       if (self._positioning.msgWidth !== "auto") {
         textBox.setOuterDimensions(self._positioning.msgWidth,
                                    self._positioning.msgHeight);
-      }
-
-      if (nextSegment.img == null) {
-        self.hideStatusBoxes("portrait");
-        textBox.portraitUrl = null;
-      } else {
-        textBox.portraitUrl = nextSegment.img;
-        /*self.showStatusBoxes("portrait");
-        var imgWidth = self._calculatedScale * self._positioning.imgWidth;
-        var imgHeight = self._calculatedScale * self._positioning.imgHeight;
-        self.portraitBox.setImg(nextSegment.img, imgWidth, imgHeight);*/
       }
 
       if (segmentIndex < textSegments.length - 1) {
