@@ -956,19 +956,34 @@ BattleSystem.prototype = {
       this.finishRound();
     } else {
       this.eventService.processGameEvent();
-      // after processing each event, play all queued animations before proceeding
-      // to next event.
+      // after processing each event, play all queued animations/messages before proceeding
+      // to next event. This is because a single "event" can produce several animations/
+      // messages as its results, which should all happen before next event.
       var self = this;
       if (this._animationQueue.length > 0) {
         // play all the animations here before calling runEventQueue as last callback
-        this._attackSFX = this._animationQueue.shift();
-        // Return here after each animation is done:
-        this._attackSFX.onFinish(function() { 
-          self._attackSFX = null;
-          self.runEventQueue();
-        });
-        this._animator.runAnimation(this._attackSFX);
-      } else {
+        var nextThingInQueue = this._animationQueue.shift();
+
+        // Everything on the animation queue is EITHER an animation OR a scrolling
+        // text message. if it's a scrolling text message then the CALLBACK from the
+        // scroll text box CLOSING should advance the animation queue.
+        if (nextThingInQueue.onFinish) { // i.e. if it is an Animation and has onFinish method
+          this._attackSFX = nextThingInQueue;
+          // Return here after each animation is done:
+          this._attackSFX.onFinish(function() {
+            self._attackSFX = null;
+            self.runEventQueue();
+          });
+          this._animator.runAnimation(this._attackSFX);
+        } else if (nextThingInQueue.text) { // next thing in queue is a message
+          // something like this????  (why doesn't scrollText take an onClose callback yet?)
+          // nextThingInQueue has text, and optionally img and speaker
+          self._multipartTextDisplay([nextThingInQueue],
+                                     function() { // Return here after player hits button:
+                                       self.runEventQueue();
+                                     });
+        }
+      } else { // No more animations in queue, proceed with next actual event.
         // TODO is this a good place for a "yield" continuation?
 
         this.runEventQueue();
@@ -1162,14 +1177,22 @@ BattleSystem.prototype = {
     /* Unlike showMsg, this shows the given message for a certain period of time
      * before proceeding with the battle. If you queueMsg multiple times then
      * the messages appear in sequence. Use it to make text more readable. */
-    var anim = new Animation( 12 );
+    /*var anim = new Animation( 12 );
     var self = this;
     anim.onFrame(function(frameNum) {
       if (frameNum == 1) {
         self.showMsg(msgText);
       }
     });
-    this.queueAnimation(anim);
+    this.queueAnimation(anim);*/
+
+    // Change of plans: if we push a textSegment into teh animation queue,
+    // then runEventQueue will treat it as a _multipartTextDisplay.
+    this._animationQueue.push({text: msgText, img: null, speaker: null});
+    // i.e. it will display this as a scrollTextBox and wait until the player
+    // presses a key before continuing.
+
+    // TODO make this do one or the other depending on battle speed setting.
   },
 
   getAllies: function(fighter) {
