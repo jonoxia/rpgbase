@@ -169,7 +169,7 @@ CssCmdMenu.prototype = {
     if (this.title) {
       var titleSpan = $("<span></span>");
       titleSpan.addClass("menu");
-      titleSpan.addClass("scrolling-title"); // ???
+      titleSpan.addClass("menu-title"); // ???
       titleSpan.html(this.title);
       this.parentTag.append(titleSpan);
     }
@@ -255,6 +255,8 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
    * then push the end of the text off the page. Splitting into lines first
    * fixes that. */
 
+  console.log("Splitting " + text);
+
   // Figure out maximum width of text in pixels before wrapping
   // (logic copied from setOuterDimensions):
   var scaleFactor = this.menuSystem._calculatedScale;
@@ -270,6 +272,8 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
     // This is because if there's a title, the text under the title gets
     // indented. TODO: don't hard-code this, make a positioning property named
     // indent or something.
+
+    // this needs to be reduced by more than that if there's a portrait inside the box.
   }
 
   var lines = this.splitLines(text, maxWidthPixels);
