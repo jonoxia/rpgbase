@@ -275,7 +275,7 @@ CssScrollingTextBox.prototype._splitPages = function(text) {
   var maxWidthPixels = scaleFactor * ( positioning.msgWidth - 2*padding - 2*borders);
   if (this.portraitUrl) {
     // subtract the width of the portrait from the usable area for page wrapping
-    maxWidthPixels -= (scaleFactor * (positioning.imgWidth);
+    maxWidthPixels -= scaleFactor * (positioning.imgWidth);
   }
 
   var lines = this.splitLines(text, maxWidthPixels);

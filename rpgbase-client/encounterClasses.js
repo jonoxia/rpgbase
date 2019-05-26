@@ -596,15 +596,15 @@ BattleSystem.prototype = {
      * If there's a whole start-of-battle conversation, require the player
      * to page through it before the battle proper starts. If there's just
      * a single line, show it as a non-blocking message. */
+    var self = this;
     if (options && options.startConvo && options.startConvo.length > 0) {
-      var self = this;
       this._multipartTextDisplay(options.startConvo, function() {
-        self.hideStatusBoxes("portrait");
         self.showStartRoundMenu();
       });
     } else if (options && options.startMsg && options.startMsg !== "") {
-      this.showMsg(options.startMsg);
-      this.showStartRoundMenu();
+      this._multipartTextDisplay(options.startMsg, function() {
+        self.showStartRoundMenu();
+      });
     } else if (this.startBattleMsg && this.startBattleMsg != "") {
       this.showMsg(this.startBattleMsg);
       this.showStartRoundMenu();
