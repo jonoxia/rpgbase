@@ -57,7 +57,7 @@ Map.prototype = {
     var mapBgImg = this._assetLoader.add(this._imageFile);
     this._img = mapBgImg;
     this.addBackgroundImg({offsetX: 0, offsetY: 0, img: mapBgImg}); // XXX ????
-      
+
     if (this._backgroundMusicTrack) {
       this.setMusicTrack(this._backgroundMusicTrack);
       if (this.engine.audioPlayer) {
@@ -675,7 +675,7 @@ MapScreen.prototype = {
     }
     if (delY < 0 && screenY < topEdge) {
       scrollY += (screenY - topEdge);
-    } 
+    }
     if (delY > 0 && screenY > bottomEdge) {
       scrollY += (screenY - bottomEdge);
     }
@@ -696,7 +696,7 @@ MapScreen.prototype = {
         var worldPt = this._screenToWorld(x, y);
         var code = this.getLandType( worldPt.x, worldPt.y );
         var img = this._currentDomain._img;
-        
+
         var tile = this._currentDomain.getTileForCode(code);
         var spriteOffsetX = tile.x * this.tilePixelsX;
         var spriteOffsetY = tile.y * this.tilePixelsY;
@@ -720,7 +720,7 @@ MapScreen.prototype = {
       }
     }
   },
-  
+
   _renderSingleImgMap: function() {
     /* it's called "single image" but it actually supports multiple images,
      * mainly to support appending a camp map to the side of a town map in
@@ -736,7 +736,20 @@ MapScreen.prototype = {
       }
       self._ctx.save();
       self._ctx.scale(1.0/ds, 1.0/ds);
+      // what if i clip the image to only include the part that's on the screen; does that
+      // make any difference?
+      //self._ctx.drawImage(background.img, drawX, drawY);
+
       self._ctx.drawImage(background.img, drawX, drawY);
+                         /* (-1)*drawX,   // left of slice
+                          (-1)*drawY,  // top of slice
+	                  1024*ds,  // width of slice
+	                  768*ds, // height of slice
+                          0,
+                          0,
+                          1024*ds,
+                          768*ds);*/
+
       self._ctx.restore();
     });
   },
@@ -745,7 +758,7 @@ MapScreen.prototype = {
     this._scratchpad = scratchpad;
     this._scratchpadCtx = scratchpad.getContext("2d");
   },
-  
+
   _drawMaskedImage: function(mask, image, drawX, drawY, scale) {
     // use mask to block out image on scratchpad:
     // TODO don't redo composite operation if parameters haven't changed since
@@ -772,7 +785,7 @@ MapScreen.prototype = {
     var self = this;
     var ds = this._currentDomain.downsampleFactor || 1;
     var foreground = this._currentDomain.foregroundImg;
-    
+
     var drawX = self.tilePixelsX * (foreground.offsetX - ds*self._scrollX );
     var drawY = self.tilePixelsY * (foreground.offsetY - ds*self._scrollY );
     if (self.scrollAdjustment) {
@@ -780,15 +793,27 @@ MapScreen.prototype = {
       drawY += ds*self.scrollAdjustment.y;
     }
 
-    if (this._scratchpad && foreground.mask) {
+    /*if (this._scratchpad && foreground.mask) {
       this._drawMaskedImage(foreground.mask, foreground.img, drawX, drawY, 1.0/ds);
-    } else {
+    } else {*/
       self._ctx.save();
       self._ctx.scale(1.0/ds, 1.0/ds);
-      self._ctx.drawImage(foreground.img, drawX, drawY);
-      self._ctx.restore();
-    }
 
+    var pre_roof = Date.now();
+    self._ctx.drawImage(foreground.img,
+                          (-1)*drawX,   // left of slice
+                          (-1)*drawY,  // top of slice
+	                  1024*ds,  // width of slice
+	                  768*ds, // height of slice
+                          0,
+                          0,
+                          1024*ds,
+                          768*ds);
+    var post_roof = Date.now();
+    console.log("rendering roof layer without clipping took "  + (post_roof - pre_roof) + " ms");
+    // This seems to be 200ms - 250ms no matter whether i use explicit clipping or not.
+    self._ctx.restore();
+    //}
   },
 
   render: function() {
@@ -960,6 +985,7 @@ MapScreen.prototype = {
 
   flash: function(color, holdFrames, fadeOutFrames, fadeInFrames) {
     // flashes the map screen the given color over the given number of frames
+    // TODO should this take an optional callback? to do when done?
     var self = this;
     if (!fadeOutFrames) {
       fadeOutFrames = 0;
@@ -988,7 +1014,7 @@ MapScreen.prototype = {
       } else if ((fadeInFrames > 0) && (frame >= fadeOutFrames + holdFrames)) {
         alpha = 1.0 - ( (1.0 / fadeInFrames) * (frame - fadeOutFrames - holdFrames));
       } else {
-        alpha = 0;
+        alpha = 1.0;
       }
       ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
       ctx.fillRect(0, 0, self._screenWidth,
