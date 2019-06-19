@@ -934,6 +934,11 @@ BattleSystem.prototype = {
 
     // Modify the event's target:
     eventData.target = target;
+
+    var declarationText = eventData.cmd.declare(this, eventData.source, eventData.target);
+    if (declarationText && declarationText !== "") {
+      this.queueMsg(declarationText);
+    }
   },
 
   onAttackResolvedEvent: function(eventData) {
@@ -1125,6 +1130,16 @@ BattleSystem.prototype = {
   },
 
   _scrollEndBattleText: function (resolutionType) {
+    // currently this is handling both "you beat x monsters" type text and "you went up a level"
+    // type text. i want it to work more like:
+    // -- scroll everything that's in the you beat X monsters type text
+    // -- that scroll has an on close method which checks for rewards and level up
+    // -- that one plays the level up music
+    // we could keep the event loop running? and use queueMsg to keep adding stuff?
+    //  not let battle actually close until no more messages in the queue... then we
+    //  don't have to  treat endbattletext differently from message queue
+    // or, maybe we should have a separate event that could be listened for?
+    // (onEndBattle, then onGetRewards, then onClose)?
     var endBattleText = this.scrollText(this._endBattleText);
     if (this._positioning.msgWidth !== "auto") {
         endBattleText.setOuterDimensions(this._positioning.msgWidth,
@@ -1323,6 +1338,10 @@ function BatCmd(options) {
   this.onStartRound = options.onStartRound;
   this.onEndRound = options.onEndRound;
   this.wrapsItem = options.reference; // undefined if not item
+  if (options.declare) {
+    this.declare = options.declare;
+  }
+  // why did i invent my own weird way of overriding the class here???
 }
 BatCmd.prototype = {
   isContainer: false,
@@ -1342,6 +1361,10 @@ BatCmd.prototype = {
     }
     return {usable: true, reason: ""};
   },
+  declare: function(system, user, target) {
+    // return a string to be shown by the battle system when the action is declared.
+    return user.name + ": " + this.name;
+  },
   canUse: function(system, user) {
      // deprecated but kept for backwards compatibility
     return this.checkUsability(user).usable;
@@ -1349,7 +1372,7 @@ BatCmd.prototype = {
   effect: function(system, user, target) {
     var result = this.checkUsability(system, user);
     if (!result.usable) {
-      system.showMsg(this.name + ": " + result.reason);
+      system.queueMsg(this.name + ": " + result.reason);
       return; // can happen if e.g. you REPEAT a spell when out of MP
     }
     if (this.cost) {
