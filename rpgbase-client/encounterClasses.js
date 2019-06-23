@@ -424,7 +424,7 @@ BattleSystem.prototype = {
       cmdMenu.addCommand("NOTHING", function() {
       });
     }
-     
+
     return cmdMenu;
   },
 
@@ -469,7 +469,7 @@ BattleSystem.prototype = {
     });
     return monsters;
   },
-  
+
   startBattle: function(player, encounter, landType, options) {
     /* player: the player object.
      * encounter: either a dictionary of monster number and type, or an encounter
@@ -660,7 +660,7 @@ BattleSystem.prototype = {
   onRollInitiative: function(callback) {
     this._initiativeCallback = callback;
   },
-  
+
   onGameOver: function(callback) {
     this._gameOverCallback = callback;
   },
@@ -670,7 +670,7 @@ BattleSystem.prototype = {
       // edge case - the battle is over before it starts - bail out!
       return;
     }
-    
+
     // Adjust PC menu contents in case there were any changes last round
     // (e.g. single-use items used up)
     this.pcMenus = [];
@@ -942,10 +942,34 @@ BattleSystem.prototype = {
   },
 
   onAttackResolvedEvent: function(eventData) {
+    // check if the target has died, and then check if that ends the battle.
+    var self = this;
+
+    // eventData.target can be one or multiple?
+    if (eventData.target.length) {
+      $.each(eventData.target, function(i, x) {
+        console.log("EventData.target is a list and this one is : " + x.name);
+        if (x.hasDied()) {
+          console.log("onAttackResolved event: someone has 0 hp or less");
+          self.removeFromBattle(x); // this fires "battler-slain"
+        }
+      });
+    } else if (eventData.target) {
+      console.log("EventData.target is singleton: " + eventData.target.name);
+      if (eventData.target.hasDied()) {
+        console.log("onAttackResolved event: someone has 0 hp or less");
+        self.removeFromBattle(eventData.target); // this fires "battler-slain"
+      }
+    }
+
     if (this.checkBattleEndConditions()) {
+      // xxx
       this.eventService.clearQueue();
       // this.finishRound();
       // What we want to do here is clear out all events still pending in the queue!
+      // TODO actually maybe only cancel the attack events and leave in the text
+      // events, that would let us treat end of battle text as a normal part of the queue
+      // instead of special-casing it.
       // (and then push on a new end of battle event? maybe?)
       // (finishRound will be called because the event queue empties)
     }
@@ -1018,7 +1042,7 @@ BattleSystem.prototype = {
       }
     }
     // clearMsg was here
-    this.updateStats(); // in case end of round effects changed 
+    this.updateStats(); // in case end of round effects changed
     // anything
     if (!this._battleOver) {
       // Unless fight has ended already, show menu for next round
@@ -1107,7 +1131,7 @@ BattleSystem.prototype = {
      * a Eagle Princess way (options.startConvo) and i think both should be
      * refactored into something where the encounter registers an event listener
      * and the event listener sticks conversation into the battle message queue. */
-    
+
     /* we could almost just build this on top of encounter.win / encounter.lose --
      * that's SO CLOSE to what we need. */
 
@@ -1135,6 +1159,7 @@ BattleSystem.prototype = {
     // -- scroll everything that's in the you beat X monsters type text
     // -- that scroll has an on close method which checks for rewards and level up
     // -- that one plays the level up music
+    // 
     // we could keep the event loop running? and use queueMsg to keep adding stuff?
     //  not let battle actually close until no more messages in the queue... then we
     //  don't have to  treat endbattletext differently from message queue
@@ -1164,7 +1189,7 @@ BattleSystem.prototype = {
 
     // TODO set "source" of this event to be whoever dealt the last blow?
     this.eventService.fireGameEvent("battler-slain", {target: target});
-    
+
     var index = this.monsters.indexOf(target);
     if (index > -1) {
       // if it's a monster...
@@ -1176,7 +1201,6 @@ BattleSystem.prototype = {
       // redraw so we see what's gone missing:
       this.draw();
     }
-    
   },
 
   // DEPRECATED use queueAnimation instead:
@@ -1242,7 +1266,7 @@ BattleSystem.prototype = {
     if (this._battleOver) {
       return true; // so we don't end the same battle twice
     }
-    
+
     var activeParty = this.getActiveParty();
 
     // if all monsters are dead or fled, you win:
@@ -1272,11 +1296,11 @@ BattleSystem.prototype = {
       this.endBattle("peace");
       return true;
     }
-    
+
     if (activeParty.length == 0) {
       // if no pcs left fighting...
       for (var i = 0; i < this._party.length; i++) {
-        if (this._party[i].isAlive() && 
+        if (this._party[i].isAlive() &&
            this._party[i].hasStatus("fled")) {
           // if any of them escaped, count it as a run
           this.endBattle("run");
@@ -1510,7 +1534,7 @@ MonsterType.prototype = {
 // BattlerMixin:
 var Battler = {
   _subClassPrototypes: [],
-  
+
   setDefault: function(propertyName, value) {
     for (var i = 0; i < this._subClassPrototypes.length; i++) {
       this._subClassPrototypes[i][propertyName] = value;
@@ -1624,10 +1648,15 @@ var BattlerMixin = function() {
     return !!(this._stati[name]);
   };
   this.canAct = function() {
-    // TODO make this under-rideable; these specific status codes
-    // belong in userland!!
+    // Userland should underride this to define what statuses prevent a battler
+    // from acting.
     return (! this._dead ) && (! this.hasStatus("asleep")) &&
       (! this.hasStatus("fleeing")) && (! this.hasStatus("fled"));
+  };
+  this.hasDied = function() {
+    // userland should underride this to define what causes a battler to be removed
+    // from battle.
+    return this.getStat("hp") < 0;
   };
 }
 
