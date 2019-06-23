@@ -911,7 +911,7 @@ BattleSystem.prototype = {
         }
       }
     }
-    
+
     // If the attack is going ahead, then interpret attack intention strings:
 
     // For the "random" strings, choose random targets now, right before executing:
@@ -963,7 +963,9 @@ BattleSystem.prototype = {
     }
 
     if (this.checkBattleEndConditions()) {
-      // xxx
+      // xxx i donn't thinnk clearQueue is even doing anythingn here since
+      // checkBattleEndConditions calls endBattle if battle is over, and that clears
+      // queue.
       this.eventService.clearQueue();
       // this.finishRound();
       // What we want to do here is clear out all events still pending in the queue!
@@ -1122,7 +1124,8 @@ BattleSystem.prototype = {
       var defaultMsgs = {"win": "You won! Let's assume there is a whole lot of end battle text, including how many experience points you got, how much gold you got, whether anybody went up a level, and all that jazz.",
                          "lose":  "YOU LOST! IT IS VERY SAD. DEFEAT TEXT GOES HERE.",
                          "peace": "THE ENCOUNTER RESOLVES PEACEFULLY.",
-                         "run": "YOU BRAVELY RAN AWAY, AWAY!"};
+                         "run": "YOU BRAVELY RAN AWAY, AWAY!",
+                         "no contest": "THERE WAS NOONE TO FIGHT"};
       this._endBattleText = defaultMsgs[resolutionType];
     }
 
@@ -1159,7 +1162,9 @@ BattleSystem.prototype = {
     // -- scroll everything that's in the you beat X monsters type text
     // -- that scroll has an on close method which checks for rewards and level up
     // -- that one plays the level up music
-    // 
+    // so really, we want a separate event that fires on battle rewards text being
+    // *closed*
+
     // we could keep the event loop running? and use queueMsg to keep adding stuff?
     //  not let battle actually close until no more messages in the queue... then we
     //  don't have to  treat endbattletext differently from message queue
@@ -1170,6 +1175,13 @@ BattleSystem.prototype = {
         endBattleText.setOuterDimensions(this._positioning.msgWidth,
                                          this._positioning.msgHeight);
     }
+    // TODO wow this literally can't work without some kind of end battle text.
+    // there has to be a final text window shown so its onClose can do the stuff
+    // below. this limitation will be gone if we shift to just keeping the event
+    // queue going, and when it runs out of events it checks whether the battle
+    // is over or whether to start the next round. if battle is over and no more
+    // events (all end of battle text is just normal events in this idea) then
+    // it just closes.
 
     var self = this;
     endBattleText.onClose(function() {
@@ -1268,6 +1280,13 @@ BattleSystem.prototype = {
     }
 
     var activeParty = this.getActiveParty();
+
+    // if there are no alive or dead monsters, it's a "no contest"
+    // resolution:
+    if (this.monsters.length + this.deadMonsters.length === 0) {
+      this.endBattle("no contest");
+      return true;
+    }
 
     // if all monsters are dead or fled, you win:
     var aliveMonsters = false;
