@@ -950,13 +950,19 @@ BattleSystem.prototype = {
   runEventQueue: function() {
     // the heartbeat of the battle system, keeps events and animations flowing in the
     // correct order.
-
+    var self = this;
     // Control battle speed by inserting delays here?
     if (this.eventService.queueIsEmpty()) {
-      // TODO should i checkBattleEndConditionsn here??
-      // but wait! end of battle messages are in the animation queue not the event queue??
+      // TODO should i checkBattleEndConditionsn here?? (no, it'sdone elsewhere
       if (this._battleOver) {
-        this._reallyFinalEndOfBattle();
+        // special case:
+        // fire an event that the end-of-battle resolution text has been read
+        // by the player; this is the last chance for any listeners to do anything
+        // before the battle mode closes.
+        this.eventService.fireGameEvent("last-chance", {});
+        this._runAnimationQueueUntilEmpty(function() {
+          self._reallyFinalEndOfBattle();
+        });
       } else {
         // TODO XXX when a battle ends do we want to finish round and THEN exit?
         // or just exit without finishing the round?
@@ -967,7 +973,6 @@ BattleSystem.prototype = {
       // after processing each event, play all queued animations/messages before proceeding
       // to next event. This is because a single "event" can produce several animations/
       // messages as its results, which should all happen before next event.
-      var self = this;
       this._runAnimationQueueUntilEmpty(function() { self.runEventQueue(); });
 
       // TODO JS doesn't optimize tail recursion so this ends up making the
@@ -1001,6 +1006,7 @@ BattleSystem.prototype = {
       }
     } else { // No more animations in queue, proceed with next actual event.
       // TODO is this a good place for a "yield" continuation?
+
       callback();
     }
   },
