@@ -486,6 +486,7 @@ BattleSystem.prototype = {
     // the same:
     var self = this;
     this._battleOver = false;
+    this.resolution = null;
     this._freelyExit = false;
     this.deadMonsters = [];
     this.player = player;
@@ -499,7 +500,7 @@ BattleSystem.prototype = {
     //this._whoseTurn = null; // currently only used to target counters
     this.encounter = encounter;
     this._fixedDisplayBoxes = [];
-    this.peacefulResolutionText = null;
+    this.peacefulResolutionText = null; // TODO wtf is this it's not used anywhere
     this.monsters = [];
     this._endBattleText = "";
     this._endBattleConvo = null;
@@ -573,42 +574,24 @@ BattleSystem.prototype = {
       // encounter reference)
     }
 
-    if (this._animationQueue.length > 0) {
-      // In case any start-battle listener pushed an animation onto our queue:
-      // play that animation before proceeding. TODO this duplicates logic from
-      // runEventQueue; could we use that somehow?
-
-      var nextAnimation = this._animationQueue.shift();
-      // TODO this only handles one animation, would there ever be multiple?
-      nextAnimation.onFinish(function() {
-        // after animation continue with the next step of starting battle:
-        self._showStartMessage(options);
-      });
-      this._animator.runAnimation(nextAnimation);
-    } else {
-      // if no animation, continue with the next step immediately:
-      this._showStartMessage(options);
-    }
-  },
-
-  _showStartMessage: function(options) {
-    /* Continuation of startBattle after the starting animation.
-     * If there's a whole start-of-battle conversation, require the player
-     * to page through it before the battle proper starts. If there's just
-     * a single line, show it as a non-blocking message. */
-    var self = this;
     if (options && options.startConvo && options.startConvo.length > 0) {
-      this._multipartTextDisplay(options.startConvo, function() {
-        self.showStartRoundMenu();
+      $.each(options.startConvo, function(i, x) {
+        self._animationQueue.push(x);
+        // could be queueMsg if queueMsg supported portrait/speaker
       });
     } else if (options && options.startMsg && options.startMsg !== "") {
-      this._multipartTextDisplay(options.startMsg, function() {
-        self.showStartRoundMenu();
-      });
+      self.queueMsg(options.startMsg);
     } else if (this.startBattleMsg && this.startBattleMsg != "") {
-      this.showMsg(this.startBattleMsg);
-      this.showStartRoundMenu();
+      // this.startBattleMsg is a last resort if nothing provided in options
+      self.queueMsg(this.startBattleMsg);
     }
+
+    // show all of the start-of-battle animations/dialog (such as the messages
+    // we just queued above, or any added by a listener to the start-battle
+    // event) and when those are done, start the first round of battle:
+    this._runAnimationQueueUntilEmpty(function() {
+      self.showStartRoundMenu();
+    });
   },
 
   updateStats: function() {
@@ -668,6 +651,7 @@ BattleSystem.prototype = {
   showStartRoundMenu: function() {
     if (this.checkBattleEndConditions()) {
       // edge case - the battle is over before it starts - bail out!
+      this.runEventQueue();
       return;
     }
 
@@ -847,12 +831,11 @@ BattleSystem.prototype = {
     this.eventService.stackGameEvent("attack-targeted", counterAttackData);
     this.eventService.stackGameEvent("attack-declared", counterAttackData);
   },
-  
+
   onAttackEvent: function(eventData) {
     if (this.menuImpl == "css") {
       this.displayElem.empty();// clear the message
     }
-      
     if (eventData.cmd) {
       eventData.cmd.effect(this, eventData.source, eventData.target);
     } else {
@@ -860,7 +843,6 @@ BattleSystem.prototype = {
     }
     // update stats display so we can see effects of action
     this.updateStats();
-    
   },
 
   onAttackDeclaredEvent: function(eventData) {
@@ -962,19 +944,7 @@ BattleSystem.prototype = {
       }
     }
 
-    if (this.checkBattleEndConditions()) {
-      // xxx i donn't thinnk clearQueue is even doing anythingn here since
-      // checkBattleEndConditions calls endBattle if battle is over, and that clears
-      // queue.
-      this.eventService.clearQueue();
-      // this.finishRound();
-      // What we want to do here is clear out all events still pending in the queue!
-      // TODO actually maybe only cancel the attack events and leave in the text
-      // events, that would let us treat end of battle text as a normal part of the queue
-      // instead of special-casing it.
-      // (and then push on a new end of battle event? maybe?)
-      // (finishRound will be called because the event queue empties)
-    }
+    this.checkBattleEndConditions();
   },
 
   runEventQueue: function() {
@@ -982,46 +952,56 @@ BattleSystem.prototype = {
     // correct order.
 
     // Control battle speed by inserting delays here?
-
     if (this.eventService.queueIsEmpty()) {
-      this.finishRound();
+      // TODO should i checkBattleEndConditionsn here??
+      // but wait! end of battle messages are in the animation queue not the event queue??
+      if (this._battleOver) {
+        this._reallyFinalEndOfBattle();
+      } else {
+        // TODO XXX when a battle ends do we want to finish round and THEN exit?
+        // or just exit without finishing the round?
+        this.finishRound();
+      }
     } else {
       this.eventService.processGameEvent();
       // after processing each event, play all queued animations/messages before proceeding
       // to next event. This is because a single "event" can produce several animations/
       // messages as its results, which should all happen before next event.
       var self = this;
-      if (this._animationQueue.length > 0) {
-        // play all the animations here before calling runEventQueue as last callback
-        var nextThingInQueue = this._animationQueue.shift();
+      this._runAnimationQueueUntilEmpty(function() { self.runEventQueue(); });
 
-        // Everything on the animation queue is EITHER an animation OR a scrolling
-        // text message. if it's a scrolling text message then the CALLBACK from the
-        // scroll text box CLOSING should advance the animation queue.
-        if (nextThingInQueue.onFinish) { // i.e. if it is an Animation and has onFinish method
-          this._attackSFX = nextThingInQueue;
-          // Return here after each animation is done:
-          this._attackSFX.onFinish(function() {
-            self._attackSFX = null;
-            self.runEventQueue();
-          });
-          this._animator.runAnimation(this._attackSFX);
-        } else if (nextThingInQueue.text) { // next thing in queue is a message
-          // something like this????  (why doesn't scrollText take an onClose callback yet?)
-          // nextThingInQueue has text, and optionally img and speaker
-          self._multipartTextDisplay([nextThingInQueue],
-                                     function() { // Return here after player hits button:
-                                       self.runEventQueue();
-                                     });
-        }
-      } else { // No more animations in queue, proceed with next actual event.
-        // TODO is this a good place for a "yield" continuation?
+      // TODO JS doesn't optimize tail recursion so this ends up making the
+      // call stack really deep. hmmm. Should probably rewrite this as a while()
+      // loop.
+    }
+  },
 
-        this.runEventQueue();
-        // TODO JS doesn't optimize tail recursion so this ends up making the
-        // call stack really deep. hmmm. Should probably rewrite this as a while()
-        // loop.
+  _runAnimationQueueUntilEmpty: function(callback) {
+    var self = this;
+    if (this._animationQueue.length > 0) {
+      // play all the animations here before calling runEventQueue as last callback
+      var nextThingInQueue = this._animationQueue.shift();
+      // Everything on the animation queue is EITHER an animation OR a scrolling
+      // text message. if it's a scrolling text message then the CALLBACK from the
+      // scroll text box CLOSING should advance the animation queue.
+      if (nextThingInQueue.onFinish) { // i.e. if it is an Animation and has onFinish method
+        this._attackSFX = nextThingInQueue;
+        // Return here after each animation is done:
+        this._attackSFX.onFinish(function() {
+          self._attackSFX = null;
+          self._runAnimationQueueUntilEmpty(callback);
+        });
+        this._animator.runAnimation(this._attackSFX);
+      } else if (nextThingInQueue.text) { // next thing in queue is a message
+        // something like this????  (why doesn't scrollText take an onClose callback yet?)
+        // nextThingInQueue has text, and optionally img and speaker
+        this._multipartTextDisplay([nextThingInQueue], function() {
+          self._runAnimationQueueUntilEmpty(callback);
+        });
       }
+    } else { // No more animations in queue, proceed with next actual event.
+      // TODO is this a good place for a "yield" continuation?
+      callback();
     }
   },
 
@@ -1067,9 +1047,10 @@ BattleSystem.prototype = {
   },
 
   endBattle: function(resolutionType) {
-    // Trigger a ScrollingTextBox to come up
-    // with end of battle messages; closing the ScrollingTextBox
-    // closes the battle menu system.
+    // This makes the battle stop and sets the resolution of the battle, but doesn't
+    // close the battle mode. There is still a phase where the player is readin
+    // the end-of-battle text, exp rewards, level ups, etc. before the battle mode
+    // actually closes and returns you to the map.
     if (this._animator) {
       this._animator.cancelAllCallbacks();
     }
@@ -1078,7 +1059,8 @@ BattleSystem.prototype = {
     this.pcMenus = [];
     this._fixedDisplayBoxes = [];
     this._attackSFX = null;
-    this._battleOver = true;
+    this._battleOver = true; // this is the most important thing this function does
+    this.resolution = resolutionType;
     this.clearMsg();
 
     /* TODO another error:  topMenu.getPos is not a function
@@ -1138,60 +1120,35 @@ BattleSystem.prototype = {
     /* we could almost just build this on top of encounter.win / encounter.lose --
      * that's SO CLOSE to what we need. */
 
-
     /* There can be both "endBattleConvo" (e.g. a story conversation happening
      * within the battle system after the battle ends) as well as "endBattleText"
      * (e.g. listing of experience rewards, items found, level ups, etc.)
      * endBattleConvo comes first if present. */
     var self = this;
     if (this._endBattleConvo) {
-      var self = this;
-      this._multipartTextDisplay(this._endBattleConvo, function() {
-        self.hideStatusBoxes("portrait");
-        self._scrollEndBattleText(resolutionType);
+      $.each(this._endBattleConvo, function(i, x) {
+        self._animationQueue.push(x);
+        // not this.queueMsg() because queueMsg() can't take speaker and img metadata
+        // (but we could change it to take them)
       });
-    } else {
-      // no end battle convo, go straight to end battle text:
-      this._scrollEndBattleText(resolutionType);
     }
+
+    if (this._endBattleText) {
+      // TODO if this works, we no longer need to special-case endBattleText or
+      // endBattleConvo, userland can just push text into queueMsg in response to the
+      // end-battle eventn listener.
+      this.queueMsg(this._endBattleText);
+    }
+    // the main event loop will take us to _reallyFinalEndOfBattle once these messages
+    // have finished scrolling.
   },
 
-  _scrollEndBattleText: function (resolutionType) {
-    // currently this is handling both "you beat x monsters" type text and "you went up a level"
-    // type text. i want it to work more like:
-    // -- scroll everything that's in the you beat X monsters type text
-    // -- that scroll has an on close method which checks for rewards and level up
-    // -- that one plays the level up music
-    // so really, we want a separate event that fires on battle rewards text being
-    // *closed*
-
-    // we could keep the event loop running? and use queueMsg to keep adding stuff?
-    //  not let battle actually close until no more messages in the queue... then we
-    //  don't have to  treat endbattletext differently from message queue
-    // or, maybe we should have a separate event that could be listened for?
-    // (onEndBattle, then onGetRewards, then onClose)?
-    var endBattleText = this.scrollText(this._endBattleText);
-    if (this._positioning.msgWidth !== "auto") {
-        endBattleText.setOuterDimensions(this._positioning.msgWidth,
-                                         this._positioning.msgHeight);
+  _reallyFinalEndOfBattle: function() {
+    this._freelyExit = true;
+    this.close();
+    if (this.resolution === "lose" && this._gameOverCallback) {
+      this._gameOverCallback();
     }
-    // TODO wow this literally can't work without some kind of end battle text.
-    // there has to be a final text window shown so its onClose can do the stuff
-    // below. this limitation will be gone if we shift to just keeping the event
-    // queue going, and when it runs out of events it checks whether the battle
-    // is over or whether to start the next round. if battle is over and no more
-    // events (all end of battle text is just normal events in this idea) then
-    // it just closes.
-
-    var self = this;
-    endBattleText.onClose(function() {
-      self._freelyExit = true;
-      self.close();
-      if (resolutionType == "lose" && self._gameOverCallback) {
-        self._gameOverCallback();
-      }
-    });
-    //endBattleText.setPos(16, 16);
   },
 
   removeFromBattle: function(target) {
@@ -1389,7 +1346,7 @@ function BatCmd(options) {
 BatCmd.prototype = {
   isContainer: false,
   INSUFFICIENT_RESOURCE_MSG: "NOT ENOUGH MP", // game should override this
-  
+
   checkUsability: function(system, user) {
     // Return a record with {usable: true/false, reason: string}
     // if it's not usable string should tell user why
