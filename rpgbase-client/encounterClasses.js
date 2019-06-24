@@ -953,7 +953,7 @@ BattleSystem.prototype = {
     var self = this;
     // Control battle speed by inserting delays here?
     if (this.eventService.queueIsEmpty()) {
-      // TODO should i checkBattleEndConditionsn here?? (no, it'sdone elsewhere
+      // TODO should i checkBattleEndConditions here?? (no, it'sdone elsewhere
       if (this._battleOver) {
         // special case:
         // fire an event that the end-of-battle resolution text has been read
@@ -1035,6 +1035,8 @@ BattleSystem.prototype = {
     if (!this._battleOver) {
       // Unless fight has ended already, show menu for next round
       this.showStartRoundMenu();
+    } else {
+      this.runEventQueue();
     }
   },
 
